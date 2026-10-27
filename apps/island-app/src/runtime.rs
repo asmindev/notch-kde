@@ -11,6 +11,23 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{debug, info};
 
+const COMPACT_NOTCH_WIDTH: u32 = 156;
+const COMPACT_NOTCH_HEIGHT: u32 = 30;
+
+fn compact_notch_rect(geom: &island_platform::kde::ScreenGeometry) -> Rect {
+    Rect {
+        x: geom.x
+            + if geom.width > COMPACT_NOTCH_WIDTH {
+                ((geom.width - COMPACT_NOTCH_WIDTH) / 2) as i32
+            } else {
+                0
+            },
+        y: geom.y,
+        w: COMPACT_NOTCH_WIDTH,
+        h: COMPACT_NOTCH_HEIGHT,
+    }
+}
+
 pub struct AppRuntime {
     window: MainWindow,
 }
@@ -231,15 +248,7 @@ impl AppRuntime {
         let overlap_detector = Arc::new(OverlapDetector::new());
         let (overlap_tx, mut overlap_rx) = mpsc::unbounded_channel();
         let geom = island_platform::KdeManager::get_primary_screen_geometry();
-        let notch_w = 380;
-        let notch_x = geom.x + if geom.width > notch_w { ((geom.width - notch_w) / 2) as i32 } else { 0 };
-        let notch_y = geom.y;
-        let notch_rect = Rect {
-            x: notch_x,
-            y: notch_y,
-            w: notch_w,
-            h: 76,
-        };
+        let notch_rect = compact_notch_rect(&geom);
         overlap_detector.start(notch_rect, overlap_tx);
 
         let tx6 = event_tx.clone();
@@ -284,11 +293,23 @@ impl AppRuntime {
                             });
                         }
                         Effect::ScheduleTimer { id, duration_ms, generation } => {
-                            if id == "bloom_wide" {
+                            if id == "overlap_reveal" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
                                     tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
-                                    let _ = tx_timer.send(AppEvent::ViewSwitchRequested(island_core::models::IslandView::Wide));
+                                    let _ = tx_timer.send(AppEvent::OverlapRevealTimeout(generation));
+                                });
+                            } else if id == "overlap_dismiss_compact" {
+                                let tx_timer = event_tx_effects.clone();
+                                tokio_rt.spawn(async move {
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    let _ = tx_timer.send(AppEvent::OverlapDismissCompactTimeout(generation));
+                                });
+                            } else if id == "overlap_dismiss_hide" {
+                                let tx_timer = event_tx_effects.clone();
+                                tokio_rt.spawn(async move {
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    let _ = tx_timer.send(AppEvent::OverlapDismissHideTimeout(generation));
                                 });
                             } else if id == "alert_timeout" {
                                 let tx_timer = event_tx_effects.clone();
@@ -331,5 +352,45 @@ impl AppRuntime {
         // 7. Show Window and Run Slint GUI event loop
         self.window.show()?;
         self.window.run()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use island_platform::kde::ScreenGeometry;
+
+    #[test]
+    fn compact_notch_rect_is_centered_and_compact() {
+        let geom = ScreenGeometry {
+            x: 100,
+            y: 20,
+            width: 1516,
+            height: 947,
+            screen_index: 0,
+        };
+
+        let rect = compact_notch_rect(&geom);
+
+        assert_eq!(rect.x, 780);
+        assert_eq!(rect.y, 20);
+        assert_eq!(rect.w, 156);
+        assert_eq!(rect.h, 30);
+    }
+
+    #[test]
+    fn compact_notch_rect_handles_narrow_screen() {
+        let geom = ScreenGeometry {
+            x: 0,
+            y: 0,
+            width: 120,
+            height: 800,
+            screen_index: 0,
+        };
+
+        let rect = compact_notch_rect(&geom);
+
+        assert_eq!(rect.x, 0);
+        assert_eq!(rect.w, 156);
     }
 }

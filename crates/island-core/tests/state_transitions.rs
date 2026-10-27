@@ -49,7 +49,7 @@ fn test_screen_unlocked_triggers_welcome() {
 #[test]
 fn test_overlap_hides_notch() {
     let mut state = AppState::default();
-    state.mode = IslandMode::Compact;
+    reduce(&mut state, AppEvent::ViewSwitchRequested(IslandMode::Compact));
     
     // Overlapping window arrives
     reduce(&mut state, AppEvent::WindowOverlapChanged(true));
@@ -65,7 +65,7 @@ fn test_overlap_hides_notch() {
 #[test]
 fn test_hover_overrides_overlap() {
     let mut state = AppState::default();
-    state.mode = IslandMode::Compact;
+    reduce(&mut state, AppEvent::ViewSwitchRequested(IslandMode::Compact));
     
     // Window overlaps
     reduce(&mut state, AppEvent::WindowOverlapChanged(true));
@@ -83,7 +83,7 @@ fn test_hover_overrides_overlap() {
 #[test]
 fn test_media_playback_activates_media_module() {
     let mut state = AppState::default();
-    state.mode = IslandMode::Compact;
+    reduce(&mut state, AppEvent::ViewSwitchRequested(IslandMode::Compact));
 
     let track = MediaTrack {
         title: "Starboy".to_string(),

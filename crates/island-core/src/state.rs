@@ -13,7 +13,11 @@ pub struct AppState {
     pub is_visible: bool,
     pub is_overlapping: bool,
     pub is_hovered: bool,
-    
+
+    // Overlap transition sequencing
+    pub overlap_reveal_generation: u64,
+    pub overlap_dismiss_generation: u64,
+
     // Services data
     pub time: TimeInfo,
     pub battery: BatteryState,
@@ -57,6 +61,7 @@ impl AppState {
             time: &self.time,
             battery: &self.battery,
             media: &self.media,
+            view: self.engine.current_view,
             is_muted: self.is_muted,
             is_dnd: self.is_dnd,
             alert_kind: self.alert_kind,
@@ -68,6 +73,7 @@ impl AppState {
             time: &self.time,
             battery: &self.battery,
             media: &self.media,
+            view: self.engine.current_view,
             is_muted: self.is_muted,
             is_dnd: self.is_dnd,
             alert_kind: self.alert_kind,
@@ -87,6 +93,8 @@ impl Default for AppState {
             is_visible: engine.is_visible,
             is_overlapping: engine.is_overlapping,
             is_hovered: engine.is_hovered,
+            overlap_reveal_generation: 0,
+            overlap_dismiss_generation: 0,
             engine,
             time: TimeInfo {
                 time_str: "00:00".to_string(),

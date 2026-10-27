@@ -7,17 +7,42 @@ export component ChargingIndicator inherits HorizontalLayout {
     in property <bool> is-charging: false;
     in property <bool> compact: false;
 
+    private property <float> progress: min(0.9999, max(0.0, root.percentage / 100.0));
+
     alignment: center;
     spacing: 6px;
 
-    // Circular green accent ring with dark gray background and bolt inside
     if root.is-charging: Rectangle {
         width: 20px;
         height: 20px;
         border-radius: 10px;
         border-width: 1.5px;
-        border-color: ThemeColors.success;
+        border-color: #3f3f46;
         background: #1c1c20;
+
+        Path {
+            width: 20px;
+            height: 20px;
+            viewbox-width: 100;
+            viewbox-height: 100;
+            fill: transparent;
+            stroke: ThemeColors.success;
+            stroke-width: 1.5px;
+
+            MoveTo {
+                x: 50;
+                y: 5;
+            }
+
+            ArcTo {
+                radius-x: 45;
+                radius-y: 45;
+                x: 50 + 45 * sin(root.progress * 360deg);
+                y: 50 - 45 * cos(root.progress * 360deg);
+                sweep: root.progress > 0;
+                large-arc: root.progress > 0.5;
+            }
+        }
 
         Image {
             width: 10px;

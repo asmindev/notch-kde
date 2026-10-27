@@ -1,4 +1,5 @@
 use crate::models::{ActiveModule, AlertKind, BatteryState, IslandView, MediaTrack, TimeInfo};
+use crate::transition_policy::TransitionPolicy;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -22,6 +23,7 @@ pub struct SlotContext<'a> {
     pub time: &'a TimeInfo,
     pub battery: &'a BatteryState,
     pub media: &'a MediaTrack,
+    pub view: IslandView,
     pub is_muted: bool,
     pub is_dnd: bool,
     pub alert_kind: AlertKind,
@@ -88,7 +90,7 @@ impl IslandModule for MediaModule {
     fn priority(&self, ctx: &SlotContext) -> Priority {
         if ctx.media.is_playing {
             Priority::HIGH
-        } else if !ctx.media.title.is_empty() {
+        } else if ctx.view == IslandView::Compact && !ctx.media.title.is_empty() {
             Priority::NORMAL
         } else {
             Priority::INACTIVE
@@ -125,6 +127,8 @@ pub struct ViewEngine {
     pub is_overlapping: bool,
     pub is_hovered: bool,
     pub hover_suppressed: bool,
+    pub overlap_reveal_hold: bool,
+    pub overlap_dismiss_active: bool,
     modules: Vec<Arc<dyn IslandModule>>,
 }
 
@@ -137,6 +141,8 @@ impl PartialEq for ViewEngine {
             && self.is_overlapping == other.is_overlapping
             && self.is_hovered == other.is_hovered
             && self.hover_suppressed == other.hover_suppressed
+            && self.overlap_reveal_hold == other.overlap_reveal_hold
+            && self.overlap_dismiss_active == other.overlap_dismiss_active
     }
 }
 
@@ -156,6 +162,8 @@ impl ViewEngine {
             is_overlapping: false,
             is_hovered: false,
             hover_suppressed: false,
+            overlap_reveal_hold: false,
+            overlap_dismiss_active: false,
             modules: Vec::new(),
         };
 
@@ -195,21 +203,105 @@ impl ViewEngine {
             self.previous_view = self.current_view;
             self.current_view = target;
         }
+        self.recompute_visibility();
+    }
+
+    fn recompute_visibility(&mut self) {
+        self.is_visible = TransitionPolicy::evaluate_for_view(
+            self.is_overlapping,
+            self.is_hovered,
+            self.overlap_reveal_hold,
+            self.overlap_dismiss_active,
+            self.current_view,
+        );
+    }
+
+    pub fn reveal_overlap_compact(&mut self) {
+        self.overlap_reveal_hold = true;
+        self.overlap_dismiss_active = false;
+        self.hover_suppressed = true;
+        self.recompute_visibility();
+    }
+
+    pub fn finish_overlap_reveal(&mut self) {
+        if self.overlap_reveal_hold
+            && self.is_hovered
+            && self.current_view == IslandView::Compact
+        {
+            self.overlap_reveal_hold = false;
+            self.hover_suppressed = false;
+            self.set_view(IslandView::Wide);
+        }
+    }
+
+    pub fn begin_overlap_dismiss(&mut self) {
+        self.overlap_dismiss_active = true;
+        self.overlap_reveal_hold = false;
+        self.hover_suppressed = true;
+        self.set_view(IslandView::Wide);
+    }
+
+    pub fn begin_hover_overlap_dismiss(&mut self) {
+        self.overlap_dismiss_active = true;
+        self.overlap_reveal_hold = false;
+        self.hover_suppressed = false;
+        self.is_hovered = false;
+        self.set_view(IslandView::Compact);
+    }
+
+    pub fn advance_overlap_dismiss(&mut self) {
+        if self.overlap_dismiss_active {
+            self.set_view(IslandView::Compact);
+        }
+    }
+
+    pub fn finish_overlap_dismiss(&mut self) {
+        if self.overlap_dismiss_active {
+            self.overlap_dismiss_active = false;
+            self.recompute_visibility();
+        }
+    }
+
+    pub fn cancel_overlap_sequences(&mut self) {
+        self.overlap_reveal_hold = false;
+        self.overlap_dismiss_active = false;
+        self.hover_suppressed = false;
+        self.recompute_visibility();
     }
 
     /// Handles mouse hover interaction:
-    /// - Hover = true: expands Compact -> Wide (unless hover is suppressed from a recent collapse)
-    /// - Hover = false: collapses Wide -> Compact, and clears any hover suppression
+    /// - Hidden Compact reveals in place and blooms to Wide after the reveal timer.
+    /// - Hover = true: expands visible Compact -> Wide unless suppressed.
+    /// - Hover = false: collapses Wide -> Compact and clears reveal suppression.
     pub fn handle_hover(&mut self, hovered: bool) {
+        if self.overlap_dismiss_active {
+            self.is_hovered = hovered;
+            if hovered {
+                self.overlap_dismiss_active = false;
+                self.hover_suppressed = false;
+                if self.is_overlapping && self.current_view == IslandView::Compact {
+                    self.set_view(IslandView::Wide);
+                }
+            }
+            self.recompute_visibility();
+            return;
+        }
+
+        let was_hidden = !self.is_visible;
+
         if !hovered {
             self.hover_suppressed = false;
+            self.overlap_reveal_hold = false;
         }
 
         self.is_hovered = hovered;
 
-        // Hover over the notch area overrides overlap visibility
-        if self.is_overlapping {
-            self.is_visible = hovered;
+        if hovered && was_hidden && self.is_overlapping && self.current_view == IslandView::Compact
+        {
+            self.overlap_reveal_hold = true;
+            self.hover_suppressed = true;
+            self.recompute_visibility();
+            return;
         }
 
         if hovered {
@@ -219,19 +311,24 @@ impl ViewEngine {
         } else if self.current_view == IslandView::Wide {
             self.set_view(IslandView::Compact);
         }
+
+        self.recompute_visibility();
     }
 
     /// Handles click interaction:
     /// - Compact / Wide -> ExpandView!
     /// - ExpandView -> collapses back directly to CompactView
     pub fn handle_click(&mut self) {
+        self.overlap_reveal_hold = false;
+        self.hover_suppressed = false;
+
         match self.current_view {
             IslandView::Compact | IslandView::Wide => {
                 self.set_view(IslandView::Expand);
             }
             IslandView::Expand => {
-                self.set_view(IslandView::Compact);
                 self.is_hovered = false;
+                self.set_view(IslandView::Compact);
                 self.hover_suppressed = true;
             }
         }
@@ -240,32 +337,40 @@ impl ViewEngine {
     /// Handles explicit collapse button [ v ]:
     /// Retracts from ExpandView directly back to CompactView and suppresses hover
     pub fn handle_collapse(&mut self) {
-        self.set_view(IslandView::Compact);
+        self.overlap_reveal_hold = false;
         self.is_hovered = false;
+        self.set_view(IslandView::Compact);
         self.hover_suppressed = true;
     }
 
-    /// Handles window overlap dodge event:
-    /// - Overlap = true: slides up into hidden state (is_visible = false).
-    /// - Overlap = false: enters into CompactView first (Stage 1),
-    ///   allowing the staged bloom transition to occur after a perceptible delay.
+    /// Handles window overlap dodge events without changing the active view.
+    /// Visibility is recomputed from overlap, hover, reveal, and dismissal state.
     pub fn handle_overlap(&mut self, overlapping: bool) {
         self.is_overlapping = overlapping;
 
-        if overlapping {
-            self.is_visible = false;
-        } else {
-            self.is_visible = true;
-            self.set_view(IslandView::Compact);
+        if !overlapping {
+            if self.overlap_dismiss_active {
+                self.overlap_dismiss_active = false;
+                self.hover_suppressed = false;
+            }
+            if self.overlap_reveal_hold {
+                if self.is_hovered {
+                    self.finish_overlap_reveal();
+                } else {
+                    self.overlap_reveal_hold = false;
+                    self.hover_suppressed = false;
+                }
+            }
         }
+
+        self.recompute_visibility();
     }
 
     /// Compatibility method for media updates
     pub fn handle_media_update(&mut self, track: &MediaTrack) {
         let has_media = !track.title.is_empty();
-        let is_playing = track.is_playing;
 
-        if is_playing || has_media {
+        if track.is_playing || (self.current_view == IslandView::Compact && has_media) {
             self.active_module = ActiveModule::Media;
         } else {
             self.active_module = ActiveModule::System;

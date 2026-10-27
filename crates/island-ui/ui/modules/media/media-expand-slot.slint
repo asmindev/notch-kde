@@ -75,6 +75,8 @@ export component MediaExpandSlot inherits Rectangle {
                     font-size: max(12px, min(17px, root.slot-h * 0.24));
                     font-weight: ThemeTypography.weight-bold;
                     overflow: elide;
+                    wrap: no-wrap;
+                    max-lines: 1;
                     vertical-alignment: center;
                 }
 
@@ -86,6 +88,8 @@ export component MediaExpandSlot inherits Rectangle {
                     font-size: max(10px, min(13px, root.slot-h * 0.18));
                     font-weight: ThemeTypography.weight-medium;
                     overflow: elide;
+                    wrap: no-wrap;
+                    max-lines: 1;
                     vertical-alignment: center;
                 }
 

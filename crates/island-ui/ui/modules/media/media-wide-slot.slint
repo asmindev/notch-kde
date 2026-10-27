@@ -91,6 +91,8 @@ export component MediaWideSlot inherits Rectangle {
                     font-size: max(11px, min(16px, root.content-h * 0.35));
                     font-weight: ThemeTypography.weight-bold;
                     overflow: elide;
+                    wrap: no-wrap;
+                    max-lines: 1;
                     vertical-alignment: center;
                 }
 
@@ -101,6 +103,8 @@ export component MediaWideSlot inherits Rectangle {
                     font-size: max(9px, min(13px, root.content-h * 0.28));
                     font-weight: ThemeTypography.weight-medium;
                     overflow: elide;
+                    wrap: no-wrap;
+                    max-lines: 1;
                     vertical-alignment: center;
                 }
             }

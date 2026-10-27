@@ -1,5 +1,5 @@
 use island_core::{
-    reduce, ActiveModule, AppEvent, AppState, BatteryState, MediaTrack,
+    reduce, ActiveModule, AppEvent, AppState, BatteryState, IslandMode, MediaTrack,
 };
 
 #[test]
@@ -31,6 +31,71 @@ fn test_media_playing_takes_priority_over_system() {
     // Media stopped (no title, not playing) -> priority drops to INACTIVE, falls back to System
     reduce(&mut state, AppEvent::MediaUpdated(MediaTrack::default()));
     assert_eq!(state.active_module, ActiveModule::System);
+}
+
+fn paused_track() -> MediaTrack {
+    MediaTrack {
+        title: "Paused Song".to_string(),
+        artist: "Artist".to_string(),
+        album: "Album".to_string(),
+        art_url: String::new(),
+        is_playing: false,
+        position_ms: 1000,
+        duration_ms: 200000,
+    }
+}
+
+#[test]
+fn test_paused_media_stays_in_compact_but_falls_back_in_wide() {
+    let mut state = AppState::default();
+    reduce(&mut state, AppEvent::WelcomeTimeout);
+    assert_eq!(state.mode, IslandMode::Compact);
+
+    reduce(&mut state, AppEvent::MediaUpdated(paused_track()));
+    assert_eq!(state.active_module, ActiveModule::Media);
+
+    reduce(&mut state, AppEvent::UserHoverChanged(true));
+    assert_eq!(state.mode, IslandMode::Wide);
+    assert_eq!(state.active_module, ActiveModule::System);
+
+    reduce(&mut state, AppEvent::UserHoverChanged(false));
+    assert_eq!(state.mode, IslandMode::Compact);
+    assert_eq!(state.active_module, ActiveModule::Media);
+}
+
+#[test]
+fn test_paused_media_falls_back_in_expand() {
+    let mut state = AppState::default();
+    reduce(&mut state, AppEvent::WelcomeTimeout);
+    reduce(&mut state, AppEvent::MediaUpdated(paused_track()));
+    assert_eq!(state.active_module, ActiveModule::Media);
+
+    reduce(&mut state, AppEvent::IslandClicked);
+    assert_eq!(state.mode, IslandMode::Expand);
+    assert_eq!(state.active_module, ActiveModule::System);
+
+    reduce(&mut state, AppEvent::CollapseClicked);
+    assert_eq!(state.mode, IslandMode::Compact);
+    assert_eq!(state.active_module, ActiveModule::Media);
+}
+
+#[test]
+fn test_playing_media_stays_active_in_all_views() {
+    let mut state = AppState::default();
+    let mut track = paused_track();
+    track.is_playing = true;
+
+    reduce(&mut state, AppEvent::MediaUpdated(track.clone()));
+    assert_eq!(state.mode, IslandMode::Wide);
+    assert_eq!(state.active_module, ActiveModule::Media);
+
+    reduce(&mut state, AppEvent::IslandClicked);
+    assert_eq!(state.mode, IslandMode::Expand);
+    assert_eq!(state.active_module, ActiveModule::Media);
+
+    reduce(&mut state, AppEvent::CollapseClicked);
+    assert_eq!(state.mode, IslandMode::Compact);
+    assert_eq!(state.active_module, ActiveModule::Media);
 }
 
 #[test]

@@ -16,6 +16,9 @@ pub enum AppEvent {
     // Platform & windowing
     WindowOverlapChanged(bool),
     UserHoverChanged(bool),
+    OverlapRevealTimeout(u64),
+    OverlapDismissCompactTimeout(u64),
+    OverlapDismissHideTimeout(u64),
     
     // Mode & module transitions
     ViewSwitchRequested(IslandView),

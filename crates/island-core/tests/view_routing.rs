@@ -3,7 +3,7 @@ use island_core::{reduce, AppEvent, AppState, IslandMode};
 #[test]
 fn test_view_routing_hover_wide() {
     let mut state = AppState::default();
-    state.mode = IslandMode::Compact;
+    reduce(&mut state, AppEvent::ViewSwitchRequested(IslandMode::Compact));
 
     // Hover true expands Compact to Wide
     reduce(&mut state, AppEvent::UserHoverChanged(true));
@@ -17,7 +17,7 @@ fn test_view_routing_hover_wide() {
 #[test]
 fn test_view_routing_click_expand_and_collapse() {
     let mut state = AppState::default();
-    state.mode = IslandMode::Compact;
+    reduce(&mut state, AppEvent::ViewSwitchRequested(IslandMode::Compact));
 
     // Click expands Compact to ExpandView
     reduce(&mut state, AppEvent::IslandClicked);
@@ -31,7 +31,7 @@ fn test_view_routing_click_expand_and_collapse() {
 #[test]
 fn test_collapse_suppresses_immediate_hover_bounce() {
     let mut state = AppState::default();
-    state.mode = IslandMode::Compact;
+    reduce(&mut state, AppEvent::ViewSwitchRequested(IslandMode::Compact));
 
     // 1. Expand to ExpandView
     reduce(&mut state, AppEvent::IslandClicked);
@@ -60,7 +60,7 @@ fn test_collapse_suppresses_immediate_hover_bounce() {
 #[test]
 fn test_expand_click_collapses_directly_to_compact() {
     let mut state = AppState::default();
-    state.mode = IslandMode::Compact;
+    reduce(&mut state, AppEvent::ViewSwitchRequested(IslandMode::Compact));
 
     // Expand via click
     reduce(&mut state, AppEvent::IslandClicked);

@@ -2,6 +2,19 @@ use crate::events::{AppEvent, Effect};
 use crate::models::IslandView;
 use crate::state::AppState;
 
+fn begin_overlap_dismissal(state: &mut AppState, effects: &mut Vec<Effect>) {
+    state.overlap_reveal_generation += 1;
+    state.overlap_dismiss_generation += 1;
+    let generation = state.overlap_dismiss_generation;
+    state.engine.begin_overlap_dismiss();
+    state.update_active_module();
+    effects.push(Effect::ScheduleTimer {
+        id: "overlap_dismiss_compact",
+        duration_ms: 250,
+        generation,
+    });
+}
+
 pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
     let mut effects = Vec::new();
 
@@ -89,24 +102,90 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         }
 
         AppEvent::WindowOverlapChanged(overlapping) => {
+            if !overlapping {
+                state.overlap_dismiss_generation += 1;
+            }
             state.engine.handle_overlap(overlapping);
             state.update_active_module();
+        }
 
-            if !overlapping && state.is_hovered {
+        AppEvent::UserHoverChanged(hovered) => {
+            if !hovered
+                && !state.engine.overlap_dismiss_active
+                && state.engine.current_view == IslandView::Wide
+                && state.engine.is_overlapping
+            {
+                state.overlap_reveal_generation += 1;
+                state.overlap_dismiss_generation += 1;
+                let generation = state.overlap_dismiss_generation;
+                state.engine.begin_hover_overlap_dismiss();
+                state.update_active_module();
                 effects.push(Effect::ScheduleTimer {
-                    id: "bloom_wide",
-                    duration_ms: 300,
-                    generation: 0,
+                    id: "overlap_dismiss_hide",
+                    duration_ms: 250,
+                    generation,
+                });
+            } else {
+                let was_hidden = !state.is_visible;
+                let was_dismissing = state.engine.overlap_dismiss_active;
+                let had_reveal_hold = state.engine.overlap_reveal_hold;
+
+                state.engine.handle_hover(hovered);
+                state.update_active_module();
+
+                if was_dismissing && !state.engine.overlap_dismiss_active {
+                    state.overlap_dismiss_generation += 1;
+                }
+
+                if !hovered {
+                    state.overlap_reveal_generation += 1;
+                } else if was_hidden && state.engine.overlap_reveal_hold && !had_reveal_hold {
+                    state.overlap_reveal_generation += 1;
+                    effects.push(Effect::ScheduleTimer {
+                        id: "overlap_reveal",
+                        duration_ms: 300,
+                        generation: state.overlap_reveal_generation,
+                    });
+                }
+            }
+        }
+
+        AppEvent::OverlapRevealTimeout(generation) => {
+            if generation == state.overlap_reveal_generation {
+                state.engine.finish_overlap_reveal();
+                state.update_active_module();
+            }
+        }
+
+        AppEvent::OverlapDismissCompactTimeout(generation) => {
+            if generation == state.overlap_dismiss_generation
+                && state.engine.overlap_dismiss_active
+                && state.engine.is_overlapping
+            {
+                state.engine.advance_overlap_dismiss();
+                state.update_active_module();
+                effects.push(Effect::ScheduleTimer {
+                    id: "overlap_dismiss_hide",
+                    duration_ms: 250,
+                    generation,
                 });
             }
         }
 
-        AppEvent::UserHoverChanged(hovered) => {
-            state.engine.handle_hover(hovered);
-            state.update_active_module();
+        AppEvent::OverlapDismissHideTimeout(generation) => {
+            if generation == state.overlap_dismiss_generation
+                && state.engine.overlap_dismiss_active
+                && state.engine.is_overlapping
+            {
+                state.engine.finish_overlap_dismiss();
+                state.update_active_module();
+            }
         }
 
         AppEvent::ViewSwitchRequested(target) => {
+            state.overlap_reveal_generation += 1;
+            state.overlap_dismiss_generation += 1;
+            state.engine.cancel_overlap_sequences();
             state.engine.set_view(target);
             state.update_active_module();
         }
@@ -130,6 +209,9 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.pet_is_happy = true;
             state.welcome_generation += 1;
             let gen_id = state.welcome_generation;
+            state.overlap_reveal_generation += 1;
+            state.overlap_dismiss_generation += 1;
+            state.engine.cancel_overlap_sequences();
             state.engine.set_view(IslandView::Wide);
             state.update_active_module();
             effects.push(Effect::ScheduleTimer {
@@ -140,13 +222,36 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         }
 
         AppEvent::IslandClicked => {
-            state.engine.handle_click();
-            state.update_active_module();
+            if !state.is_visible && state.engine.is_overlapping {
+                state.overlap_reveal_generation += 1;
+                state.overlap_dismiss_generation += 1;
+                state.engine.reveal_overlap_compact();
+                state.update_active_module();
+            } else if state.engine.current_view == IslandView::Expand
+                && state.engine.is_overlapping
+            {
+                begin_overlap_dismissal(state, &mut effects);
+            } else {
+                state.overlap_reveal_generation += 1;
+                state.overlap_dismiss_generation += 1;
+                state.engine.cancel_overlap_sequences();
+                state.engine.handle_click();
+                state.update_active_module();
+            }
         }
 
         AppEvent::CollapseClicked => {
-            state.engine.handle_collapse();
-            state.update_active_module();
+            if state.engine.current_view == IslandView::Expand
+                && state.engine.is_overlapping
+            {
+                begin_overlap_dismissal(state, &mut effects);
+            } else {
+                state.overlap_reveal_generation += 1;
+                state.overlap_dismiss_generation += 1;
+                state.engine.cancel_overlap_sequences();
+                state.engine.handle_collapse();
+                state.update_active_module();
+            }
         }
 
         AppEvent::PlayPauseClicked => {

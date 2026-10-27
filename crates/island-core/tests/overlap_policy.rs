@@ -1,4 +1,4 @@
-use island_core::TransitionPolicy;
+use island_core::{IslandView, TransitionPolicy};
 
 #[test]
 fn test_transition_policy_visibility() {
@@ -13,4 +13,36 @@ fn test_transition_policy_visibility() {
 
     // No overlap, hovered -> visible
     assert!(TransitionPolicy::evaluate_visibility(false, true));
+}
+
+#[test]
+fn test_transition_policy_view_aware_visibility() {
+    assert!(!TransitionPolicy::evaluate_for_view(
+        true,
+        false,
+        false,
+        false,
+        IslandView::Compact,
+    ));
+    assert!(TransitionPolicy::evaluate_for_view(
+        true,
+        false,
+        true,
+        false,
+        IslandView::Compact,
+    ));
+    assert!(TransitionPolicy::evaluate_for_view(
+        true,
+        false,
+        false,
+        false,
+        IslandView::Wide,
+    ));
+    assert!(TransitionPolicy::evaluate_for_view(
+        true,
+        false,
+        false,
+        true,
+        IslandView::Compact,
+    ));
 }
