@@ -1,0 +1,75 @@
+import { ThemeColors } from "../../theme/colors.slint";
+import { ThemeTypography } from "../../theme/typography.slint";
+import { IslandContext } from "../../context.slint";
+
+export component AlertCompactSlot inherits HorizontalLayout {
+    width: 100%;
+    height: 100%;
+    padding-left: 10px;
+    padding-right: 12px;
+    alignment: space-between;
+
+    // Left: Glowing Animated Lightning Badge
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            background: #22c55e26; // Soft neon-green halo aura
+
+            Rectangle {
+                x: 2px;
+                y: 2px;
+                width: 20px;
+                height: 20px;
+                border-radius: 10px;
+                background: #172a1e;
+                border-width: 1.5px;
+                border-color: ThemeColors.success;
+
+                Image {
+                    width: 11px;
+                    height: 11px;
+                    source: @image-url("../../../assets/icons/zap.svg");
+                    image-fit: contain;
+                    colorize: ThemeColors.success;
+                }
+            }
+        }
+    }
+
+    // Center: Alert Message with smooth typography
+    VerticalLayout {
+        alignment: center;
+        Text {
+            text: IslandContext.alert-kind == 1 ? "charging .." : "System Alert";
+            color: ThemeColors.foreground;
+            font-family: ThemeTypography.font-family;
+            font-size: 11px;
+            font-weight: ThemeTypography.weight-medium;
+            vertical-alignment: center;
+        }
+    }
+
+    // Right: Vivid Value (Percentage)
+    VerticalLayout {
+        alignment: center;
+        HorizontalLayout {
+            alignment: center;
+            padding-left: 6px;
+            padding-right: 6px;
+            padding-top: 2px;
+            padding-bottom: 2px;
+
+            Text {
+                text: "\{IslandContext.battery-percentage}%";
+                color: ThemeColors.success;
+                font-family: ThemeTypography.font-family;
+                font-size: 11px;
+                font-weight: ThemeTypography.weight-bold;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

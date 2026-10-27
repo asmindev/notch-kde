@@ -1,0 +1,48 @@
+import { ThemeColors } from "../../theme/colors.slint";
+import { IslandContext } from "../../context.slint";
+import { PetView } from "../../components/pet-view.slint";
+import { Clock } from "../../components/clock.slint";
+import { ChargingIndicator } from "../../components/charging-indicator.slint";
+
+export component SystemWideSlot inherits Rectangle {
+    out property <bool> is-hovered: false;
+
+    width: 100%;
+    height: 100%;
+
+    // Row: Pet | Clock & Date | Battery
+    HorizontalLayout {
+        x: 18px;
+        y: (parent.height - self.height) / 2;
+        width: parent.width - 36px;
+        height: 34px;
+        alignment: space-between;
+
+        VerticalLayout {
+            alignment: center;
+            PetView {
+                pet-size: 28px;
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            Clock {
+                time-str: IslandContext.time-str;
+                date-str: IslandContext.date-str;
+                show-date: true;
+                font-size: 13px;
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            ChargingIndicator {
+                percentage: IslandContext.battery-percentage;
+                is-charging: IslandContext.is-charging;
+                compact: false;
+            }
+        }
+    }
+}
+

@@ -1,0 +1,12 @@
+[Unit]
+Description=KDE Dynamic Island daemon
+PartOf=graphical-session.target
+After=plasma-workspace-wayland.target
+
+[Service]
+ExecStart=/usr/local/bin/island-app
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=plasma-workspace-wayland.target

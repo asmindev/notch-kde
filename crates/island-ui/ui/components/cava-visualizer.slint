@@ -1,0 +1,38 @@
+import { ThemeColors } from "../theme/colors.slint";
+
+component CavaBar inherits Rectangle {
+    in property <float> val: 0.0;
+
+    width: 2.5px;
+    height: max(3px, root.val * 16px);
+    background: root.val > 0.9 ? ThemeColors.apple-red :
+        (root.val >= 0.5 ? ThemeColors.accent : ThemeColors.muted);
+    border-radius: 1px;
+    y: (16px - self.height) / 2;
+
+    animate background { duration: 60ms; }
+}
+
+export component CavaVisualizer inherits HorizontalLayout {
+    in property <float> b0: 0.2;
+    in property <float> b1: 0.5;
+    in property <float> b2: 0.8;
+    in property <float> b3: 0.6;
+    in property <float> b4: 0.9;
+    in property <float> b5: 0.4;
+    in property <float> b6: 0.3;
+    in property <float> b7: 0.1;
+
+    spacing: 2px;
+    alignment: center;
+    height: 16px;
+
+    CavaBar { val: root.b0; }
+    CavaBar { val: root.b1; }
+    CavaBar { val: root.b2; }
+    CavaBar { val: root.b3; }
+    CavaBar { val: root.b4; }
+    CavaBar { val: root.b5; }
+    CavaBar { val: root.b6; }
+    CavaBar { val: root.b7; }
+}

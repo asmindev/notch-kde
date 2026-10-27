@@ -1,0 +1,63 @@
+use crate::{ContentRouter, IslandContext, MainWindow};
+use island_core::models::ActiveModule;
+use island_core::state::AppState;
+use slint::ComponentHandle;
+
+pub struct ViewModel;
+
+impl ViewModel {
+    pub fn sync_state_to_ui(window: &MainWindow, state: &AppState) {
+        let ctx = window.global::<IslandContext>();
+
+        ctx.set_active_mode(ContentRouter::mode_to_index(state.mode));
+        ctx.set_active_module(match state.active_module {
+            ActiveModule::System => 0,
+            ActiveModule::Media => 1,
+            ActiveModule::Alert => 2,
+        });
+        ctx.set_alert_kind(state.alert_kind as i32);
+        ctx.set_is_visible_state(state.is_visible);
+
+        ctx.set_time_str(state.time.time_str.clone().into());
+        ctx.set_date_str(state.time.date_str.clone().into());
+
+        ctx.set_battery_percentage(state.battery.percentage as i32);
+        ctx.set_is_charging(state.battery.is_charging);
+
+        ctx.set_song_title(state.media.title.clone().into());
+        ctx.set_song_artist(state.media.artist.clone().into());
+        ctx.set_is_playing(state.media.is_playing);
+        ctx.set_has_audio(state.media.is_playing || state.spectrum.bars.iter().any(|&b| b > 0.05));
+        ctx.set_music_visual_mode(state.music_visual_mode as i32);
+
+        // Resolve Album Art image
+        if !state.media.art_url.is_empty() {
+            let path = std::path::Path::new(&state.media.art_url);
+            if path.exists() {
+                if let Ok(img) = slint::Image::load_from_path(path) {
+                    ctx.set_art_image(img);
+                    ctx.set_has_art(true);
+                } else {
+                    ctx.set_has_art(false);
+                }
+            } else {
+                ctx.set_has_art(false);
+            }
+        } else {
+            ctx.set_has_art(false);
+        }
+
+        ctx.set_is_muted(state.is_muted);
+        ctx.set_is_dnd(state.is_dnd);
+
+        // Spectrum bars
+        ctx.set_b0(state.spectrum.bars[0]);
+        ctx.set_b1(state.spectrum.bars[1]);
+        ctx.set_b2(state.spectrum.bars[2]);
+        ctx.set_b3(state.spectrum.bars[3]);
+        ctx.set_b4(state.spectrum.bars[4]);
+        ctx.set_b5(state.spectrum.bars[5]);
+        ctx.set_b6(state.spectrum.bars[6]);
+        ctx.set_b7(state.spectrum.bars[7]);
+    }
+}

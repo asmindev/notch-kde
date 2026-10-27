@@ -1,0 +1,64 @@
+/// Unified IslandContext (React-style Context singleton for the Dynamic Island)
+/// Conceptually structured into 4 groups: Navigation, Domain, Presentation, Actions.
+export global IslandContext {
+    // ==========================================
+    // 1. NAVIGATION STATE
+    // Menentukan bentuk island dan modul yang sedang aktif
+    // ==========================================
+    in-out property <int> active-mode: 0;   // 0=Compact, 1=Wide, 2=Expand
+    in-out property <int> active-module: 0; // 0=System, 1=Media, 2=Alert
+
+    // ==========================================
+    // 2. DOMAIN STATE
+    // Fakta terkini dari sistem (Waktu, Baterai, Media, CAVA)
+    // ==========================================
+    // Time & Date
+    in-out property <string> time-str: "12:00";
+    in-out property <string> date-str: "Tue, 27 Oct";
+
+    // Battery & Power
+    in-out property <int> battery-percentage: 85;
+    in-out property <bool> is-charging: false;
+
+    // Media & Playback
+    in-out property <string> song-title: "Starboy";
+    in-out property <string> song-artist: "The Weeknd";
+    in-out property <bool> is-playing: false;
+    in-out property <bool> has-audio: false;
+    in-out property <image> art-image;
+    in-out property <bool> has-art: false;
+
+    // Audio spectrum bars (0.0 .. 1.0)
+    in-out property <float> b0: 0.1;
+    in-out property <float> b1: 0.3;
+    in-out property <float> b2: 0.6;
+    in-out property <float> b3: 0.8;
+    in-out property <float> b4: 0.7;
+    in-out property <float> b5: 0.4;
+    in-out property <float> b6: 0.2;
+    in-out property <float> b7: 0.1;
+
+    // Quick System Switches
+    in-out property <bool> is-muted: false;
+    in-out property <bool> is-dnd: false;
+
+    // ==========================================
+    // 3. PRESENTATION STATE
+    // Menentukan hak tampil, layout variant, dan alert aktif
+    // ==========================================
+    in-out property <int> alert-kind: 0;           // 0=None, 1=Charging, 2=LowBattery
+    in-out property <int> music-visual-mode: 0;    // 0=PetPrimary (Pet Left, Art Right), 1=ArtworkPrimary (Art Left, Pet Right)
+    in-out property <bool> is-visible-state: true; // Shell docking visibility
+
+    // ==========================================
+    // 4. ACTIONS
+    // Callback meneruskan perintah ke controller/reducer
+    // ==========================================
+    callback play-pause();
+    callback next-track();
+    callback prev-track();
+    callback toggle-mute();
+    callback toggle-dnd();
+    callback toggle-swap();
+    callback collapse-clicked();
+}

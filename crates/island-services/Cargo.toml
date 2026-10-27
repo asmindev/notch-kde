@@ -1,0 +1,14 @@
+[package]
+name = "island-services"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+island-core = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+zbus = { workspace = true }
+libc = { workspace = true }
+futures-lite = "2"

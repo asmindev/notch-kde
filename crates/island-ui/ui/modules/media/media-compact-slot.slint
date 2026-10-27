@@ -1,0 +1,80 @@
+import { ThemeColors } from "../../theme/colors.slint";
+import { ThemeTypography } from "../../theme/typography.slint";
+import { IslandContext } from "../../context.slint";
+import { PetView } from "../../components/pet-view.slint";
+import { Clock } from "../../components/clock.slint";
+import { CavaVisualizer } from "../../components/cava-visualizer.slint";
+import { ChargingIndicator } from "../../components/charging-indicator.slint";
+
+export component MediaCompactSlot inherits HorizontalLayout {
+    width: 100%;
+    height: 100%;
+    padding-left: 10px;
+    padding-right: 12px;
+    alignment: space-between;
+
+    // Left: 3D Pet
+    VerticalLayout {
+        alignment: center;
+        PetView {
+            pet-size: 20px;
+        }
+    }
+
+    // Center: Digital Clock (Strictly immutable in Compact mode)
+    VerticalLayout {
+        alignment: center;
+        Clock {
+            time-str: IslandContext.time-str;
+            show-date: false;
+            font-size: 12px;
+        }
+    }
+
+    // Right: Live CAVA Spectrum Visualizer when playing, Charging Ring when paused/stopped
+    VerticalLayout {
+        alignment: center;
+
+        Rectangle {
+            width: IslandContext.is-playing ? 32px : 20px;
+            height: 20px;
+
+            animate width { duration: 180ms; easing: ease-out; }
+
+            // Live CAVA bars when playing
+            cava-box := Rectangle {
+                width: 100%;
+                height: 100%;
+                opacity: IslandContext.is-playing ? 1.0 : 0.0;
+                visible: self.opacity > 0.01;
+                animate opacity { duration: 180ms; easing: ease-out; }
+
+                CavaVisualizer {
+                    b0: IslandContext.b0;
+                    b1: IslandContext.b1;
+                    b2: IslandContext.b2;
+                    b3: IslandContext.b3;
+                    b4: IslandContext.b4;
+                    b5: IslandContext.b5;
+                    b6: IslandContext.b6;
+                    b7: IslandContext.b7;
+                }
+            }
+
+            // Charging Ring / Battery when paused or stopped
+            charge-box := Rectangle {
+                width: 100%;
+                height: 100%;
+                opacity: !IslandContext.is-playing ? 1.0 : 0.0;
+                visible: self.opacity > 0.01;
+                animate opacity { duration: 180ms; easing: ease-out; }
+
+                ChargingIndicator {
+                    percentage: IslandContext.battery-percentage;
+                    is-charging: IslandContext.is-charging;
+                    compact: true;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,32 @@
+import { ThemeColors } from "../theme/colors.slint";
+import { ThemeMetrics } from "../theme/metrics.slint";
+
+export component IconButton inherits Rectangle {
+    in property <image> icon;
+    in property <length> btn-size: 26px;
+    in property <length> icon-size: 14px;
+    in property <bool> active: false;
+    out property <bool> has-hover <=> touch.has-hover;
+    
+    callback clicked();
+
+    width: root.btn-size;
+    height: root.btn-size;
+    border-radius: root.btn-size / 2;
+    background: touch.has-hover 
+        ? ThemeColors.surface-hover 
+        : (root.active ? ThemeColors.surface-hover : ThemeColors.surface);
+
+    animate background { duration: ThemeMetrics.fast-anim; }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    Image {
+        width: root.icon-size;
+        height: root.icon-size;
+        source: root.icon;
+        image-fit: contain;
+    }
+}

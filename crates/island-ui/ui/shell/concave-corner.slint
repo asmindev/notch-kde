@@ -1,0 +1,26 @@
+import { ThemeColors } from "../theme/colors.slint";
+import { ThemeMetrics } from "../theme/metrics.slint";
+
+export component ConcaveCorner inherits Rectangle {
+    in property <bool> is-right: false;
+    in property <color> fill-color: ThemeColors.background;
+
+    width: ThemeMetrics.ear-size;
+    height: ThemeMetrics.ear-size;
+    background: transparent;
+
+    Path {
+        width: parent.width;
+        height: parent.height;
+        viewbox-x: 0;
+        viewbox-y: 0;
+        viewbox-width: 10;
+        viewbox-height: 10;
+        fill: root.fill-color;
+
+        // Exact organic cubic bezier fillet with seamless overlap
+        commands: !root.is-right 
+            ? "M 0 0 L 10.5 0 L 10.5 10 C 10 4.5 4.5 0 0 0 Z"
+            : "M -0.5 0 L 10 0 C 5.5 0 0 4.5 0 10 L -0.5 10 Z";
+    }
+}

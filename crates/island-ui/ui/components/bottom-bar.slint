@@ -1,0 +1,49 @@
+import { ThemeColors } from "../theme/colors.slint";
+import { IslandContext } from "../context.slint";
+import { IconButton } from "icon-button.slint";
+
+export component BottomBar inherits VerticalLayout {
+    out property <bool> is-hovered: mute-btn.has-hover || dnd-btn.has-hover;
+
+    alignment: center;
+    spacing: 3px;
+
+    // Horizontal Gray Divider Line
+    Rectangle {
+        width: 100%;
+        height: 1px;
+        background: #3f3f46;
+        opacity: 0.8;
+    }
+
+    // Action Buttons Row (Mute, DND)
+    HorizontalLayout {
+        alignment: center;
+        spacing: 18px;
+        height: 24px;
+
+        // Mute Toggle Button
+        VerticalLayout {
+            alignment: center;
+            mute-btn := IconButton {
+                icon: @image-url("../../assets/icons/volume-x.svg");
+                btn-size: 22px;
+                icon-size: 12px;
+                active: IslandContext.is-muted;
+                clicked => { IslandContext.toggle-mute(); }
+            }
+        }
+
+        // DND Toggle Button
+        VerticalLayout {
+            alignment: center;
+            dnd-btn := IconButton {
+                icon: @image-url("../../assets/icons/bell-off.svg");
+                btn-size: 22px;
+                icon-size: 12px;
+                active: IslandContext.is-dnd;
+                clicked => { IslandContext.toggle-dnd(); }
+            }
+        }
+    }
+}

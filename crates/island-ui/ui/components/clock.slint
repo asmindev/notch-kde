@@ -1,0 +1,29 @@
+import { ThemeColors } from "../theme/colors.slint";
+import { ThemeTypography } from "../theme/typography.slint";
+
+export component Clock inherits VerticalLayout {
+    in property <string> time-str: "12:00";
+    in property <string> date-str: "";
+    in property <bool> show-date: false;
+    in property <length> font-size: ThemeTypography.size-sm;
+
+    alignment: center;
+    spacing: 1px;
+
+    Text {
+        text: root.time-str;
+        color: ThemeColors.foreground;
+        font-family: ThemeTypography.font-family;
+        font-size: root.font-size;
+        font-weight: ThemeTypography.weight-bold;
+        horizontal-alignment: center;
+    }
+
+    if root.show-date && root.date-str != "": Text {
+        text: root.date-str;
+        color: ThemeColors.muted;
+        font-family: ThemeTypography.font-family;
+        font-size: ThemeTypography.size-xs;
+        horizontal-alignment: center;
+    }
+}

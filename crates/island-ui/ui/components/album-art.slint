@@ -1,0 +1,57 @@
+import { ThemeColors } from "../theme/colors.slint";
+
+export component AlbumArt inherits Rectangle {
+    in property <length> art-size: 48px;
+    in property <image> art-source;
+    in property <bool> has-art: false;
+
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    background: #141418;
+    border-width: 1px;
+    border-color: #27272a;
+    clip: true;
+
+    // Artwork image if available
+    if root.has-art: Image {
+        width: 100%;
+        height: 100%;
+        source: root.art-source;
+        image-fit: cover;
+    }
+
+    // Stylized Vinyl Disc fallback if no artwork
+    if !root.has-art: Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #121216;
+
+        // Outer concentric ring
+        Rectangle {
+            width: parent.width - 10px;
+            height: parent.height - 10px;
+            border-radius: (parent.width - 10px) / 2;
+            border-width: 1px;
+            border-color: #2a2a32;
+        }
+
+        // Inner vinyl groove
+        Rectangle {
+            width: parent.width - 22px;
+            height: parent.height - 22px;
+            border-radius: (parent.width - 22px) / 2;
+            border-width: 1px;
+            border-color: #353540;
+            background: #181820;
+
+            Image {
+                width: 14px;
+                height: 14px;
+                source: @image-url("../../assets/icons/music.svg");
+                image-fit: contain;
+                colorize: ThemeColors.accent;
+            }
+        }
+    }
+}

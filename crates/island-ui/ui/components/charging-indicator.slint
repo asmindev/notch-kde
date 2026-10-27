@@ -1,0 +1,47 @@
+import { ThemeColors } from "../theme/colors.slint";
+import { ThemeTypography } from "../theme/typography.slint";
+
+export component ChargingIndicator inherits HorizontalLayout {
+    in property <int> percentage: 85;
+    in property <bool> is-charging: false;
+    in property <bool> compact: false;
+
+    alignment: center;
+    spacing: 6px;
+
+    // Circular green accent ring with dark gray background and bolt inside
+    if root.is-charging: Rectangle {
+        width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        border-width: 1.5px;
+        border-color: ThemeColors.success;
+        background: #1c1c20;
+
+        Image {
+            width: 10px;
+            height: 10px;
+            source: @image-url("../../assets/icons/zap.svg");
+            image-fit: contain;
+            colorize: ThemeColors.success;
+        }
+    }
+
+    if !root.is-charging: Image {
+        width: 14px;
+        height: 14px;
+        source: @image-url("../../assets/icons/zap.svg");
+        image-fit: contain;
+        colorize: ThemeColors.muted;
+    }
+
+    // Percentage number: strictly hidden in compact mode!
+    if !root.compact: Text {
+        text: "\{root.percentage}%";
+        color: root.is-charging ? ThemeColors.success : ThemeColors.muted;
+        font-family: ThemeTypography.font-family;
+        font-size: ThemeTypography.size-sm;
+        font-weight: ThemeTypography.weight-bold;
+        vertical-alignment: center;
+    }
+}

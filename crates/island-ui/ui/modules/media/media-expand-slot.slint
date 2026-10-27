@@ -1,0 +1,120 @@
+import { ThemeColors } from "../../theme/colors.slint";
+import { ThemeTypography } from "../../theme/typography.slint";
+import { IslandContext } from "../../context.slint";
+import { PetView } from "../../components/pet-view.slint";
+import { AlbumArt } from "../../components/album-art.slint";
+import { PlaybackControls } from "../../components/playback-controls.slint";
+import { CavaVisualizer } from "../../components/cava-visualizer.slint";
+
+export component MediaExpandSlot inherits Rectangle {
+    out property <bool> is-hovered: controls.is-hovered || art-touch.has-hover;
+
+    width: 100%;
+    height: 100%;
+
+    HorizontalLayout {
+        width: 100%;
+        height: 100%;
+        alignment: space-between;
+
+        // LEFT GROUP: [Art Cover] + [Title | Artist | Visualizer tepat di bawah artist]
+        HorizontalLayout {
+            alignment: start;
+            spacing: 14px;
+            horizontal-stretch: 1;
+
+            // 1. Art Cover (50px x 50px, Clickable to flip with 3D Pet)
+            VerticalLayout {
+                alignment: center;
+                art-container := Rectangle {
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 10px;
+                    background: #141418;
+                    border-width: 1px;
+                    border-color: #27272a;
+                    clip: true;
+
+                    // Mode 0: Album Art Cover (Default)
+                    if IslandContext.music-visual-mode == 0: AlbumArt {
+                        art-size: 50px;
+                        art-source: IslandContext.art-image;
+                        has-art: IslandContext.has-art;
+                    }
+
+                    // Mode 1: 3D Pet (Flipped)
+                    if IslandContext.music-visual-mode == 1: VerticalLayout {
+                        alignment: center;
+                        PetView {
+                            pet-size: 42px;
+                        }
+                    }
+
+                    art-touch := TouchArea {
+                        clicked => { IslandContext.toggle-swap(); }
+                    }
+                }
+            }
+
+            // 2. Center: Title (atas) | Artist (bawah) | Visualizer tepat di bawah artist
+            VerticalLayout {
+                alignment: center;
+                spacing: 3px;
+                horizontal-stretch: 1;
+
+                // Song Title
+                Text {
+                    text: IslandContext.song-title != "" ? IslandContext.song-title : "No Track";
+                    color: ThemeColors.foreground;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-base;
+                    font-weight: ThemeTypography.weight-bold;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+
+                // Artist Name
+                Text {
+                    text: IslandContext.song-artist != "" ? IslandContext.song-artist : "Unknown Artist";
+                    color: ThemeColors.muted;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-sm;
+                    font-weight: ThemeTypography.weight-medium;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+
+                // Visualizer tepat di bawah artist!
+                HorizontalLayout {
+                    alignment: start;
+                    padding-top: 3px;
+                    height: 16px;
+
+                    CavaVisualizer {
+                        b0: IslandContext.b0;
+                        b1: IslandContext.b1;
+                        b2: IslandContext.b2;
+                        b3: IslandContext.b3;
+                        b4: IslandContext.b4;
+                        b5: IslandContext.b5;
+                        b6: IslandContext.b6;
+                        b7: IslandContext.b7;
+                    }
+                }
+            }
+        }
+
+        // 3. RIGHT: Playback Controls (Previous, Play/Pause, Next)
+        VerticalLayout {
+            alignment: center;
+            controls := PlaybackControls {
+                width: 96px;
+                height: 28px;
+                is-playing: IslandContext.is-playing;
+                play-pause => { IslandContext.play-pause(); }
+                next => { IslandContext.next-track(); }
+                previous => { IslandContext.prev-track(); }
+            }
+        }
+    }
+}

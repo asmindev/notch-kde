@@ -1,0 +1,16 @@
+[package]
+name = "island-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+island-core = { workspace = true }
+island-ui = { workspace = true }
+island-platform = { workspace = true }
+island-services = { workspace = true }
+
+slint = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

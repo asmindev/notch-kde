@@ -1,0 +1,72 @@
+import { ThemeColors } from "../../theme/colors.slint";
+import { ThemeTypography } from "../../theme/typography.slint";
+import { IslandContext } from "../../context.slint";
+import { PetView } from "../../components/pet-view.slint";
+import { ChargingIndicator } from "../../components/charging-indicator.slint";
+
+export component SystemExpandSlot inherits VerticalLayout {
+    out property <bool> is-hovered: false;
+
+    width: 100%;
+    height: 100%;
+    spacing: 8px;
+
+    // Large Clock + Date + Pet
+    HorizontalLayout {
+        alignment: space-between;
+        height: 42px;
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: IslandContext.time-str;
+                color: ThemeColors.foreground;
+                font-family: ThemeTypography.font-family;
+                font-size: ThemeTypography.size-lg;
+                font-weight: ThemeTypography.weight-bold;
+            }
+
+            Text {
+                text: IslandContext.date-str;
+                color: ThemeColors.muted;
+                font-family: ThemeTypography.font-family;
+                font-size: ThemeTypography.size-xs;
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            PetView {
+                pet-size: 38px;
+            }
+        }
+    }
+
+    // Battery Status Bar
+    HorizontalLayout {
+        alignment: space-between;
+        height: 28px;
+
+        VerticalLayout {
+            alignment: center;
+            ChargingIndicator {
+                percentage: IslandContext.battery-percentage;
+                is-charging: IslandContext.is-charging;
+                compact: false;
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: IslandContext.is-charging ? "Charging" : (IslandContext.battery-percentage > 20 ? "Battery Normal" : "Battery Low");
+                color: IslandContext.is-charging ? #22c55e : ThemeColors.muted;
+                font-family: ThemeTypography.font-family;
+                font-size: ThemeTypography.size-xs;
+                font-weight: ThemeTypography.weight-medium;
+            }
+        }
+    }
+}

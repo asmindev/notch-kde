@@ -1,0 +1,34 @@
+export global ThemeMetrics {
+    // Window canvas (extra room for expand view and smooth spring overshoot)
+    in-out property <length> window-width: 480px;
+    in-out property <length> window-height: 220px;
+
+    // Dynamic Island 3-Tier Morph dimensions
+    in-out property <length> compact-width: 176px;
+    in-out property <length> compact-alert-width: 228px;
+    in-out property <length> compact-height: 30px;
+    in-out property <length> compact-radius: 15px;
+
+    in-out property <length> wide-width: 390px;
+    in-out property <length> wide-height: 46px;
+    in-out property <length> wide-radius: 20px;
+
+    in-out property <length> expand-width: 440px;
+    in-out property <length> expand-height: 150px;
+    in-out property <length> expand-radius: 24px;
+
+    // Bottom Bar Extension Height (Extends at bottom, does not occupy main content container)
+    in-out property <length> bottom-bar-height: 28px;
+
+    // Dynamic Concave Ear sizes
+    in-out property <length> ear-size: 10px;
+    in-out property <length> compact-ear-size: 5px;
+    in-out property <length> wide-ear-size: 10px;
+
+    // Animation Durations
+    in-out property <duration> expand-duration: 380ms;
+    in-out property <duration> collapse-duration: 260ms;
+    in-out property <duration> crossfade-duration: 200ms;
+    in-out property <duration> fast-anim: 120ms;
+    in-out property <duration> normal-anim: 300ms;
+}

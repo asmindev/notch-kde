@@ -1,0 +1,27 @@
+import { ThemeColors } from "../theme/colors.slint";
+import { ThemeTypography } from "../theme/typography.slint";
+
+export component MusicInfo inherits VerticalLayout {
+    in property <string> title: "Song Title";
+    in property <string> artist: "Artist Name";
+
+    alignment: center;
+    spacing: 2px;
+
+    Text {
+        text: root.title;
+        color: ThemeColors.foreground;
+        font-family: ThemeTypography.font-family;
+        font-size: ThemeTypography.size-sm;
+        font-weight: ThemeTypography.weight-medium;
+        overflow: elide;
+    }
+
+    Text {
+        text: root.artist;
+        color: ThemeColors.muted;
+        font-family: ThemeTypography.font-family;
+        font-size: ThemeTypography.size-xs;
+        overflow: elide;
+    }
+}

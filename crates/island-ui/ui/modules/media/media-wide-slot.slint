@@ -1,0 +1,117 @@
+import { ThemeColors } from "../../theme/colors.slint";
+import { ThemeTypography } from "../../theme/typography.slint";
+import { IslandContext } from "../../context.slint";
+import { PetView } from "../../components/pet-view.slint";
+import { AlbumArt } from "../../components/album-art.slint";
+import { PlaybackControls } from "../../components/playback-controls.slint";
+
+export component MediaWideSlot inherits Rectangle {
+    out property <bool> is-hovered: music-controls.is-hovered || art-touch.has-hover;
+
+    width: 100%;
+    height: 100%;
+
+    HorizontalLayout {
+        x: 16px;
+        y: (parent.height - self.height) / 2;
+        width: parent.width - 32px;
+        height: 36px;
+        alignment: space-between;
+
+        // LEFT GROUP: [Art Cover] + [Title & Artist rapat ke artcover]
+        HorizontalLayout {
+            alignment: start;
+            spacing: 10px;
+            horizontal-stretch: 1;
+
+            // 1. Art Cover (Clickable to flip with 3D Pet)
+            VerticalLayout {
+                alignment: center;
+                art-container := Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 8px;
+                    background: #141418;
+                    border-width: 1px;
+                    border-color: #27272a;
+                    clip: true;
+
+                    // Mode 0: Album Art Cover (Default)
+                    art-view := Rectangle {
+                        width: 100%;
+                        height: 100%;
+                        opacity: IslandContext.music-visual-mode == 0 ? 1.0 : 0.0;
+                        visible: self.opacity > 0.01;
+                        animate opacity { duration: 180ms; easing: ease-out; }
+
+                        AlbumArt {
+                            art-size: 36px;
+                            art-source: IslandContext.art-image;
+                            has-art: IslandContext.has-art;
+                        }
+                    }
+
+                    // Mode 1: 3D Pet (Flipped)
+                    pet-view := Rectangle {
+                        width: 100%;
+                        height: 100%;
+                        opacity: IslandContext.music-visual-mode == 1 ? 1.0 : 0.0;
+                        visible: self.opacity > 0.01;
+                        animate opacity { duration: 180ms; easing: ease-out; }
+
+                        VerticalLayout {
+                            alignment: center;
+                            PetView {
+                                pet-size: 30px;
+                            }
+                        }
+                    }
+
+                    art-touch := TouchArea {
+                        clicked => { IslandContext.toggle-swap(); }
+                    }
+                }
+            }
+
+            // 2. Title Song (Atas) | Artist (Bawah) - rapat ke artcover
+            VerticalLayout {
+                alignment: center;
+                spacing: 2px;
+                horizontal-stretch: 1;
+
+                Text {
+                    text: IslandContext.song-title != "" ? IslandContext.song-title : "No Track";
+                    color: ThemeColors.foreground;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-sm;
+                    font-weight: ThemeTypography.weight-bold;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: IslandContext.song-artist != "" ? IslandContext.song-artist : "Unknown Artist";
+                    color: ThemeColors.muted;
+                    font-family: ThemeTypography.font-family;
+                    font-size: 11px;
+                    font-weight: ThemeTypography.weight-medium;
+                    overflow: elide;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // 3. RIGHT: Music Playback Controls
+        VerticalLayout {
+            alignment: center;
+            music-controls := PlaybackControls {
+                width: 92px;
+                height: 26px;
+                is-playing: IslandContext.is-playing;
+                play-pause => { IslandContext.play-pause(); }
+                next => { IslandContext.next-track(); }
+                previous => { IslandContext.prev-track(); }
+            }
+        }
+    }
+}

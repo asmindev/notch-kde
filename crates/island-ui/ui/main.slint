@@ -1,0 +1,82 @@
+import { ThemeMetrics } from "theme/metrics.slint";
+import { IslandShell } from "shell/island-shell.slint";
+import { IslandContext } from "context.slint";
+import { CompactView } from "views/compact-view.slint";
+import { WideView } from "views/wide-view.slint";
+import { ExpandView } from "views/expand-view.slint";
+
+export { IslandContext }
+
+export component MainWindow inherits Window {
+    title: "island-app";
+    no-frame: true;
+    background: transparent;
+    always-on-top: true;
+    
+    width: ThemeMetrics.window-width;
+    height: ThemeMetrics.window-height;
+
+    // Window level event callbacks
+    callback hover-changed(bool);
+    callback island-clicked();
+
+    // Unified Hover Tracking (Shell background OR active child controls)
+    property <bool> is-any-hovered: shell.has-hover 
+        || (IslandContext.active-mode == 1 && wide-view.is-hovered)
+        || (IslandContext.active-mode == 2 && expand-view.is-hovered);
+
+    changed is-any-hovered => {
+        root.hover-changed(self.is-any-hovered);
+    }
+
+    shell := IslandShell {
+        active-mode: IslandContext.active-mode;
+        alert-kind: IslandContext.alert-kind;
+        is-expanded: IslandContext.active-mode != 0;
+        is-visible-state: IslandContext.is-visible-state;
+
+        island-clicked => { root.island-clicked(); }
+
+        // Zero-Instantiation 3-Tier View Crossfade Stack
+        Rectangle {
+            width: 100%;
+            height: 100%;
+
+            // View 0: Compact (Default Desktop State)
+            CompactView {
+                width: 100%;
+                height: 100%;
+                opacity: IslandContext.active-mode == 0 ? 1.0 : 0.0;
+                y: IslandContext.active-mode == 0 ? 0px : -4px;
+                visible: self.opacity > 0.01;
+
+                animate opacity { duration: ThemeMetrics.crossfade-duration; easing: ease-out; }
+                animate y { duration: ThemeMetrics.crossfade-duration; easing: ease-out; }
+            }
+
+            // View 1: Wide (Hover State)
+            wide-view := WideView {
+                width: 100%;
+                height: 100%;
+                opacity: IslandContext.active-mode == 1 ? 1.0 : 0.0;
+                y: IslandContext.active-mode == 1 ? 0px : (IslandContext.active-mode == 2 ? 16px : 4px);
+                visible: self.opacity > 0.01;
+
+                animate opacity { duration: 180ms; easing: ease-out; }
+                animate y { duration: 200ms; easing: ease-out; }
+            }
+
+            // View 2: Expand (Click State - Interactive Dashboard Card)
+            expand-view := ExpandView {
+                width: 100%;
+                height: 100%;
+                opacity: IslandContext.active-mode == 2 ? 1.0 : 0.0;
+                y: IslandContext.active-mode == 2 ? 0px : -48px;
+                visible: self.opacity > 0.01;
+
+                animate opacity { duration: 150ms; easing: ease-out; }
+                animate y { duration: 220ms; easing: cubic-bezier(0.34, 1.25, 0.64, 1.0); }
+            }
+        }
+    }
+}

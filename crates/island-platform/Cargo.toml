@@ -1,0 +1,15 @@
+[package]
+name = "island-platform"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+island-core = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+zbus = { workspace = true }
+
+[build-dependencies]
+cc = "1.0"

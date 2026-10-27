@@ -1,0 +1,13 @@
+[package]
+name = "island-ui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+island-core = { workspace = true }
+slint = { workspace = true }
+tracing = { workspace = true }
+
+[build-dependencies]
+slint-build = { workspace = true }

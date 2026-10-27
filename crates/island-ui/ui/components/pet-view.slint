@@ -1,0 +1,14 @@
+export component PetView inherits Rectangle {
+    in property <length> pet-size: 24px;
+    
+    width: root.pet-size;
+    height: root.pet-size;
+    background: transparent;
+
+    Image {
+        width: parent.width;
+        height: parent.height;
+        source: @image-url("../../assets/pet/avatar_labubu.png");
+        image-fit: contain;
+    }
+}

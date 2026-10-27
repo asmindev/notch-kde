@@ -1,0 +1,47 @@
+import { IconButton } from "icon-button.slint";
+
+export component PlaybackControls inherits HorizontalLayout {
+    in property <bool> is-playing: false;
+    out property <bool> is-hovered: prev-btn.has-hover || play-btn.has-hover || next-btn.has-hover;
+    
+    callback play-pause();
+    callback next();
+    callback previous();
+
+    alignment: center;
+    spacing: 10px;
+    height: 26px;
+
+    VerticalLayout {
+        alignment: center;
+        prev-btn := IconButton {
+            icon: @image-url("../../assets/icons/skip-back.svg");
+            btn-size: 20px;
+            icon-size: 10px;
+            clicked => { root.previous(); }
+        }
+    }
+
+    VerticalLayout {
+        alignment: center;
+        play-btn := IconButton {
+            icon: root.is-playing 
+                ? @image-url("../../assets/icons/pause.svg") 
+                : @image-url("../../assets/icons/play.svg");
+            btn-size: 26px;
+            icon-size: 13px;
+            active: root.is-playing;
+            clicked => { root.play-pause(); }
+        }
+    }
+
+    VerticalLayout {
+        alignment: center;
+        next-btn := IconButton {
+            icon: @image-url("../../assets/icons/skip-forward.svg");
+            btn-size: 20px;
+            icon-size: 10px;
+            clicked => { root.next(); }
+        }
+    }
+}

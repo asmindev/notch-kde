@@ -1,0 +1,105 @@
+import { ThemeColors } from "../theme/colors.slint";
+import { ThemeMetrics } from "../theme/metrics.slint";
+import { ThemeTypography } from "../theme/typography.slint";
+import { IslandContext } from "../context.slint";
+import { IconButton } from "../components/icon-button.slint";
+import { BottomBar } from "../components/bottom-bar.slint";
+import { SystemExpandSlot } from "../modules/system/system-expand-slot.slint";
+import { MediaExpandSlot } from "../modules/media/media-expand-slot.slint";
+
+export component ExpandView inherits VerticalLayout {
+    out property <bool> is-hovered: collapse-btn.has-hover 
+        || bottom-bar.is-hovered
+        || (IslandContext.active-module == 1 && media-slot.is-hovered) 
+        || (IslandContext.active-module == 0 && system-slot.is-hovered);
+
+    width: 100%;
+    height: 100%;
+    spacing: 0px;
+    padding: 0px;
+
+    // 1. Primary Expand Content Container (Strictly 100% proportional to ThemeMetrics.expand-height)
+    VerticalLayout {
+        width: 100%;
+        height: ThemeMetrics.expand-height;
+        padding-left: 18px;
+        padding-right: 18px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        spacing: 8px;
+
+        // ==========================================
+        // TEMPLATE HEADER (Shared by all modules)
+        // ==========================================
+        HorizontalLayout {
+            alignment: space-between;
+            height: 22px;
+
+            HorizontalLayout {
+                alignment: start;
+                spacing: 8px;
+
+                Image {
+                    width: 14px;
+                    height: 14px;
+                    source: IslandContext.active-module == 1 
+                        ? @image-url("../../assets/icons/music.svg")
+                        : @image-url("../../assets/icons/zap.svg");
+                    image-fit: contain;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                Text {
+                    text: IslandContext.active-module == 1 ? "Now Playing" : "System Overview";
+                    color: ThemeColors.muted;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-xs;
+                    font-weight: ThemeTypography.weight-medium;
+                    vertical-alignment: center;
+                }
+            }
+
+            VerticalLayout {
+                alignment: center;
+                collapse-btn := IconButton {
+                    icon: @image-url("../../assets/icons/chevron-down.svg");
+                    btn-size: 20px;
+                    icon-size: 11px;
+                    clicked => { IslandContext.collapse-clicked(); }
+                }
+            }
+        }
+
+        // ==========================================
+        // TEMPLATE BODY SLOT (Dynamic Module Content)
+        // ==========================================
+        Rectangle {
+            width: 100%;
+            vertical-stretch: 1;
+
+            // Slot 0: System Module Expand Slot
+            system-slot := SystemExpandSlot {
+                visible: IslandContext.active-module == 0;
+                opacity: IslandContext.active-module == 0 ? 1.0 : 0.0;
+            }
+
+            // Slot 1: Media Module Expand Slot
+            media-slot := MediaExpandSlot {
+                visible: IslandContext.active-module == 1;
+                opacity: IslandContext.active-module == 1 ? 1.0 : 0.0;
+            }
+        }
+    }
+
+    // 2. Bottom Bar Extension (Extends at bottom, does not occupy expand container)
+    HorizontalLayout {
+        padding-left: 18px;
+        padding-right: 18px;
+        height: ThemeMetrics.bottom-bar-height;
+
+        bottom-bar := BottomBar {
+            width: 100%;
+            height: 100%;
+        }
+    }
+}
