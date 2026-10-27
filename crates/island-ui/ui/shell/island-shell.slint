@@ -28,12 +28,12 @@ export component IslandShell inherits Rectangle {
     property <length> target-h: 
         !root.is-visible-state ? ThemeMetrics.compact-height :
         (root.active-mode == 2 ? (ThemeMetrics.expand-height + ThemeMetrics.bottom-bar-height) :
-        (root.active-mode == 1 ? (IslandContext.is-welcome ? ThemeMetrics.wide-height : (ThemeMetrics.wide-height + ThemeMetrics.bottom-bar-height)) :
+        (root.active-mode == 1 ? (IslandContext.is-welcome ? ThemeMetrics.welcome-height : (ThemeMetrics.wide-height + ThemeMetrics.bottom-bar-height)) :
         ThemeMetrics.compact-height));
 
     property <length> target-r:
         root.active-mode == 2 ? ThemeMetrics.expand-radius :
-        (root.active-mode == 1 ? ThemeMetrics.wide-radius :
+        (root.active-mode == 1 ? (IslandContext.is-welcome ? ThemeMetrics.welcome-radius : ThemeMetrics.wide-radius) :
         ThemeMetrics.compact-radius);
 
     // Dynamic Concave Ear Size: 5px in Compact, 10px in Wide & Expand

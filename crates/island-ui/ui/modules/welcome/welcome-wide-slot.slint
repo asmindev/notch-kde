@@ -10,7 +10,7 @@ export component WelcomeWideSlot inherits Rectangle {
     height: 100%;
 
     property <length> margin-x: max(12px, min(24px, ThemeMetrics.wide-width * 0.04));
-    property <length> content-h: ThemeMetrics.wide-height * 0.85;
+    property <length> content-h: ThemeMetrics.welcome-height * 0.85;
 
     HorizontalLayout {
         x: root.margin-x;
@@ -23,7 +23,7 @@ export component WelcomeWideSlot inherits Rectangle {
         VerticalLayout {
             alignment: center;
             PetView {
-                pet-size: max(26px, min(38px, root.content-h * 0.95));
+                pet-size: max(28px, min(44px, root.content-h * 0.92));
             }
         }
 

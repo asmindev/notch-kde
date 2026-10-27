@@ -20,10 +20,10 @@ export component WideView inherits VerticalLayout {
     spacing: 0px;
     padding: 0px;
 
-    // 1. Primary Wide Content Container (Strictly 100% proportional to ThemeMetrics.wide-height)
+    // 1. Primary Wide Content Container (Strictly 100% proportional to ThemeMetrics.wide-height or ThemeMetrics.welcome-height)
     Rectangle {
         width: 100%;
-        height: ThemeMetrics.wide-height;
+        height: IslandContext.is-welcome ? ThemeMetrics.welcome-height : ThemeMetrics.wide-height;
 
         // Slot -1: Welcome Greeting Slot (Option 1 - Labubu Greeting)
         if IslandContext.is-welcome: WelcomeWideSlot {
