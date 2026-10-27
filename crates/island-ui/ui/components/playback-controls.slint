@@ -3,22 +3,28 @@ import { Icons } from "../theme/icons.slint";
 
 export component PlaybackControls inherits HorizontalLayout {
     in property <bool> is-playing: false;
+    in property <length> control-size: 26px;
     out property <bool> is-hovered: prev-btn.has-hover || play-btn.has-hover || next-btn.has-hover;
     
     callback play-pause();
     callback next();
     callback previous();
 
+    property <length> play-btn-size: root.control-size;
+    property <length> skip-btn-size: root.control-size * 0.8;
+    property <length> btn-spacing: max(6px, min(12px, root.control-size * 0.35));
+
     alignment: center;
-    spacing: 10px;
-    height: 26px;
+    spacing: self.btn-spacing;
+    height: root.control-size;
+    width: (self.skip-btn-size * 2) + self.play-btn-size + (self.btn-spacing * 2);
 
     VerticalLayout {
         alignment: center;
         prev-btn := IconButton {
             icon: Icons.skip-back;
-            btn-size: 20px;
-            icon-size: 10px;
+            btn-size: root.skip-btn-size;
+            icon-size: root.skip-btn-size * 0.5;
             clicked => { root.previous(); }
         }
     }
@@ -27,8 +33,8 @@ export component PlaybackControls inherits HorizontalLayout {
         alignment: center;
         play-btn := IconButton {
             icon: root.is-playing ? Icons.pause : Icons.play;
-            btn-size: 26px;
-            icon-size: 13px;
+            btn-size: root.play-btn-size;
+            icon-size: root.play-btn-size * 0.5;
             active: root.is-playing;
             clicked => { root.play-pause(); }
         }
@@ -38,8 +44,8 @@ export component PlaybackControls inherits HorizontalLayout {
         alignment: center;
         next-btn := IconButton {
             icon: Icons.skip-forward;
-            btn-size: 20px;
-            icon-size: 10px;
+            btn-size: root.skip-btn-size;
+            icon-size: root.skip-btn-size * 0.5;
             clicked => { root.next(); }
         }
     }

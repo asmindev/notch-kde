@@ -1,6 +1,7 @@
 import { ThemeColors } from "../../theme/colors.slint";
 import { ThemeTypography } from "../../theme/typography.slint";
 import { Icons } from "../../theme/icons.slint";
+import { ThemeMetrics } from "../../theme/metrics.slint";
 
 export component AlertWideSlot inherits Rectangle {
     in property <string> alert-title: "Notification";
@@ -10,17 +11,20 @@ export component AlertWideSlot inherits Rectangle {
     width: 100%;
     height: 100%;
 
+    property <length> icon-dim: max(18px, min(28px, ThemeMetrics.wide-height * 0.55));
+    property <length> margin-x: max(12px, min(24px, ThemeMetrics.wide-width * 0.04));
+
     HorizontalLayout {
-        padding-left: 16px;
-        padding-right: 16px;
+        padding-left: root.margin-x;
+        padding-right: root.margin-x;
         spacing: 12px;
         alignment: start;
 
         VerticalLayout {
             alignment: center;
             Image {
-                width: 22px;
-                height: 22px;
+                width: root.icon-dim;
+                height: root.icon-dim;
                 source: root.alert-icon;
                 image-fit: contain;
             }
@@ -34,7 +38,7 @@ export component AlertWideSlot inherits Rectangle {
                 text: root.alert-title;
                 color: ThemeColors.foreground;
                 font-family: ThemeTypography.font-family;
-                font-size: ThemeTypography.size-sm;
+                font-size: max(11px, min(15px, ThemeMetrics.wide-height * 0.32));
                 font-weight: ThemeTypography.weight-bold;
             }
 
@@ -42,7 +46,7 @@ export component AlertWideSlot inherits Rectangle {
                 text: root.alert-message;
                 color: ThemeColors.muted;
                 font-family: ThemeTypography.font-family;
-                font-size: ThemeTypography.size-xs;
+                font-size: max(9px, min(12px, ThemeMetrics.wide-height * 0.24));
             }
         }
     }

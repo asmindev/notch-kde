@@ -1,4 +1,5 @@
 import { ThemeColors } from "../../theme/colors.slint";
+import { ThemeMetrics } from "../../theme/metrics.slint";
 import { IslandContext } from "../../context.slint";
 import { PetView } from "../../components/pet-view.slint";
 import { Clock } from "../../components/clock.slint";
@@ -7,21 +8,24 @@ import { ChargingIndicator } from "../../components/charging-indicator.slint";
 export component SystemWideSlot inherits Rectangle {
     out property <bool> is-hovered: false;
 
+    property <length> margin-x: max(12px, min(24px, ThemeMetrics.wide-width * 0.04));
+    property <length> content-h: ThemeMetrics.wide-height * 0.82;
+
     width: 100%;
     height: 100%;
 
     // Row: Pet | Clock & Date | Battery
     HorizontalLayout {
-        x: 18px;
-        y: (parent.height - self.height) / 2;
-        width: parent.width - 36px;
-        height: 34px;
+        x: root.margin-x;
+        y: (root.height - self.height) / 2;
+        width: root.width - (root.margin-x * 2);
+        height: root.content-h;
         alignment: space-between;
 
         VerticalLayout {
             alignment: center;
             PetView {
-                pet-size: 28px;
+                pet-size: max(22px, min(44px, root.content-h * 0.85));
             }
         }
 
@@ -30,8 +34,8 @@ export component SystemWideSlot inherits Rectangle {
             Clock {
                 time-str: IslandContext.time-str;
                 date-str: IslandContext.date-str;
-                show-date: true;
-                font-size: 13px;
+                show-date: root.content-h >= 28px;
+                font-size: max(11px, min(16px, root.content-h * 0.38));
             }
         }
 

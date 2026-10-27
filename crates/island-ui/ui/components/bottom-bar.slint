@@ -4,6 +4,7 @@ import { IslandContext } from "../context.slint";
 import { IconButton } from "icon-button.slint";
 
 export component BottomBar inherits VerticalLayout {
+    in property <length> btn-dim: 22px;
     out property <bool> is-hovered: mute-btn.has-hover || dnd-btn.has-hover;
 
     alignment: center;
@@ -20,16 +21,16 @@ export component BottomBar inherits VerticalLayout {
     // Action Buttons Row (Mute, DND)
     HorizontalLayout {
         alignment: center;
-        spacing: 18px;
-        height: 24px;
+        spacing: max(12px, min(20px, root.btn-dim * 0.75));
+        height: root.btn-dim;
 
         // Mute Toggle Button
         VerticalLayout {
             alignment: center;
             mute-btn := IconButton {
                 icon: IslandContext.is-muted ? Icons.volume-x : Icons.volume-2;
-                btn-size: 22px;
-                icon-size: 12px;
+                btn-size: root.btn-dim;
+                icon-size: root.btn-dim * 0.52;
                 active: IslandContext.is-muted;
                 clicked => { IslandContext.toggle-mute(); }
             }
@@ -40,8 +41,8 @@ export component BottomBar inherits VerticalLayout {
             alignment: center;
             dnd-btn := IconButton {
                 icon: IslandContext.is-dnd ? Icons.bell-off : Icons.bell;
-                btn-size: 22px;
-                icon-size: 12px;
+                btn-size: root.btn-dim;
+                icon-size: root.btn-dim * 0.52;
                 active: IslandContext.is-dnd;
                 clicked => { IslandContext.toggle-dnd(); }
             }

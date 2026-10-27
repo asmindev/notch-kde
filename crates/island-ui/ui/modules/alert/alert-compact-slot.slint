@@ -2,36 +2,43 @@ import { ThemeColors } from "../../theme/colors.slint";
 import { ThemeTypography } from "../../theme/typography.slint";
 import { Icons } from "../../theme/icons.slint";
 import { IslandContext } from "../../context.slint";
+import { ThemeMetrics } from "../../theme/metrics.slint";
 
 export component AlertCompactSlot inherits HorizontalLayout {
     width: 100%;
     height: 100%;
-    padding-left: 10px;
-    padding-right: 12px;
+    property <length> pad-x: max(8px, min(16px, ThemeMetrics.compact-width * 0.06));
+    padding-left: root.pad-x;
+    padding-right: root.pad-x;
     alignment: space-between;
+
+    property <length> badge-outer: max(18px, min(24px, ThemeMetrics.compact-height - 6px));
+    property <length> badge-inner: max(14px, min(20px, root.badge-outer - 4px));
+    property <length> icon-dim: max(8px, min(12px, root.badge-inner * 0.55));
+    property <length> font-sz: max(9px, min(13px, ThemeMetrics.compact-height * 0.36));
 
     // Left: Glowing Animated Lightning Badge
     VerticalLayout {
         alignment: center;
         Rectangle {
-            width: 24px;
-            height: 24px;
-            border-radius: 12px;
+            width: root.badge-outer;
+            height: root.badge-outer;
+            border-radius: root.badge-outer / 2;
             background: #22c55e26; // Soft neon-green halo aura
 
             Rectangle {
-                x: 2px;
-                y: 2px;
-                width: 20px;
-                height: 20px;
-                border-radius: 10px;
+                x: (root.badge-outer - root.badge-inner) / 2;
+                y: (root.badge-outer - root.badge-inner) / 2;
+                width: root.badge-inner;
+                height: root.badge-inner;
+                border-radius: root.badge-inner / 2;
                 background: #172a1e;
                 border-width: 1.5px;
                 border-color: ThemeColors.success;
 
                 Image {
-                    width: 11px;
-                    height: 11px;
+                    width: root.icon-dim;
+                    height: root.icon-dim;
                     source: Icons.zap;
                     image-fit: contain;
                     colorize: ThemeColors.success;
@@ -47,7 +54,7 @@ export component AlertCompactSlot inherits HorizontalLayout {
             text: IslandContext.alert-kind == 1 ? "charging .." : "System Alert";
             color: ThemeColors.foreground;
             font-family: ThemeTypography.font-family;
-            font-size: 11px;
+            font-size: root.font-sz;
             font-weight: ThemeTypography.weight-medium;
             vertical-alignment: center;
         }
@@ -67,7 +74,7 @@ export component AlertCompactSlot inherits HorizontalLayout {
                 text: "\{IslandContext.battery-percentage}%";
                 color: ThemeColors.success;
                 font-family: ThemeTypography.font-family;
-                font-size: 11px;
+                font-size: root.font-sz;
                 font-weight: ThemeTypography.weight-bold;
                 vertical-alignment: center;
             }

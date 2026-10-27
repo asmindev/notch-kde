@@ -1,4 +1,5 @@
 import { ThemeColors } from "../../theme/colors.slint";
+import { ThemeMetrics } from "../../theme/metrics.slint";
 import { ThemeTypography } from "../../theme/typography.slint";
 import { IslandContext } from "../../context.slint";
 import { PetView } from "../../components/pet-view.slint";
@@ -8,6 +9,10 @@ import { CavaVisualizer } from "../../components/cava-visualizer.slint";
 
 export component MediaExpandSlot inherits Rectangle {
     out property <bool> is-hovered: controls.is-hovered || art-touch.has-hover;
+
+    // Available slot height inside expand container (excluding header and paddings)
+    property <length> slot-h: max(40px, ThemeMetrics.expand-height - 44px);
+    property <length> art-dim: max(36px, min(80px, root.slot-h * 0.8));
 
     width: 100%;
     height: 100%;
@@ -20,16 +25,16 @@ export component MediaExpandSlot inherits Rectangle {
         // LEFT GROUP: [Art Cover] + [Title | Artist | Visualizer tepat di bawah artist]
         HorizontalLayout {
             alignment: start;
-            spacing: 14px;
+            spacing: max(10px, min(18px, ThemeMetrics.expand-width * 0.03));
             horizontal-stretch: 1;
 
-            // 1. Art Cover (50px x 50px, Clickable to flip with 3D Pet)
+            // 1. Art Cover (Dynamically sized to art-dim, flips with Pet)
             VerticalLayout {
                 alignment: center;
                 art-container := Rectangle {
-                    width: 50px;
-                    height: 50px;
-                    border-radius: 10px;
+                    width: root.art-dim;
+                    height: root.art-dim;
+                    border-radius: root.art-dim * 0.2;
                     background: #141418;
                     border-width: 1px;
                     border-color: #27272a;
@@ -37,7 +42,7 @@ export component MediaExpandSlot inherits Rectangle {
 
                     // Mode 0: Album Art Cover (Default)
                     if IslandContext.music-visual-mode == 0: AlbumArt {
-                        art-size: 50px;
+                        art-size: root.art-dim;
                         art-source: IslandContext.art-image;
                         has-art: IslandContext.has-art;
                     }
@@ -46,7 +51,7 @@ export component MediaExpandSlot inherits Rectangle {
                     if IslandContext.music-visual-mode == 1: VerticalLayout {
                         alignment: center;
                         PetView {
-                            pet-size: 42px;
+                            pet-size: root.art-dim * 0.85;
                         }
                     }
 
@@ -59,7 +64,7 @@ export component MediaExpandSlot inherits Rectangle {
             // 2. Center: Title (atas) | Artist (bawah) | Visualizer tepat di bawah artist
             VerticalLayout {
                 alignment: center;
-                spacing: 3px;
+                spacing: max(2px, min(6px, root.slot-h * 0.04));
                 horizontal-stretch: 1;
 
                 // Song Title
@@ -67,7 +72,7 @@ export component MediaExpandSlot inherits Rectangle {
                     text: IslandContext.song-title != "" ? IslandContext.song-title : "No Track";
                     color: ThemeColors.foreground;
                     font-family: ThemeTypography.font-family;
-                    font-size: ThemeTypography.size-base;
+                    font-size: max(12px, min(17px, root.slot-h * 0.24));
                     font-weight: ThemeTypography.weight-bold;
                     overflow: elide;
                     vertical-alignment: center;
@@ -78,7 +83,7 @@ export component MediaExpandSlot inherits Rectangle {
                     text: IslandContext.song-artist != "" ? IslandContext.song-artist : "Unknown Artist";
                     color: ThemeColors.muted;
                     font-family: ThemeTypography.font-family;
-                    font-size: ThemeTypography.size-sm;
+                    font-size: max(10px, min(13px, root.slot-h * 0.18));
                     font-weight: ThemeTypography.weight-medium;
                     overflow: elide;
                     vertical-alignment: center;
@@ -87,8 +92,8 @@ export component MediaExpandSlot inherits Rectangle {
                 // Visualizer tepat di bawah artist!
                 HorizontalLayout {
                     alignment: start;
-                    padding-top: 3px;
-                    height: 16px;
+                    padding-top: 2px;
+                    height: max(10px, min(18px, root.slot-h * 0.22));
 
                     CavaVisualizer {
                         b0: IslandContext.b0;
@@ -99,17 +104,17 @@ export component MediaExpandSlot inherits Rectangle {
                         b5: IslandContext.b5;
                         b6: IslandContext.b6;
                         b7: IslandContext.b7;
+                        viz-height: max(10px, min(18px, root.slot-h * 0.22));
                     }
                 }
             }
         }
 
-        // 3. RIGHT: Playback Controls (Previous, Play/Pause, Next)
+        // 3. RIGHT: Playback Controls (Responsive to slot-h)
         VerticalLayout {
             alignment: center;
             controls := PlaybackControls {
-                width: 96px;
-                height: 28px;
+                control-size: max(22px, min(34px, root.slot-h * 0.45));
                 is-playing: IslandContext.is-playing;
                 play-pause => { IslandContext.play-pause(); }
                 next => { IslandContext.next-track(); }

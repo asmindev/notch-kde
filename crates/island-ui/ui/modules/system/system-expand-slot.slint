@@ -1,4 +1,5 @@
 import { ThemeColors } from "../../theme/colors.slint";
+import { ThemeMetrics } from "../../theme/metrics.slint";
 import { ThemeTypography } from "../../theme/typography.slint";
 import { IslandContext } from "../../context.slint";
 import { PetView } from "../../components/pet-view.slint";
@@ -7,14 +8,16 @@ import { ChargingIndicator } from "../../components/charging-indicator.slint";
 export component SystemExpandSlot inherits VerticalLayout {
     out property <bool> is-hovered: false;
 
+    property <length> slot-h: max(40px, ThemeMetrics.expand-height - 44px);
+
     width: 100%;
     height: 100%;
-    spacing: 8px;
+    spacing: max(4px, min(10px, root.slot-h * 0.08));
 
     // Large Clock + Date + Pet
     HorizontalLayout {
         alignment: space-between;
-        height: 42px;
+        height: root.slot-h * 0.58;
 
         VerticalLayout {
             alignment: center;
@@ -24,7 +27,7 @@ export component SystemExpandSlot inherits VerticalLayout {
                 text: IslandContext.time-str;
                 color: ThemeColors.foreground;
                 font-family: ThemeTypography.font-family;
-                font-size: ThemeTypography.size-lg;
+                font-size: max(14px, min(24px, root.slot-h * 0.35));
                 font-weight: ThemeTypography.weight-bold;
             }
 
@@ -32,14 +35,14 @@ export component SystemExpandSlot inherits VerticalLayout {
                 text: IslandContext.date-str;
                 color: ThemeColors.muted;
                 font-family: ThemeTypography.font-family;
-                font-size: ThemeTypography.size-xs;
+                font-size: max(9px, min(13px, root.slot-h * 0.2));
             }
         }
 
         VerticalLayout {
             alignment: center;
             PetView {
-                pet-size: 38px;
+                pet-size: max(26px, min(52px, root.slot-h * 0.52));
             }
         }
     }
@@ -47,7 +50,7 @@ export component SystemExpandSlot inherits VerticalLayout {
     // Battery Status Bar
     HorizontalLayout {
         alignment: space-between;
-        height: 28px;
+        height: root.slot-h * 0.35;
 
         VerticalLayout {
             alignment: center;
@@ -64,7 +67,7 @@ export component SystemExpandSlot inherits VerticalLayout {
                 text: IslandContext.is-charging ? "Charging" : (IslandContext.battery-percentage > 20 ? "Battery Normal" : "Battery Low");
                 color: IslandContext.is-charging ? #22c55e : ThemeColors.muted;
                 font-family: ThemeTypography.font-family;
-                font-size: ThemeTypography.size-xs;
+                font-size: max(9px, min(13px, root.slot-h * 0.22));
                 font-weight: ThemeTypography.weight-medium;
             }
         }

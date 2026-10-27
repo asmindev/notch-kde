@@ -41,13 +41,14 @@ export component WideView inherits VerticalLayout {
 
     // 2. Bottom Bar Extension (Extends at bottom, does not occupy wide container)
     HorizontalLayout {
-        padding-left: 16px;
-        padding-right: 16px;
+        padding-left: max(12px, min(24px, root.width * 0.04));
+        padding-right: max(12px, min(24px, root.width * 0.04));
         height: ThemeMetrics.bottom-bar-height;
 
         bottom-bar := BottomBar {
             width: 100%;
             height: 100%;
+            btn-dim: max(18px, min(24px, ThemeMetrics.bottom-bar-height * 0.75));
         }
     }
 }

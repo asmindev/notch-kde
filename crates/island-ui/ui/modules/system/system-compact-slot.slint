@@ -14,7 +14,7 @@ export component SystemCompactSlot inherits HorizontalLayout {
     VerticalLayout {
         alignment: center;
         PetView {
-            pet-size: 20px;
+            pet-size: max(16px, min(24px, parent.height * 0.7));
         }
     }
 
@@ -24,7 +24,7 @@ export component SystemCompactSlot inherits HorizontalLayout {
         Clock {
             time-str: IslandContext.time-str;
             show-date: false;
-            font-size: 12px;
+            font-size: max(10px, min(14px, parent.height * 0.42));
         }
     }
 

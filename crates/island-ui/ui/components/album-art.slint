@@ -8,7 +8,7 @@ export component AlbumArt inherits Rectangle {
 
     width: 100%;
     height: 100%;
-    border-radius: 10px;
+    border-radius: root.width * 0.22;
     background: #141418;
     border-width: 1px;
     border-color: #27272a;
@@ -30,25 +30,25 @@ export component AlbumArt inherits Rectangle {
 
         // Outer concentric ring
         Rectangle {
-            width: parent.width - 10px;
-            height: parent.height - 10px;
-            border-radius: (parent.width - 10px) / 2;
+            width: parent.width * 0.82;
+            height: parent.height * 0.82;
+            border-radius: self.width / 2;
             border-width: 1px;
             border-color: #2a2a32;
         }
 
         // Inner vinyl groove
         Rectangle {
-            width: parent.width - 22px;
-            height: parent.height - 22px;
-            border-radius: (parent.width - 22px) / 2;
+            width: parent.width * 0.52;
+            height: parent.height * 0.52;
+            border-radius: self.width / 2;
             border-width: 1px;
             border-color: #353540;
             background: #181820;
 
             Image {
-                width: 14px;
-                height: 14px;
+                width: parent.width * 0.6;
+                height: parent.height * 0.6;
                 source: Icons.music;
                 image-fit: contain;
                 colorize: ThemeColors.accent;

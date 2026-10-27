@@ -1,4 +1,5 @@
 import { ThemeColors } from "../../theme/colors.slint";
+import { ThemeMetrics } from "../../theme/metrics.slint";
 import { ThemeTypography } from "../../theme/typography.slint";
 import { IslandContext } from "../../context.slint";
 import { PetView } from "../../components/pet-view.slint";
@@ -8,29 +9,33 @@ import { PlaybackControls } from "../../components/playback-controls.slint";
 export component MediaWideSlot inherits Rectangle {
     out property <bool> is-hovered: music-controls.is-hovered || art-touch.has-hover;
 
+    property <length> margin-x: max(12px, min(24px, ThemeMetrics.wide-width * 0.04));
+    property <length> content-h: ThemeMetrics.wide-height * 0.82;
+    property <length> art-dim: min(self.content-h, 56px);
+
     width: 100%;
     height: 100%;
 
     HorizontalLayout {
-        x: 16px;
-        y: (parent.height - self.height) / 2;
-        width: parent.width - 32px;
-        height: 36px;
+        x: root.margin-x;
+        y: (root.height - self.height) / 2;
+        width: root.width - (root.margin-x * 2);
+        height: root.content-h;
         alignment: space-between;
 
         // LEFT GROUP: [Art Cover] + [Title & Artist rapat ke artcover]
         HorizontalLayout {
             alignment: start;
-            spacing: 10px;
+            spacing: max(8px, min(14px, root.width * 0.025));
             horizontal-stretch: 1;
 
             // 1. Art Cover (Clickable to flip with 3D Pet)
             VerticalLayout {
                 alignment: center;
                 art-container := Rectangle {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 8px;
+                    width: root.art-dim;
+                    height: root.art-dim;
+                    border-radius: root.art-dim * 0.22;
                     background: #141418;
                     border-width: 1px;
                     border-color: #27272a;
@@ -45,7 +50,7 @@ export component MediaWideSlot inherits Rectangle {
                         animate opacity { duration: 180ms; easing: ease-out; }
 
                         AlbumArt {
-                            art-size: 36px;
+                            art-size: root.art-dim;
                             art-source: IslandContext.art-image;
                             has-art: IslandContext.has-art;
                         }
@@ -62,7 +67,7 @@ export component MediaWideSlot inherits Rectangle {
                         VerticalLayout {
                             alignment: center;
                             PetView {
-                                pet-size: 30px;
+                                pet-size: root.art-dim * 0.85;
                             }
                         }
                     }
@@ -76,14 +81,14 @@ export component MediaWideSlot inherits Rectangle {
             // 2. Title Song (Atas) | Artist (Bawah) - rapat ke artcover
             VerticalLayout {
                 alignment: center;
-                spacing: 2px;
+                spacing: max(1px, min(4px, root.content-h * 0.05));
                 horizontal-stretch: 1;
 
                 Text {
                     text: IslandContext.song-title != "" ? IslandContext.song-title : "No Track";
                     color: ThemeColors.foreground;
                     font-family: ThemeTypography.font-family;
-                    font-size: ThemeTypography.size-sm;
+                    font-size: max(11px, min(16px, root.content-h * 0.35));
                     font-weight: ThemeTypography.weight-bold;
                     overflow: elide;
                     vertical-alignment: center;
@@ -93,7 +98,7 @@ export component MediaWideSlot inherits Rectangle {
                     text: IslandContext.song-artist != "" ? IslandContext.song-artist : "Unknown Artist";
                     color: ThemeColors.muted;
                     font-family: ThemeTypography.font-family;
-                    font-size: 11px;
+                    font-size: max(9px, min(13px, root.content-h * 0.28));
                     font-weight: ThemeTypography.weight-medium;
                     overflow: elide;
                     vertical-alignment: center;
@@ -105,8 +110,7 @@ export component MediaWideSlot inherits Rectangle {
         VerticalLayout {
             alignment: center;
             music-controls := PlaybackControls {
-                width: 92px;
-                height: 26px;
+                control-size: max(20px, min(34px, root.content-h * 0.72));
                 is-playing: IslandContext.is-playing;
                 play-pause => { IslandContext.play-pause(); }
                 next => { IslandContext.next-track(); }
