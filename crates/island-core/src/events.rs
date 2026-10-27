@@ -21,6 +21,8 @@ pub enum AppEvent {
     ViewSwitchRequested(IslandView),
     ModuleSwitchRequested(ActiveModule),
     WelcomeTimeout,
+    ScreenUnlocked,
+    TriggerWelcome,
     
     // User interactions
     PlayPauseClicked,

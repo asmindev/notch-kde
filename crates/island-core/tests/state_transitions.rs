@@ -1,9 +1,10 @@
 use island_core::{reduce, ActiveModule, AppEvent, AppState, IslandMode, MediaTrack};
 
 #[test]
-fn test_initial_state_compact() {
+fn test_initial_state_wide_welcome() {
     let state = AppState::default();
-    assert_eq!(state.mode, IslandMode::Compact);
+    assert_eq!(state.mode, IslandMode::Wide);
+    assert!(state.is_welcome);
     assert!(state.is_visible);
     assert!(!state.is_overlapping);
     assert_eq!(state.active_module, ActiveModule::System);
@@ -12,8 +13,37 @@ fn test_initial_state_compact() {
 #[test]
 fn test_welcome_timeout_to_compact() {
     let mut state = AppState::default();
+    assert!(state.is_welcome);
+    assert_eq!(state.mode, IslandMode::Wide);
+
     reduce(&mut state, AppEvent::WelcomeTimeout);
     assert_eq!(state.mode, IslandMode::Compact);
+    assert!(!state.is_welcome);
+}
+
+#[test]
+fn test_screen_unlocked_triggers_welcome() {
+    let mut state = AppState::default();
+    // First settle to compact
+    reduce(&mut state, AppEvent::WelcomeTimeout);
+    assert_eq!(state.mode, IslandMode::Compact);
+    assert!(!state.is_welcome);
+
+    // Screen unlocks from lockscreen
+    let effects = reduce(&mut state, AppEvent::ScreenUnlocked);
+    assert_eq!(state.mode, IslandMode::Wide);
+    assert!(state.is_welcome);
+    assert!(state.pet_is_happy);
+    assert_eq!(effects, vec![island_core::events::Effect::ScheduleTimer {
+        id: "welcome_timeout",
+        duration_ms: 3500,
+        generation: 2,
+    }]);
+
+    // Timeout settles it back to compact
+    reduce(&mut state, AppEvent::WelcomeTimeout);
+    assert_eq!(state.mode, IslandMode::Compact);
+    assert!(!state.is_welcome);
 }
 
 #[test]

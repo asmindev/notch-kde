@@ -1,7 +1,10 @@
 use island_core::{reduce, AppEvent, AppState, Effect};
 use island_platform::overlap::Rect;
 use island_platform::OverlapDetector;
-use island_services::{AudioService, BatteryService, CavaService, ClockService, DndService, MediaService};
+use island_services::{
+    AudioService, BatteryService, CavaService, ClockService, DndService, MediaService,
+    ScreenSaverService,
+};
 use island_ui::{MainWindow, ViewModel};
 use slint::ComponentHandle;
 use std::sync::Arc;
@@ -25,6 +28,30 @@ impl AppRuntime {
         app_state.time = ClockService::get_current_time();
         app_state.battery = BatteryService::read_battery();
         app_state.is_muted = AudioService::check_muted_sync();
+
+        // Personalized welcome greeting
+        let username = std::env::var("USER").unwrap_or_else(|_| "User".to_string());
+        let mut chars = username.chars();
+        let formatted_user = match chars.next() {
+            None => "User".to_string(),
+            Some(f) => f.to_uppercase().collect::<String>() + chars.as_str(),
+        };
+        app_state.welcome_title = format!("Welcome back, {}!", formatted_user);
+
+        let now = chrono::Local::now();
+        let day_name = now.format("%A").to_string();
+        let hour = now.format("%H").to_string().parse::<u32>().unwrap_or(12);
+
+        let greeting_sub = if hour < 12 {
+            format!("Have a wonderful {} morning ✨", day_name)
+        } else if hour < 17 {
+            format!("Have a wonderful {} afternoon ☀️", day_name)
+        } else if hour < 21 {
+            format!("Good evening! Enjoy your {} 🌆", day_name)
+        } else {
+            "Good night! Rest and recharge 🌙".to_string()
+        };
+        app_state.welcome_subtitle = greeting_sub;
 
         // Sync initial state to UI
         ViewModel::sync_state_to_ui(&self.window, &app_state);
@@ -169,6 +196,16 @@ impl AppRuntime {
                 }
             });
 
+            // ScreenSaver / Lockscreen Service (Detects unlock after lockscreen)
+            let (unlock_tx, mut unlock_rx) = mpsc::unbounded_channel();
+            ScreenSaverService::start(unlock_tx);
+            let tx_unlock = event_tx_services.clone();
+            tokio::spawn(async move {
+                while let Some(_) = unlock_rx.recv().await {
+                    let _ = tx_unlock.send(AppEvent::ScreenUnlocked);
+                }
+            });
+
             // Welcome Timeout (Phase 4): Transition after 3.5 seconds
             let tx4 = event_tx_services.clone();
             tokio::spawn(async move {
@@ -264,6 +301,12 @@ impl AppRuntime {
                                 tokio_rt.spawn(async move {
                                     tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
                                     let _ = tx_timer.send(AppEvent::PetHappyTimeout(generation));
+                                });
+                            } else if id == "welcome_timeout" {
+                                let tx_timer = event_tx_effects.clone();
+                                tokio_rt.spawn(async move {
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    let _ = tx_timer.send(AppEvent::WelcomeTimeout);
                                 });
                             }
                         }

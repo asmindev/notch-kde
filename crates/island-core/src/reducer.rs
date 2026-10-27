@@ -117,11 +117,26 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         }
 
         AppEvent::WelcomeTimeout => {
+            state.is_welcome = false;
             // Settle into CompactView if not hovered
             if !state.engine.is_hovered {
                 state.engine.set_view(IslandView::Compact);
             }
             state.update_active_module();
+        }
+
+        AppEvent::ScreenUnlocked | AppEvent::TriggerWelcome => {
+            state.is_welcome = true;
+            state.pet_is_happy = true;
+            state.welcome_generation += 1;
+            let gen_id = state.welcome_generation;
+            state.engine.set_view(IslandView::Wide);
+            state.update_active_module();
+            effects.push(Effect::ScheduleTimer {
+                id: "welcome_timeout",
+                duration_ms: 3500,
+                generation: gen_id,
+            });
         }
 
         AppEvent::IslandClicked => {

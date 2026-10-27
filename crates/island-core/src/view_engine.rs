@@ -147,8 +147,8 @@ impl Default for ViewEngine {
 impl ViewEngine {
     pub fn new() -> Self {
         let mut engine = Self {
-            current_view: IslandView::Compact,
-            previous_view: IslandView::Compact,
+            current_view: IslandView::Wide,
+            previous_view: IslandView::Wide,
             active_module: ActiveModule::System,
             is_visible: true,
             is_overlapping: false,

@@ -1,5 +1,6 @@
 import { ThemeColors } from "../theme/colors.slint";
 import { ThemeMetrics } from "../theme/metrics.slint";
+import { IslandContext } from "../context.slint";
 import { ConcaveCorner } from "concave-corner.slint";
 
 export component IslandShell inherits Rectangle {
@@ -27,7 +28,7 @@ export component IslandShell inherits Rectangle {
     property <length> target-h: 
         !root.is-visible-state ? ThemeMetrics.compact-height :
         (root.active-mode == 2 ? (ThemeMetrics.expand-height + ThemeMetrics.bottom-bar-height) :
-        (root.active-mode == 1 ? (ThemeMetrics.wide-height + ThemeMetrics.bottom-bar-height) :
+        (root.active-mode == 1 ? (IslandContext.is-welcome ? ThemeMetrics.wide-height : (ThemeMetrics.wide-height + ThemeMetrics.bottom-bar-height)) :
         ThemeMetrics.compact-height));
 
     property <length> target-r:

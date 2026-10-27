@@ -1,0 +1,98 @@
+import { ThemeColors } from "../../theme/colors.slint";
+import { ThemeTypography } from "../../theme/typography.slint";
+import { ThemeMetrics } from "../../theme/metrics.slint";
+import { Icons } from "../../theme/icons.slint";
+import { IslandContext } from "../../context.slint";
+import { PetView } from "../../components/pet-view.slint";
+
+export component WelcomeWideSlot inherits Rectangle {
+    width: 100%;
+    height: 100%;
+
+    property <length> margin-x: max(12px, min(24px, ThemeMetrics.wide-width * 0.04));
+    property <length> content-h: ThemeMetrics.wide-height * 0.85;
+
+    HorizontalLayout {
+        x: root.margin-x;
+        y: (root.height - self.height) / 2;
+        width: root.width - (root.margin-x * 2);
+        height: root.content-h;
+        alignment: space-between;
+
+        // 1. LEFT: 3D Labubu Waving Avatar (Warm & Interactive)
+        VerticalLayout {
+            alignment: center;
+            PetView {
+                pet-size: max(26px, min(38px, root.content-h * 0.95));
+            }
+        }
+
+        // 2. CENTER: Personalized Welcome Greeting
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+            padding-left: 10px;
+            padding-right: 8px;
+
+            Text {
+                text: IslandContext.welcome-title != "" ? IslandContext.welcome-title : "Welcome back!";
+                color: ThemeColors.foreground;
+                font-family: ThemeTypography.font-family;
+                font-size: max(12px, min(15px, root.content-h * 0.36));
+                font-weight: ThemeTypography.weight-bold;
+                overflow: elide;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: IslandContext.welcome-subtitle != "" ? IslandContext.welcome-subtitle : "Have a wonderful day ✨";
+                color: ThemeColors.muted;
+                font-family: ThemeTypography.font-family;
+                font-size: max(9px, min(12px, root.content-h * 0.26));
+                font-weight: ThemeTypography.weight-medium;
+                overflow: elide;
+                vertical-alignment: center;
+            }
+        }
+
+        // 3. RIGHT: Compact Digital Clock & Battery Status
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: IslandContext.time-str;
+                color: ThemeColors.foreground;
+                font-family: ThemeTypography.font-family;
+                font-size: max(11px, min(14px, root.content-h * 0.34));
+                font-weight: ThemeTypography.weight-bold;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+
+            HorizontalLayout {
+                alignment: end;
+                spacing: 4px;
+
+                Image {
+                    width: 10px;
+                    height: 10px;
+                    source: Icons.zap;
+                    image-fit: contain;
+                    colorize: IslandContext.is-charging ? ThemeColors.success : ThemeColors.muted;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                Text {
+                    text: "\{IslandContext.battery-percentage}%";
+                    color: IslandContext.is-charging ? ThemeColors.success : ThemeColors.muted;
+                    font-family: ThemeTypography.font-family;
+                    font-size: max(9px, min(11px, root.content-h * 0.26));
+                    font-weight: ThemeTypography.weight-medium;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}
