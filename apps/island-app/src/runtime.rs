@@ -311,6 +311,12 @@ impl AppRuntime {
                                     tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
                                     let _ = tx_timer.send(AppEvent::OverlapDismissHideTimeout(generation));
                                 });
+                            } else if id == "collapse_compact" {
+                                let tx_timer = event_tx_effects.clone();
+                                tokio_rt.spawn(async move {
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    let _ = tx_timer.send(AppEvent::CollapseCompactTimeout(generation));
+                                });
                             } else if id == "alert_timeout" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {

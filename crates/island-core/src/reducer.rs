@@ -15,6 +15,19 @@ fn begin_overlap_dismissal(state: &mut AppState, effects: &mut Vec<Effect>) {
     });
 }
 
+fn begin_standard_collapse(state: &mut AppState, effects: &mut Vec<Effect>) {
+    state.overlap_reveal_generation += 1;
+    state.overlap_dismiss_generation += 1;
+    let generation = state.overlap_dismiss_generation;
+    state.engine.begin_overlap_dismiss();
+    state.update_active_module();
+    effects.push(Effect::ScheduleTimer {
+        id: "collapse_compact",
+        duration_ms: 250,
+        generation,
+    });
+}
+
 pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
     let mut effects = Vec::new();
 
@@ -182,6 +195,17 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             }
         }
 
+        AppEvent::CollapseCompactTimeout(generation) => {
+            if generation == state.overlap_dismiss_generation
+                && state.engine.overlap_dismiss_active
+                && !state.engine.is_overlapping
+            {
+                state.engine.advance_overlap_dismiss();
+                state.engine.finish_overlap_dismiss();
+                state.update_active_module();
+            }
+        }
+
         AppEvent::ViewSwitchRequested(target) => {
             state.overlap_reveal_generation += 1;
             state.overlap_dismiss_generation += 1;
@@ -227,10 +251,12 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
                 state.overlap_dismiss_generation += 1;
                 state.engine.reveal_overlap_compact();
                 state.update_active_module();
-            } else if state.engine.current_view == IslandView::Expand
-                && state.engine.is_overlapping
-            {
-                begin_overlap_dismissal(state, &mut effects);
+            } else if state.engine.current_view == IslandView::Expand {
+                if state.engine.is_overlapping {
+                    begin_overlap_dismissal(state, &mut effects);
+                } else {
+                    begin_standard_collapse(state, &mut effects);
+                }
             } else {
                 state.overlap_reveal_generation += 1;
                 state.overlap_dismiss_generation += 1;
@@ -241,10 +267,12 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         }
 
         AppEvent::CollapseClicked => {
-            if state.engine.current_view == IslandView::Expand
-                && state.engine.is_overlapping
-            {
-                begin_overlap_dismissal(state, &mut effects);
+            if state.engine.current_view == IslandView::Expand {
+                if state.engine.is_overlapping {
+                    begin_overlap_dismissal(state, &mut effects);
+                } else {
+                    begin_standard_collapse(state, &mut effects);
+                }
             } else {
                 state.overlap_reveal_generation += 1;
                 state.overlap_dismiss_generation += 1;

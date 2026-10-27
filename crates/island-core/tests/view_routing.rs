@@ -23,13 +23,24 @@ fn test_view_routing_click_expand_and_collapse() {
     reduce(&mut state, AppEvent::IslandClicked);
     assert_eq!(state.mode, IslandMode::Expand);
 
-    // Collapse click retracts Expand back to Compact
-    reduce(&mut state, AppEvent::CollapseClicked);
+    // Collapse click follows the Wide intermediate stage before Compact
+    let effects = reduce(&mut state, AppEvent::CollapseClicked);
+    assert_eq!(state.mode, IslandMode::Wide);
+    let generation = state.overlap_dismiss_generation;
+    assert_eq!(
+        effects,
+        vec![island_core::Effect::ScheduleTimer {
+            id: "collapse_compact",
+            duration_ms: 250,
+            generation,
+        }]
+    );
+    reduce(&mut state, AppEvent::CollapseCompactTimeout(generation));
     assert_eq!(state.mode, IslandMode::Compact);
 }
 
 #[test]
-fn test_collapse_suppresses_immediate_hover_bounce() {
+fn test_collapse_stages_through_wide_before_compact() {
     let mut state = AppState::default();
     reduce(&mut state, AppEvent::ViewSwitchRequested(IslandMode::Compact));
 
@@ -37,14 +48,15 @@ fn test_collapse_suppresses_immediate_hover_bounce() {
     reduce(&mut state, AppEvent::IslandClicked);
     assert_eq!(state.mode, IslandMode::Expand);
 
-    // 2. Cursor was hovered over collapse button
+    // 2. Collapse starts with the same Wide intermediate stage as overlap dismissal
     state.engine.is_hovered = true;
     reduce(&mut state, AppEvent::CollapseClicked);
-    assert_eq!(state.mode, IslandMode::Compact);
+    assert_eq!(state.mode, IslandMode::Wide);
     assert!(state.engine.hover_suppressed);
 
-    // 3. Immediate hover event while cursor is still over pill does NOT bounce to Wide
-    reduce(&mut state, AppEvent::UserHoverChanged(true));
+    // 3. The scheduled transition completes at Compact
+    let generation = state.overlap_dismiss_generation;
+    reduce(&mut state, AppEvent::CollapseCompactTimeout(generation));
     assert_eq!(state.mode, IslandMode::Compact);
 
     // 4. Cursor exits the notch area -> re-arms hover
@@ -66,8 +78,19 @@ fn test_expand_click_collapses_directly_to_compact() {
     reduce(&mut state, AppEvent::IslandClicked);
     assert_eq!(state.mode, IslandMode::Expand);
 
-    // Clicking again on expand view collapses directly to Compact
-    reduce(&mut state, AppEvent::IslandClicked);
+    // Clicking again on expand view follows the same staged collapse
+    let effects = reduce(&mut state, AppEvent::IslandClicked);
+    assert_eq!(state.mode, IslandMode::Wide);
+    let generation = state.overlap_dismiss_generation;
+    assert_eq!(
+        effects,
+        vec![island_core::Effect::ScheduleTimer {
+            id: "collapse_compact",
+            duration_ms: 250,
+            generation,
+        }]
+    );
+    reduce(&mut state, AppEvent::CollapseCompactTimeout(generation));
     assert_eq!(state.mode, IslandMode::Compact);
     assert!(state.engine.hover_suppressed);
 }

@@ -19,6 +19,7 @@ pub enum AppEvent {
     OverlapRevealTimeout(u64),
     OverlapDismissCompactTimeout(u64),
     OverlapDismissHideTimeout(u64),
+    CollapseCompactTimeout(u64),
     
     // Mode & module transitions
     ViewSwitchRequested(IslandView),

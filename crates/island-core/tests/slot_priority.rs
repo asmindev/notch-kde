@@ -75,6 +75,8 @@ fn test_paused_media_falls_back_in_expand() {
     assert_eq!(state.active_module, ActiveModule::System);
 
     reduce(&mut state, AppEvent::CollapseClicked);
+    let generation = state.overlap_dismiss_generation;
+    reduce(&mut state, AppEvent::CollapseCompactTimeout(generation));
     assert_eq!(state.mode, IslandMode::Compact);
     assert_eq!(state.active_module, ActiveModule::Media);
 }
@@ -94,6 +96,8 @@ fn test_playing_media_stays_active_in_all_views() {
     assert_eq!(state.active_module, ActiveModule::Media);
 
     reduce(&mut state, AppEvent::CollapseClicked);
+    let generation = state.overlap_dismiss_generation;
+    reduce(&mut state, AppEvent::CollapseCompactTimeout(generation));
     assert_eq!(state.mode, IslandMode::Compact);
     assert_eq!(state.active_module, ActiveModule::Media);
 }
