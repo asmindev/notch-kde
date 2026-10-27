@@ -107,3 +107,37 @@ fn test_toggle_source_selector_and_select() {
     reduce(&mut state, AppEvent::ToggleSourceSelector);
     assert!(!state.show_source_selector);
 }
+
+#[test]
+fn test_pet_clicked_and_happy_timeout() {
+    let mut state = AppState::default();
+    assert!(!state.pet_is_happy);
+
+    // Click pet
+    let effects = reduce(&mut state, AppEvent::PetClicked);
+    assert!(state.pet_is_happy);
+    assert_eq!(state.pet_happy_generation, 1);
+    assert_eq!(effects, vec![island_core::events::Effect::ScheduleTimer {
+        id: "pet_happy_timeout",
+        duration_ms: 1500,
+        generation: 1,
+    }]);
+
+    // Another click updates generation
+    let effects2 = reduce(&mut state, AppEvent::PetClicked);
+    assert!(state.pet_is_happy);
+    assert_eq!(state.pet_happy_generation, 2);
+    assert_eq!(effects2, vec![island_core::events::Effect::ScheduleTimer {
+        id: "pet_happy_timeout",
+        duration_ms: 1500,
+        generation: 2,
+    }]);
+
+    // Stale timeout generation 1 does not reset happy state
+    reduce(&mut state, AppEvent::PetHappyTimeout(1));
+    assert!(state.pet_is_happy);
+
+    // Matching timeout generation 2 resets happy state
+    reduce(&mut state, AppEvent::PetHappyTimeout(2));
+    assert!(!state.pet_is_happy);
+}

@@ -103,6 +103,11 @@ impl AppRuntime {
             let _ = tx.send(AppEvent::SelectMediaSource(player_id.to_string()));
         });
 
+        let tx = event_tx.clone();
+        ctx.on_pet_clicked(move || {
+            let _ = tx.send(AppEvent::PetClicked);
+        });
+
         // 3. Start Tokio Async Runtime for Background Services
         let window_weak = self.window.as_weak();
         let tokio_rt = tokio::runtime::Builder::new_multi_thread()
@@ -253,6 +258,12 @@ impl AppRuntime {
                                 tokio_rt.spawn(async move {
                                     tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
                                     let _ = tx_timer.send(AppEvent::AlertTimeout(generation));
+                                });
+                            } else if id == "pet_happy_timeout" {
+                                let tx_timer = event_tx_effects.clone();
+                                tokio_rt.spawn(async move {
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    let _ = tx_timer.send(AppEvent::PetHappyTimeout(generation));
                                 });
                             }
                         }

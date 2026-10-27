@@ -29,6 +29,7 @@ impl ViewModel {
         ctx.set_is_playing(state.media.is_playing);
         ctx.set_has_audio(state.media.is_playing || state.spectrum.bars.iter().any(|&b| b > 0.05));
         ctx.set_music_visual_mode(state.music_visual_mode as i32);
+        ctx.set_pet_is_happy(state.pet_is_happy);
 
         // Resolve Album Art image
         if !state.media.art_url.is_empty() {

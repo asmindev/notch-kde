@@ -33,6 +33,8 @@ pub enum AppEvent {
     IslandClicked,
     CollapseClicked,
     ToggleSwapPetArt,
+    PetClicked,
+    PetHappyTimeout(u64),
     AlertTimeout(u64),
 }
 

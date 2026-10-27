@@ -44,6 +44,23 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             };
         }
 
+        AppEvent::PetClicked => {
+            state.pet_happy_generation += 1;
+            state.pet_is_happy = true;
+            let gen_id = state.pet_happy_generation;
+            effects.push(Effect::ScheduleTimer {
+                id: "pet_happy_timeout",
+                duration_ms: 1500,
+                generation: gen_id,
+            });
+        }
+
+        AppEvent::PetHappyTimeout(target_gen) => {
+            if state.pet_happy_generation == target_gen {
+                state.pet_is_happy = false;
+            }
+        }
+
         AppEvent::MediaUpdated(track) => {
             state.media = track;
             state.update_active_module();

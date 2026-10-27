@@ -1,0 +1,91 @@
+import { ThemeColors } from "../theme/colors.slint";
+import { ThemeTypography } from "../theme/typography.slint";
+import { IslandContext } from "../context.slint";
+
+export component FloatingNotes inherits Rectangle {
+    in property <bool> is-singing: false;
+    in property <bool> is-happy: false;
+    in property <length> pet-size: 32px;
+
+    width: root.pet-size * 1.6;
+    height: root.pet-size * 1.6;
+    background: transparent;
+
+    property <float> bass: (IslandContext.b0 + IslandContext.b1) * 0.5;
+    property <float> mid: (IslandContext.b2 + IslandContext.b3) * 0.5;
+
+    // ==========================================
+    // 1. MUSICAL NOTES (Active when singing)
+    // ==========================================
+    // Note 1: Purple high eighth note (♪)
+    Text {
+        text: "♪";
+        font-family: ThemeTypography.font-family;
+        font-size: max(8px, min(14px, root.pet-size * 0.35));
+        font-weight: ThemeTypography.weight-bold;
+        color: #c084fc;
+        x: (parent.width * 0.55) + (root.mid * 10px);
+        y: (parent.height * 0.2) - (root.bass * 16px);
+        opacity: root.is-singing ? max(0.0, min(0.95, root.bass * 2.2)) : 0.0;
+
+        animate y { duration: 80ms; easing: ease-out; }
+        animate opacity { duration: 100ms; easing: ease-out; }
+    }
+
+    // Note 2: Pink beam musical note (♫)
+    Text {
+        text: "♫";
+        font-family: ThemeTypography.font-family;
+        font-size: max(9px, min(15px, root.pet-size * 0.4));
+        font-weight: ThemeTypography.weight-bold;
+        color: #f472b6;
+        x: (parent.width * 0.2) - (root.bass * 8px);
+        y: (parent.height * 0.15) - (root.mid * 18px);
+        opacity: root.is-singing ? max(0.0, min(0.95, root.mid * 2.2)) : 0.0;
+
+        animate y { duration: 90ms; easing: ease-out; }
+        animate opacity { duration: 110ms; easing: ease-out; }
+    }
+
+    // Note 3: Golden sparkle/note (♩)
+    Text {
+        text: "♩";
+        font-family: ThemeTypography.font-family;
+        font-size: max(8px, min(13px, root.pet-size * 0.32));
+        font-weight: ThemeTypography.weight-bold;
+        color: #38bdf8;
+        x: (parent.width * 0.75) - (root.mid * 6px);
+        y: (parent.height * 0.25) - (root.bass * 12px);
+        opacity: root.is-singing ? max(0.0, min(0.9, (root.bass + root.mid) * 1.5)) : 0.0;
+
+        animate y { duration: 85ms; easing: ease-out; }
+        animate opacity { duration: 95ms; easing: ease-out; }
+    }
+
+    // ==========================================
+    // 2. HAPPY / PETTING REACTION (Hearts & Stars)
+    // ==========================================
+    // Burst Heart 💖
+    Text {
+        text: "💖";
+        font-size: max(10px, min(18px, root.pet-size * 0.45));
+        x: (parent.width - self.width) / 2 + (root.is-happy ? 8px : 0px);
+        y: root.is-happy ? -6px : parent.height * 0.3;
+        opacity: root.is-happy ? 1.0 : 0.0;
+
+        animate y { duration: 350ms; easing: cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        animate opacity { duration: 380ms; easing: ease-out; }
+    }
+
+    // Burst Sparkle ✨
+    Text {
+        text: "✨";
+        font-size: max(9px, min(15px, root.pet-size * 0.38));
+        x: (parent.width * 0.15) - (root.is-happy ? 6px : 0px);
+        y: root.is-happy ? 0px : parent.height * 0.4;
+        opacity: root.is-happy ? 0.9 : 0.0;
+
+        animate y { duration: 320ms; easing: cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        animate opacity { duration: 350ms; easing: ease-out; }
+    }
+}

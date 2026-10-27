@@ -32,6 +32,8 @@ pub struct AppState {
     pub alert_kind: AlertKind,
     pub alert_generation: u64,
     pub music_visual_mode: MusicVisualMode,
+    pub pet_is_happy: bool,
+    pub pet_happy_generation: u64,
 }
 
 impl AppState {
@@ -94,6 +96,8 @@ impl Default for AppState {
             alert_kind: AlertKind::None,
             alert_generation: 0,
             music_visual_mode: MusicVisualMode::ArtworkPrimary,
+            pet_is_happy: false,
+            pet_happy_generation: 0,
         }
     }
 }
