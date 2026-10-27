@@ -49,6 +49,24 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.update_active_module();
         }
 
+        AppEvent::MediaSourcesUpdated(sources) => {
+            state.media_sources = sources;
+        }
+
+        AppEvent::ToggleSourceSelector => {
+            state.show_source_selector = !state.show_source_selector;
+            if state.show_source_selector {
+                state.active_module = crate::models::ActiveModule::Media;
+            }
+        }
+
+        AppEvent::SelectMediaSource(id) => {
+            for source in &mut state.media_sources {
+                source.is_active = source.id == id;
+            }
+            effects.push(Effect::SelectMediaSource(id));
+        }
+
         AppEvent::SpectrumUpdated(bars) => {
             state.spectrum.bars = bars;
         }

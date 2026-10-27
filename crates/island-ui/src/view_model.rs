@@ -50,6 +50,20 @@ impl ViewModel {
         ctx.set_is_muted(state.is_muted);
         ctx.set_is_dnd(state.is_dnd);
 
+        // Media sources selection
+        ctx.set_show_source_selector(state.show_source_selector);
+        let items: Vec<crate::PlayerSourceItem> = state
+            .media_sources
+            .iter()
+            .map(|s| crate::PlayerSourceItem {
+                id: s.id.clone().into(),
+                name: s.name.clone().into(),
+                is_active: s.is_active,
+                is_playing: s.is_playing,
+            })
+            .collect();
+        ctx.set_player_sources(slint::ModelRc::new(slint::VecModel::from(items)));
+
         // Spectrum bars
         ctx.set_b0(state.spectrum.bars[0]);
         ctx.set_b1(state.spectrum.bars[1]);

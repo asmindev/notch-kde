@@ -1,3 +1,10 @@
+export struct PlayerSourceItem {
+    id: string,
+    name: string,
+    is-active: bool,
+    is-playing: bool,
+}
+
 /// Unified IslandContext (React-style Context singleton for the Dynamic Island)
 /// Conceptually structured into 4 groups: Navigation, Domain, Presentation, Actions.
 export global IslandContext {
@@ -42,6 +49,10 @@ export global IslandContext {
     in-out property <bool> is-muted: false;
     in-out property <bool> is-dnd: false;
 
+    // Media Source Selector
+    in-out property <bool> show-source-selector: false;
+    in-out property <[PlayerSourceItem]> player-sources: [];
+
     // ==========================================
     // 3. PRESENTATION STATE
     // Menentukan hak tampil, layout variant, dan alert aktif
@@ -61,4 +72,6 @@ export global IslandContext {
     callback toggle-dnd();
     callback toggle-swap();
     callback collapse-clicked();
+    callback toggle-source-selector();
+    callback select-player-source(string);
 }

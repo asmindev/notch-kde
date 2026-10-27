@@ -5,6 +5,7 @@ import { Icons } from "../theme/icons.slint";
 import { IslandContext } from "../context.slint";
 import { IconButton } from "../components/icon-button.slint";
 import { BottomBar } from "../components/bottom-bar.slint";
+import { SourceSelectorBar } from "../components/source-selector.slint";
 import { SystemExpandSlot } from "../modules/system/system-expand-slot.slint";
 import { MediaExpandSlot } from "../modules/media/media-expand-slot.slint";
 
@@ -50,7 +51,11 @@ export component ExpandView inherits VerticalLayout {
                     y: (parent.height - self.height) / 2;
                 }
 
-                Text {
+                if IslandContext.show-source-selector && IslandContext.active-module == 1: SourceSelectorBar {
+                    bar-height: root.hdr-h;
+                }
+
+                if !IslandContext.show-source-selector || IslandContext.active-module != 1: Text {
                     text: IslandContext.active-module == 1 ? "Now Playing" : "System Overview";
                     color: ThemeColors.muted;
                     font-family: ThemeTypography.font-family;

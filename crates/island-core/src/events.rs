@@ -1,4 +1,4 @@
-use crate::models::{ActiveModule, BatteryState, IslandView, MediaTrack, TimeInfo};
+use crate::models::{ActiveModule, BatteryState, IslandView, MediaSource, MediaTrack, TimeInfo};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppEvent {
@@ -8,6 +8,7 @@ pub enum AppEvent {
     // Services
     BatteryUpdated(BatteryState),
     MediaUpdated(MediaTrack),
+    MediaSourcesUpdated(Vec<MediaSource>),
     SpectrumUpdated([f32; 8]),
     DndUpdated(bool),
     AudioMuteUpdated(bool),
@@ -27,6 +28,8 @@ pub enum AppEvent {
     PreviousTrackClicked,
     MuteToggleClicked,
     DndToggleClicked,
+    ToggleSourceSelector,
+    SelectMediaSource(String),
     IslandClicked,
     CollapseClicked,
     ToggleSwapPetArt,
@@ -40,6 +43,7 @@ pub enum Effect {
     PreviousTrack,
     ToggleMute,
     ToggleDnd,
+    SelectMediaSource(String),
     ScheduleTimer { id: &'static str, duration_ms: u64, generation: u64 },
     CancelTimer { id: &'static str },
 }

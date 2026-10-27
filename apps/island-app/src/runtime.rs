@@ -93,6 +93,16 @@ impl AppRuntime {
             let _ = tx.send(AppEvent::ToggleSwapPetArt);
         });
 
+        let tx = event_tx.clone();
+        ctx.on_toggle_source_selector(move || {
+            let _ = tx.send(AppEvent::ToggleSourceSelector);
+        });
+
+        let tx = event_tx.clone();
+        ctx.on_select_player_source(move |player_id| {
+            let _ = tx.send(AppEvent::SelectMediaSource(player_id.to_string()));
+        });
+
         // 3. Start Tokio Async Runtime for Background Services
         let window_weak = self.window.as_weak();
         let tokio_rt = tokio::runtime::Builder::new_multi_thread()
@@ -128,8 +138,9 @@ impl AppRuntime {
             MediaService::start(media_tx);
             let tx3 = event_tx_services.clone();
             tokio::spawn(async move {
-                while let Some(media_track) = media_rx.recv().await {
-                    let _ = tx3.send(AppEvent::MediaUpdated(media_track));
+                while let Some(update) = media_rx.recv().await {
+                    let _ = tx3.send(AppEvent::MediaUpdated(update.track));
+                    let _ = tx3.send(AppEvent::MediaSourcesUpdated(update.sources));
                 }
             });
 
@@ -223,6 +234,12 @@ impl AppRuntime {
                         Effect::ToggleDnd => {
                             debug!("Toggling notification Do-Not-Disturb");
                             tokio_rt.spawn(async { DndService::toggle_dnd().await; });
+                        }
+                        Effect::SelectMediaSource(player_id) => {
+                            debug!("Switching active media source to: {}", player_id);
+                            tokio_rt.spawn(async move {
+                                MediaService::select_source(&player_id).await;
+                            });
                         }
                         Effect::ScheduleTimer { id, duration_ms, generation } => {
                             if id == "bloom_wide" {

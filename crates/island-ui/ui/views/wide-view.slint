@@ -1,12 +1,16 @@
 import { ThemeMetrics } from "../theme/metrics.slint";
+import { ThemeColors } from "../theme/colors.slint";
+import { ThemeTypography } from "../theme/typography.slint";
 import { IslandContext } from "../context.slint";
 import { SystemWideSlot } from "../modules/system/system-wide-slot.slint";
 import { MediaWideSlot } from "../modules/media/media-wide-slot.slint";
 import { AlertWideSlot } from "../modules/alert/alert-wide-slot.slint";
 import { BottomBar } from "../components/bottom-bar.slint";
+import { SourceSelectorBar } from "../components/source-selector.slint";
 
 export component WideView inherits VerticalLayout {
     out property <bool> is-hovered: bottom-bar.is-hovered
+        || IslandContext.show-source-selector
         || (IslandContext.active-module == 1 && media-slot.is-hovered) 
         || (IslandContext.active-module == 0 && system-slot.is-hovered);
 
@@ -20,22 +24,46 @@ export component WideView inherits VerticalLayout {
         width: 100%;
         height: ThemeMetrics.wide-height;
 
+        // Slot: Source Selector View in Wide Mode
+        if IslandContext.show-source-selector: Rectangle {
+            width: 100%;
+            height: 100%;
+
+            HorizontalLayout {
+                alignment: center;
+                spacing: 10px;
+
+                Text {
+                    text: "Play from:";
+                    color: ThemeColors.muted;
+                    font-family: ThemeTypography.font-family;
+                    font-size: max(10px, min(13px, ThemeMetrics.wide-height * 0.28));
+                    font-weight: ThemeTypography.weight-medium;
+                    vertical-alignment: center;
+                }
+
+                SourceSelectorBar {
+                    bar-height: max(20px, min(26px, ThemeMetrics.wide-height * 0.58));
+                }
+            }
+        }
+
         // Slot 0: System Module Wide Slot
         system-slot := SystemWideSlot {
-            visible: IslandContext.active-module == 0;
-            opacity: IslandContext.active-module == 0 ? 1.0 : 0.0;
+            visible: !IslandContext.show-source-selector && IslandContext.active-module == 0;
+            opacity: (!IslandContext.show-source-selector && IslandContext.active-module == 0) ? 1.0 : 0.0;
         }
 
         // Slot 1: Media Module Wide Slot (Dynamic Studio)
         media-slot := MediaWideSlot {
-            visible: IslandContext.active-module == 1;
-            opacity: IslandContext.active-module == 1 ? 1.0 : 0.0;
+            visible: !IslandContext.show-source-selector && IslandContext.active-module == 1;
+            opacity: (!IslandContext.show-source-selector && IslandContext.active-module == 1) ? 1.0 : 0.0;
         }
 
         // Slot 2: Alert Module Wide Slot
         alert-slot := AlertWideSlot {
-            visible: IslandContext.active-module == 2;
-            opacity: IslandContext.active-module == 2 ? 1.0 : 0.0;
+            visible: !IslandContext.show-source-selector && IslandContext.active-module == 2;
+            opacity: (!IslandContext.show-source-selector && IslandContext.active-module == 2) ? 1.0 : 0.0;
         }
     }
 

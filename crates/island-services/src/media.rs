@@ -1,12 +1,76 @@
 use futures_lite::StreamExt;
-use island_core::models::MediaTrack;
+use island_core::models::{MediaSource, MediaTrack, MediaUpdate};
 use std::collections::HashMap;
+use std::sync::RwLock;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, error, info};
 use zbus::zvariant::Value;
 use zbus::Connection;
 use zbus::MatchRule;
 use zbus::MessageStream;
+
+static ACTIVE_PLAYER: RwLock<Option<String>> = RwLock::new(None);
+static MEDIA_SENDER: RwLock<Option<UnboundedSender<MediaUpdate>>> = RwLock::new(None);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlayerCandidate {
+    pub bus_name: String,
+    pub identity: String,
+    pub status: String,
+    pub has_metadata: bool,
+    pub title: String,
+    pub artist: String,
+}
+
+pub fn select_target_player<'a>(
+    candidates: &'a [PlayerCandidate],
+    current_active: Option<&str>,
+) -> Option<&'a PlayerCandidate> {
+    if candidates.is_empty() {
+        return None;
+    }
+
+    // Rule 1: A player is "Playing"
+    // If the currently active player is among the playing ones, stick with it (stability)
+    if let Some(active) = current_active {
+        if let Some(cand) = candidates
+            .iter()
+            .find(|c| c.bus_name == active && c.status.eq_ignore_ascii_case("playing"))
+        {
+            return Some(cand);
+        }
+    }
+
+    // Otherwise, pick the first player that is "Playing"
+    if let Some(cand) = candidates
+        .iter()
+        .find(|c| c.status.eq_ignore_ascii_case("playing"))
+    {
+        return Some(cand);
+    }
+
+    // Rule 2: No player is playing.
+    // If current_active is still present and has metadata, keep it (e.g. paused Spotify)
+    if let Some(active) = current_active {
+        if let Some(cand) = candidates
+            .iter()
+            .find(|c| c.bus_name == active && c.has_metadata)
+        {
+            return Some(cand);
+        }
+    }
+
+    // Rule 3: Pick the first player with metadata
+    if let Some(cand) = candidates
+        .iter()
+        .find(|c| c.has_metadata && !c.title.is_empty())
+    {
+        return Some(cand);
+    }
+
+    // Rule 4: Fallback to the first candidate
+    candidates.first()
+}
 
 pub struct MediaService;
 
@@ -29,19 +93,86 @@ impl MediaService {
         }
     }
 
+    pub async fn select_source(player_id: &str) {
+        info!("MediaService: User manually selected player source: {}", player_id);
+        if let Ok(mut lock) = ACTIVE_PLAYER.write() {
+            *lock = Some(player_id.to_string());
+        }
+
+        if let Ok(conn) = Connection::session().await {
+            let update = Self::query_current_track_and_sources(&conn).await;
+            Self::publish_update(update);
+        }
+    }
+
+    fn publish_update(update: MediaUpdate) {
+        if let Ok(lock) = MEDIA_SENDER.read() {
+            if let Some(sender) = lock.as_ref() {
+                let _ = sender.send(update);
+            }
+        }
+    }
+
     async fn call_player_method(conn: &Connection, method: &str) -> Result<(), zbus::Error> {
         let players = Self::find_players(conn).await?;
-        if let Some(player) = players.first() {
-            let proxy = zbus::Proxy::new(
-                conn,
-                player.as_str(),
-                "/org/mpris/MediaPlayer2",
-                "org.mpris.MediaPlayer2.Player",
-            )
-            .await?;
-            let _: () = proxy.call(method, &()).await?;
+        if players.is_empty() {
+            return Ok(());
         }
+
+        let current_active = ACTIVE_PLAYER.read().ok().and_then(|p| p.clone());
+        let target_player = if let Some(ref act) = current_active {
+            if players.contains(act) {
+                act.clone()
+            } else {
+                players[0].clone()
+            }
+        } else {
+            players[0].clone()
+        };
+
+        info!("MPRIS: Calling method '{}' on target player '{}'", method, target_player);
+
+        let proxy = zbus::Proxy::new(
+            conn,
+            target_player.as_str(),
+            "/org/mpris/MediaPlayer2",
+            "org.mpris.MediaPlayer2.Player",
+        )
+        .await?;
+
+        let _: () = proxy.call(method, &()).await?;
+
+        // Re-query immediately to reflect UI state
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        let update = Self::query_current_track_and_sources(conn).await;
+        Self::publish_update(update);
+
         Ok(())
+    }
+
+    async fn resolve_identity(conn: &Connection, bus_name: &str) -> String {
+        if let Ok(proxy) = zbus::Proxy::new(
+            conn,
+            bus_name,
+            "/org/mpris/MediaPlayer2",
+            "org.mpris.MediaPlayer2",
+        )
+        .await
+        {
+            if let Ok(identity) = proxy.get_property::<String>("Identity").await {
+                if !identity.trim().is_empty() {
+                    return identity;
+                }
+            }
+        }
+
+        // Fallback: strip prefix and capitalize
+        let stripped = bus_name.trim_start_matches("org.mpris.MediaPlayer2.");
+        let mut chars = stripped.chars();
+        match chars.next() {
+            None => String::new(),
+            Some(f) => f.to_uppercase().collect::<String>() + chars.as_str(),
+        }
     }
 
     async fn find_players(conn: &Connection) -> Result<Vec<String>, zbus::Error> {
@@ -136,43 +267,35 @@ impl MediaService {
         String::new()
     }
 
-    async fn query_current_track(conn: &Connection) -> MediaTrack {
-        if let Ok(players) = Self::find_players(conn).await {
-            let mut best_candidate: Option<(String, HashMap<String, Value>, String)> = None;
+    async fn query_current_track_and_sources(conn: &Connection) -> MediaUpdate {
+        let players = Self::find_players(conn).await.unwrap_or_default();
+        if players.is_empty() {
+            return MediaUpdate::default();
+        }
 
-            for player in &players {
-                if let Ok(proxy) = zbus::Proxy::new(
-                    conn,
-                    player.as_str(),
-                    "/org/mpris/MediaPlayer2",
-                    "org.mpris.MediaPlayer2.Player",
-                )
-                .await
-                {
-                    let status: String = proxy
-                        .get_property("PlaybackStatus")
-                        .await
-                        .unwrap_or_else(|_| "Stopped".to_string());
+        let mut candidates = Vec::new();
+        let mut meta_map = HashMap::new();
 
-                    let metadata: HashMap<String, Value> = proxy
-                        .get_property("Metadata")
-                        .await
-                        .unwrap_or_default();
+        for player in &players {
+            let identity = Self::resolve_identity(conn, player).await;
+            if let Ok(proxy) = zbus::Proxy::new(
+                conn,
+                player.as_str(),
+                "/org/mpris/MediaPlayer2",
+                "org.mpris.MediaPlayer2.Player",
+            )
+            .await
+            {
+                let status: String = proxy
+                    .get_property("PlaybackStatus")
+                    .await
+                    .unwrap_or_else(|_| "Stopped".to_string());
 
-                    let is_playing = status.eq_ignore_ascii_case("playing");
+                let metadata: HashMap<String, Value> = proxy
+                    .get_property("Metadata")
+                    .await
+                    .unwrap_or_default();
 
-                    if is_playing {
-                        best_candidate = Some((player.clone(), metadata, status));
-                        break;
-                    }
-
-                    if best_candidate.is_none() && !metadata.is_empty() {
-                        best_candidate = Some((player.clone(), metadata, status));
-                    }
-                }
-            }
-
-            if let Some((_player, metadata, status)) = best_candidate {
                 let title = metadata
                     .get("xesam:title")
                     .and_then(Self::extract_str)
@@ -183,37 +306,88 @@ impl MediaService {
                     .and_then(Self::extract_artist)
                     .unwrap_or_default();
 
-                let album = metadata
-                    .get("xesam:album")
-                    .and_then(Self::extract_str)
-                    .unwrap_or_default();
+                let has_metadata = !metadata.is_empty() && (!title.is_empty() || !artist.is_empty());
 
-                let raw_art_url = metadata
-                    .get("mpris:artUrl")
-                    .or_else(|| metadata.get("xesam:artUrl"))
-                    .and_then(Self::extract_str)
-                    .unwrap_or_default();
-
-                let art_url = Self::resolve_art_path(&raw_art_url).await;
-                let is_playing = status.eq_ignore_ascii_case("playing");
-
-                return MediaTrack {
+                candidates.push(PlayerCandidate {
+                    bus_name: player.clone(),
+                    identity,
+                    status,
+                    has_metadata,
                     title,
                     artist,
-                    album,
-                    art_url,
-                    is_playing,
-                    position_ms: 0,
-                    duration_ms: 0,
-                };
+                });
+
+                meta_map.insert(player.clone(), metadata);
             }
         }
-        MediaTrack::default()
+
+        let current_active = ACTIVE_PLAYER.read().ok().and_then(|p| p.clone());
+        let selected = select_target_player(&candidates, current_active.as_deref());
+
+        let active_bus_name = selected.map(|c| c.bus_name.clone());
+        if let Some(ref act) = active_bus_name {
+            if let Ok(mut lock) = ACTIVE_PLAYER.write() {
+                *lock = Some(act.clone());
+            }
+        }
+
+        // Build list of MediaSource
+        let sources: Vec<MediaSource> = candidates
+            .iter()
+            .map(|c| MediaSource {
+                id: c.bus_name.clone(),
+                name: c.identity.clone(),
+                is_active: active_bus_name.as_deref() == Some(&c.bus_name),
+                is_playing: c.status.eq_ignore_ascii_case("playing"),
+            })
+            .collect();
+
+        // Build MediaTrack for the active player
+        let track = if let Some(sel) = selected {
+            let metadata = meta_map.remove(&sel.bus_name).unwrap_or_default();
+            let title = sel.title.clone();
+            let artist = sel.artist.clone();
+            let album = metadata
+                .get("xesam:album")
+                .and_then(Self::extract_str)
+                .unwrap_or_default();
+
+            let raw_art_url = metadata
+                .get("mpris:artUrl")
+                .or_else(|| metadata.get("xesam:artUrl"))
+                .and_then(Self::extract_str)
+                .unwrap_or_default();
+
+            let art_url = Self::resolve_art_path(&raw_art_url).await;
+            let is_playing = sel.status.eq_ignore_ascii_case("playing");
+
+            MediaTrack {
+                title,
+                artist,
+                album,
+                art_url,
+                is_playing,
+                position_ms: 0,
+                duration_ms: 0,
+            }
+        } else {
+            MediaTrack::default()
+        };
+
+        MediaUpdate {
+            track,
+            sources,
+            active_player: active_bus_name,
+        }
     }
 
-    pub fn start(sender: UnboundedSender<MediaTrack>) {
+    pub fn start(sender: UnboundedSender<MediaUpdate>) {
+        if let Ok(mut lock) = MEDIA_SENDER.write() {
+            *lock = Some(sender.clone());
+        }
+
         tokio::spawn(async move {
-            info!("MPRIS Media service starting with D-Bus event listening");
+            info!("MPRIS Media service starting with multi-source D-Bus event listening");
             let conn = match Connection::session().await {
                 Ok(c) => c,
                 Err(e) => {
@@ -222,12 +396,12 @@ impl MediaService {
                 }
             };
 
-            let mut last_track = MediaTrack::default();
+            let mut last_update = MediaUpdate::default();
 
             // Initial query
-            let initial = Self::query_current_track(&conn).await;
-            if initial != last_track {
-                last_track = initial.clone();
+            let initial = Self::query_current_track_and_sources(&conn).await;
+            if initial != last_update {
+                last_update = initial.clone();
                 let _ = sender.send(initial);
             }
 
@@ -278,15 +452,95 @@ impl MediaService {
                     } => {},
                 }
 
-                let track = Self::query_current_track(&conn).await;
-                if track != last_track {
-                    debug!("Media track changed via D-Bus: {} - {}", track.artist, track.title);
-                    last_track = track.clone();
-                    if sender.send(track).is_err() {
+                let update = Self::query_current_track_and_sources(&conn).await;
+                if update != last_update {
+                    debug!("Media update via D-Bus: {} - {} (sources: {})", update.track.artist, update.track.title, update.sources.len());
+                    last_update = update.clone();
+                    if sender.send(update).is_err() {
                         break;
                     }
                 }
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_select_target_player_playing_takes_precedence() {
+        let candidates = vec![
+            PlayerCandidate {
+                bus_name: "org.mpris.MediaPlayer2.zen".to_string(),
+                identity: "Zen Browser".to_string(),
+                status: "Paused".to_string(),
+                has_metadata: true,
+                title: "Threads".to_string(),
+                artist: "".to_string(),
+            },
+            PlayerCandidate {
+                bus_name: "org.mpris.MediaPlayer2.spotify".to_string(),
+                identity: "Spotify".to_string(),
+                status: "Playing".to_string(),
+                has_metadata: true,
+                title: "Song".to_string(),
+                artist: "Artist".to_string(),
+            },
+        ];
+
+        let selected = select_target_player(&candidates, None);
+        assert_eq!(selected.unwrap().bus_name, "org.mpris.MediaPlayer2.spotify");
+    }
+
+    #[test]
+    fn test_select_target_player_preserves_active_when_paused() {
+        let candidates = vec![
+            PlayerCandidate {
+                bus_name: "org.mpris.MediaPlayer2.zen".to_string(),
+                identity: "Zen Browser".to_string(),
+                status: "Paused".to_string(),
+                has_metadata: true,
+                title: "Threads".to_string(),
+                artist: "".to_string(),
+            },
+            PlayerCandidate {
+                bus_name: "org.mpris.MediaPlayer2.spotify".to_string(),
+                identity: "Spotify".to_string(),
+                status: "Paused".to_string(),
+                has_metadata: true,
+                title: "Song".to_string(),
+                artist: "Artist".to_string(),
+            },
+        ];
+
+        let selected = select_target_player(&candidates, Some("org.mpris.MediaPlayer2.spotify"));
+        assert_eq!(selected.unwrap().bus_name, "org.mpris.MediaPlayer2.spotify");
+    }
+
+    #[test]
+    fn test_select_target_player_sticks_with_active_if_both_playing() {
+        let candidates = vec![
+            PlayerCandidate {
+                bus_name: "org.mpris.MediaPlayer2.zen".to_string(),
+                identity: "Zen Browser".to_string(),
+                status: "Playing".to_string(),
+                has_metadata: true,
+                title: "Video".to_string(),
+                artist: "YouTube".to_string(),
+            },
+            PlayerCandidate {
+                bus_name: "org.mpris.MediaPlayer2.spotify".to_string(),
+                identity: "Spotify".to_string(),
+                status: "Playing".to_string(),
+                has_metadata: true,
+                title: "Song".to_string(),
+                artist: "Artist".to_string(),
+            },
+        ];
+
+        let selected = select_target_player(&candidates, Some("org.mpris.MediaPlayer2.spotify"));
+        assert_eq!(selected.unwrap().bus_name, "org.mpris.MediaPlayer2.spotify");
     }
 }

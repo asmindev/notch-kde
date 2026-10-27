@@ -5,7 +5,7 @@ import { IconButton } from "icon-button.slint";
 
 export component BottomBar inherits VerticalLayout {
     in property <length> btn-dim: 22px;
-    out property <bool> is-hovered: mute-btn.has-hover || dnd-btn.has-hover;
+    out property <bool> is-hovered: music-btn.has-hover || mute-btn.has-hover || dnd-btn.has-hover;
 
     alignment: center;
     spacing: 3px;
@@ -18,11 +18,23 @@ export component BottomBar inherits VerticalLayout {
         opacity: 0.8;
     }
 
-    // Action Buttons Row (Mute, DND)
+    // Action Buttons Row (Music Source, Mute, DND)
     HorizontalLayout {
         alignment: center;
         spacing: max(12px, min(20px, root.btn-dim * 0.75));
         height: root.btn-dim;
+
+        // Music Source Toggle Button
+        VerticalLayout {
+            alignment: center;
+            music-btn := IconButton {
+                icon: Icons.music;
+                btn-size: root.btn-dim;
+                icon-size: root.btn-dim * 0.52;
+                active: IslandContext.show-source-selector;
+                clicked => { IslandContext.toggle-source-selector(); }
+            }
+        }
 
         // Mute Toggle Button
         VerticalLayout {

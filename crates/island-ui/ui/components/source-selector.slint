@@ -1,0 +1,86 @@
+import { ThemeColors } from "../theme/colors.slint";
+import { ThemeTypography } from "../theme/typography.slint";
+import { Icons } from "../theme/icons.slint";
+import { IslandContext } from "../context.slint";
+
+export component SourceChip inherits Rectangle {
+    in property <string> source-id: "";
+    in property <string> source-name: "Player";
+    in property <bool> is-active: false;
+    in property <bool> is-playing: false;
+    in property <length> chip-height: 20px;
+    out property <bool> has-hover <=> touch.has-hover;
+
+    callback clicked();
+
+    height: root.chip-height;
+    border-radius: root.chip-height / 2;
+    background: root.is-active 
+        ? #3b82f633 
+        : (touch.has-hover ? #ffffff20 : #ffffff0e);
+    border-width: 1px;
+    border-color: root.is-active 
+        ? #3b82f6 
+        : (touch.has-hover ? #ffffff38 : #ffffff18);
+
+    animate background { duration: 120ms; }
+    animate border-color { duration: 120ms; }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 5px;
+        alignment: center;
+
+        // Playing status dot (Green pulse dot if currently playing)
+        if root.is-playing: Rectangle {
+            width: 5px;
+            height: 5px;
+            border-radius: 2.5px;
+            background: ThemeColors.success;
+            y: (parent.height - self.height) / 2;
+        }
+
+        Text {
+            text: root.source-name;
+            color: root.is-active ? ThemeColors.foreground : ThemeColors.muted;
+            font-family: ThemeTypography.font-family;
+            font-size: max(9px, min(12px, root.chip-height * 0.52));
+            font-weight: root.is-active ? ThemeTypography.weight-bold : ThemeTypography.weight-medium;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component SourceSelectorBar inherits HorizontalLayout {
+    in property <length> bar-height: 22px;
+    out property <bool> is-hovered: false;
+
+    alignment: start;
+    spacing: 6px;
+    height: root.bar-height;
+
+    for source in IslandContext.player-sources: SourceChip {
+        source-id: source.id;
+        source-name: source.name;
+        is-active: source.is-active;
+        is-playing: source.is-playing;
+        chip-height: root.bar-height;
+        clicked => {
+            IslandContext.select-player-source(source.id);
+        }
+    }
+
+    if IslandContext.player-sources.length == 0: Text {
+        text: "No active media players";
+        color: ThemeColors.muted;
+        font-family: ThemeTypography.font-family;
+        font-size: max(9px, min(12px, root.bar-height * 0.5));
+        font-italic: true;
+        vertical-alignment: center;
+    }
+}

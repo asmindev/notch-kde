@@ -1,6 +1,6 @@
 use crate::models::{
-    ActiveModule, AlertKind, AudioSpectrum, BatteryState, IslandView, MediaTrack, MusicVisualMode,
-    TimeInfo,
+    ActiveModule, AlertKind, AudioSpectrum, BatteryState, IslandView, MediaSource, MediaTrack,
+    MusicVisualMode, TimeInfo,
 };
 use crate::view_engine::{SlotContext, ViewEngine};
 
@@ -23,6 +23,10 @@ pub struct AppState {
     // Actions toggles
     pub is_muted: bool,
     pub is_dnd: bool,
+
+    // Media sources selection
+    pub media_sources: Vec<MediaSource>,
+    pub show_source_selector: bool,
 
     // Presentation states
     pub alert_kind: AlertKind,
@@ -85,6 +89,8 @@ impl Default for AppState {
             spectrum: AudioSpectrum::default(),
             is_muted: false,
             is_dnd: false,
+            media_sources: Vec::new(),
+            show_source_selector: false,
             alert_kind: AlertKind::None,
             alert_generation: 0,
             music_visual_mode: MusicVisualMode::ArtworkPrimary,

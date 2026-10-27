@@ -68,3 +68,42 @@ fn test_media_playback_activates_media_module() {
     reduce(&mut state, AppEvent::MediaUpdated(track));
     assert_eq!(state.active_module, ActiveModule::Media);
 }
+
+#[test]
+fn test_toggle_source_selector_and_select() {
+    let mut state = AppState::default();
+    assert!(!state.show_source_selector);
+
+    // Toggle on
+    reduce(&mut state, AppEvent::ToggleSourceSelector);
+    assert!(state.show_source_selector);
+    assert_eq!(state.active_module, ActiveModule::Media);
+
+    // Populate sources
+    let sources = vec![
+        island_core::models::MediaSource {
+            id: "org.mpris.MediaPlayer2.spotify".to_string(),
+            name: "Spotify".to_string(),
+            is_active: false,
+            is_playing: true,
+        },
+        island_core::models::MediaSource {
+            id: "org.mpris.MediaPlayer2.plasma-browser-integration".to_string(),
+            name: "Zen Browser".to_string(),
+            is_active: false,
+            is_playing: false,
+        },
+    ];
+    reduce(&mut state, AppEvent::MediaSourcesUpdated(sources));
+    assert_eq!(state.media_sources.len(), 2);
+
+    // Select Spotify
+    let effects = reduce(&mut state, AppEvent::SelectMediaSource("org.mpris.MediaPlayer2.spotify".to_string()));
+    assert_eq!(effects, vec![island_core::events::Effect::SelectMediaSource("org.mpris.MediaPlayer2.spotify".to_string())]);
+    assert!(state.media_sources[0].is_active);
+    assert!(!state.media_sources[1].is_active);
+
+    // Toggle off
+    reduce(&mut state, AppEvent::ToggleSourceSelector);
+    assert!(!state.show_source_selector);
+}

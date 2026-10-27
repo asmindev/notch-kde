@@ -63,6 +63,21 @@ pub struct MediaTrack {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct MediaSource {
+    pub id: String,
+    pub name: String,
+    pub is_active: bool,
+    pub is_playing: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct MediaUpdate {
+    pub track: MediaTrack,
+    pub sources: Vec<MediaSource>,
+    pub active_player: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct TimeInfo {
     pub time_str: String,
     pub date_str: String,
