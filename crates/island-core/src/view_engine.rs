@@ -124,6 +124,7 @@ pub struct ViewEngine {
     pub is_visible: bool,
     pub is_overlapping: bool,
     pub is_hovered: bool,
+    pub hover_suppressed: bool,
     modules: Vec<Arc<dyn IslandModule>>,
 }
 
@@ -135,6 +136,7 @@ impl PartialEq for ViewEngine {
             && self.is_visible == other.is_visible
             && self.is_overlapping == other.is_overlapping
             && self.is_hovered == other.is_hovered
+            && self.hover_suppressed == other.hover_suppressed
     }
 }
 
@@ -153,6 +155,7 @@ impl ViewEngine {
             is_visible: true,
             is_overlapping: false,
             is_hovered: false,
+            hover_suppressed: false,
             modules: Vec::new(),
         };
 
@@ -195,9 +198,13 @@ impl ViewEngine {
     }
 
     /// Handles mouse hover interaction:
-    /// - Hover = true: expands Compact -> Wide (or keeps Expand)
-    /// - Hover = false: collapses Wide -> Compact (unless in Expand)
+    /// - Hover = true: expands Compact -> Wide (unless hover is suppressed from a recent collapse)
+    /// - Hover = false: collapses Wide -> Compact, and clears any hover suppression
     pub fn handle_hover(&mut self, hovered: bool) {
+        if !hovered {
+            self.hover_suppressed = false;
+        }
+
         self.is_hovered = hovered;
 
         // Hover over the notch area overrides overlap visibility
@@ -206,7 +213,7 @@ impl ViewEngine {
         }
 
         if hovered {
-            if self.current_view == IslandView::Compact {
+            if !self.hover_suppressed && self.current_view == IslandView::Compact {
                 self.set_view(IslandView::Wide);
             }
         } else if self.current_view == IslandView::Wide {
@@ -216,32 +223,26 @@ impl ViewEngine {
 
     /// Handles click interaction:
     /// - Compact / Wide -> ExpandView!
-    /// - ExpandView -> toggles back to Wide or Compact
+    /// - ExpandView -> collapses back directly to CompactView
     pub fn handle_click(&mut self) {
         match self.current_view {
             IslandView::Compact | IslandView::Wide => {
                 self.set_view(IslandView::Expand);
             }
             IslandView::Expand => {
-                let target = if self.is_hovered {
-                    IslandView::Wide
-                } else {
-                    IslandView::Compact
-                };
-                self.set_view(target);
+                self.set_view(IslandView::Compact);
+                self.is_hovered = false;
+                self.hover_suppressed = true;
             }
         }
     }
 
     /// Handles explicit collapse button [ v ]:
-    /// Retracts from ExpandView back to Wide (if hovered) or Compact
+    /// Retracts from ExpandView directly back to CompactView and suppresses hover
     pub fn handle_collapse(&mut self) {
-        let target = if self.is_hovered {
-            IslandView::Wide
-        } else {
-            IslandView::Compact
-        };
-        self.set_view(target);
+        self.set_view(IslandView::Compact);
+        self.is_hovered = false;
+        self.hover_suppressed = true;
     }
 
     /// Handles window overlap dodge event:

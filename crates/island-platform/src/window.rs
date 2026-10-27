@@ -25,6 +25,7 @@ impl PlatformWindow {
             && existing_content.contains(&target_screen)
             && existing_content.contains(&target_pos)
             && existing_content.contains("screenrule=2")
+            && existing_content.contains("acceptfocus=false")
         {
             info!("KWin window rule for island-app already up-to-date at primary screen (screen: {}, pos: {}). Skipping reconfigure.", target_screen_idx, pos);
             return Ok(());
@@ -37,6 +38,8 @@ impl PlatformWindow {
 Description=KDE Dynamic Island Placement\n\
 above=true\n\
 aboverule=2\n\
+acceptfocus=false\n\
+acceptfocusrule=2\n\
 decorationpolicy=none\n\
 decorationpolicyrule=2\n\
 position={pos}\n\
