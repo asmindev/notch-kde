@@ -1,4 +1,5 @@
 import { ThemeColors } from "../theme/colors.slint";
+import { Icons } from "../theme/icons.slint";
 
 export component AlbumArt inherits Rectangle {
     in property <length> art-size: 48px;
@@ -48,7 +49,7 @@ export component AlbumArt inherits Rectangle {
             Image {
                 width: 14px;
                 height: 14px;
-                source: @image-url("../../assets/icons/music.svg");
+                source: Icons.music;
                 image-fit: contain;
                 colorize: ThemeColors.accent;
             }

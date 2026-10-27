@@ -1,4 +1,5 @@
 import { ThemeColors } from "../theme/colors.slint";
+import { Icons } from "../theme/icons.slint";
 import { IslandContext } from "../context.slint";
 import { IconButton } from "icon-button.slint";
 
@@ -26,7 +27,7 @@ export component BottomBar inherits VerticalLayout {
         VerticalLayout {
             alignment: center;
             mute-btn := IconButton {
-                icon: @image-url("../../assets/icons/volume-x.svg");
+                icon: IslandContext.is-muted ? Icons.volume-x : Icons.volume-2;
                 btn-size: 22px;
                 icon-size: 12px;
                 active: IslandContext.is-muted;
@@ -38,7 +39,7 @@ export component BottomBar inherits VerticalLayout {
         VerticalLayout {
             alignment: center;
             dnd-btn := IconButton {
-                icon: @image-url("../../assets/icons/bell-off.svg");
+                icon: IslandContext.is-dnd ? Icons.bell-off : Icons.bell;
                 btn-size: 22px;
                 icon-size: 12px;
                 active: IslandContext.is-dnd;

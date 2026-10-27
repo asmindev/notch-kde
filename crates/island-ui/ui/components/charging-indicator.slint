@@ -1,5 +1,6 @@
 import { ThemeColors } from "../theme/colors.slint";
 import { ThemeTypography } from "../theme/typography.slint";
+import { Icons } from "../theme/icons.slint";
 
 export component ChargingIndicator inherits HorizontalLayout {
     in property <int> percentage: 85;
@@ -21,7 +22,7 @@ export component ChargingIndicator inherits HorizontalLayout {
         Image {
             width: 10px;
             height: 10px;
-            source: @image-url("../../assets/icons/zap.svg");
+            source: Icons.zap;
             image-fit: contain;
             colorize: ThemeColors.success;
         }
@@ -30,7 +31,7 @@ export component ChargingIndicator inherits HorizontalLayout {
     if !root.is-charging: Image {
         width: 14px;
         height: 14px;
-        source: @image-url("../../assets/icons/zap.svg");
+        source: Icons.zap;
         image-fit: contain;
         colorize: ThemeColors.muted;
     }

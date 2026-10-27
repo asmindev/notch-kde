@@ -1,10 +1,11 @@
 import { ThemeColors } from "../../theme/colors.slint";
 import { ThemeTypography } from "../../theme/typography.slint";
+import { Icons } from "../../theme/icons.slint";
 
 export component AlertWideSlot inherits Rectangle {
     in property <string> alert-title: "Notification";
     in property <string> alert-message: "System Alert";
-    in property <image> alert-icon: @image-url("../../../assets/icons/zap.svg");
+    in property <image> alert-icon: Icons.zap;
 
     width: 100%;
     height: 100%;

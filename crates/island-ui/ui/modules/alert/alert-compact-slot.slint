@@ -1,5 +1,6 @@
 import { ThemeColors } from "../../theme/colors.slint";
 import { ThemeTypography } from "../../theme/typography.slint";
+import { Icons } from "../../theme/icons.slint";
 import { IslandContext } from "../../context.slint";
 
 export component AlertCompactSlot inherits HorizontalLayout {
@@ -31,7 +32,7 @@ export component AlertCompactSlot inherits HorizontalLayout {
                 Image {
                     width: 11px;
                     height: 11px;
-                    source: @image-url("../../../assets/icons/zap.svg");
+                    source: Icons.zap;
                     image-fit: contain;
                     colorize: ThemeColors.success;
                 }
