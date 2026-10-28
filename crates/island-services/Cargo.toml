@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 island-core = { workspace = true }
+island-platform = { workspace = true }
 chrono = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }

@@ -68,6 +68,10 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.update_active_module();
         }
 
+        AppEvent::NotificationReceived => {
+            state.notification_generation = state.notification_generation.wrapping_add(1);
+        }
+
         AppEvent::AlertTimeout(target_gen) => {
             // Only dismiss if the timeout belongs to the current alert generation
             if state.alert_generation == target_gen {
@@ -77,11 +81,46 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         }
 
         AppEvent::CycleBlobCharacter => {
-            state.blob_character = (state.blob_character + 1) % 5;
+            state.blob_character = (state.blob_character + 1) % 8;
         }
 
         AppEvent::SetBlobCharacter(ch) => {
-            state.blob_character = ch % 5;
+            state.blob_character = ch % 8;
+        }
+
+        AppEvent::CycleBlobPalette => {
+            state.blob_palette = (state.blob_palette + 1) % 14;
+        }
+
+        AppEvent::SetBlobPalette(palette) => {
+            state.blob_palette = palette % 14;
+        }
+
+        AppEvent::CycleBlobExpression => {
+            state.blob_expression = (state.blob_expression + 1) % 17;
+            state.blob_expression_custom = true;
+        }
+
+        AppEvent::SetBlobExpression(expression) => {
+            state.blob_expression = expression % 17;
+            state.blob_expression_custom = true;
+        }
+
+        AppEvent::RandomizeAvatar => {
+            randomize_avatar(state);
+        }
+
+        AppEvent::AvatarRandomTick => {
+            if state.avatar_random {
+                randomize_avatar(state);
+            }
+        }
+
+        AppEvent::ToggleAvatarRandom => {
+            state.avatar_random = !state.avatar_random;
+            if state.avatar_random {
+                randomize_avatar(state);
+            }
         }
 
         AppEvent::ToggleSwapPetArt => {
@@ -216,7 +255,15 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         AppEvent::ToggleSourceSelector => {
             state.show_source_selector = !state.show_source_selector;
             if state.show_source_selector {
+                state.show_avatar_selector = false;
                 state.active_module = crate::models::ActiveModule::Media;
+            }
+        }
+
+        AppEvent::ToggleAvatarSelector => {
+            state.show_avatar_selector = !state.show_avatar_selector;
+            if state.show_avatar_selector {
+                state.show_source_selector = false;
             }
         }
 
@@ -438,4 +485,20 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
     }
 
     effects
+}
+
+fn next_avatar_seed(state: &mut AppState) -> u64 {
+    let mut x = state.avatar_seed;
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+    state.avatar_seed = x;
+    x
+}
+
+fn randomize_avatar(state: &mut AppState) {
+    state.blob_character = (next_avatar_seed(state) % 8) as u32;
+    state.blob_palette = (next_avatar_seed(state) % 14) as u32;
+    state.blob_expression = (next_avatar_seed(state) % 17) as u32;
+    state.blob_expression_custom = true;
 }

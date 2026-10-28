@@ -12,6 +12,7 @@ pub enum AppEvent {
     SpectrumUpdated([f32; 8]),
     DndUpdated(bool),
     AudioMuteUpdated(bool),
+    NotificationReceived,
     
     // Platform & windowing
     WindowOverlapChanged(bool),
@@ -35,6 +36,7 @@ pub enum AppEvent {
     MuteToggleClicked,
     DndToggleClicked,
     ToggleSourceSelector,
+    ToggleAvatarSelector,
     SelectMediaSource(String),
     IslandClicked,
     CollapseClicked,
@@ -50,6 +52,13 @@ pub enum AppEvent {
     MochiSlapReset(u64),
     CycleBlobCharacter,
     SetBlobCharacter(u32),
+    CycleBlobPalette,
+    SetBlobPalette(u32),
+    CycleBlobExpression,
+    SetBlobExpression(u32),
+    RandomizeAvatar,
+    AvatarRandomTick,
+    ToggleAvatarRandom,
     AlertTimeout(u64),
 }
 

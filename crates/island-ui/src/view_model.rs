@@ -31,6 +31,10 @@ impl ViewModel {
         ctx.set_music_visual_mode(state.music_visual_mode as i32);
         ctx.set_mochi_mood(state.mochi_mood as i32);
         ctx.set_blob_character(state.blob_character as i32);
+        ctx.set_blob_palette(state.blob_palette as i32);
+        ctx.set_blob_expression(state.blob_expression as i32);
+        ctx.set_show_avatar_selector(state.show_avatar_selector);
+        ctx.set_avatar_random(state.avatar_random);
         ctx.set_pet_is_happy(state.pet_is_happy);
         ctx.set_pet_is_dizzy(state.pet_is_dizzy);
         ctx.set_pet_is_sleepy(state.pet_is_sleepy);

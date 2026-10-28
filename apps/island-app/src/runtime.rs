@@ -2,14 +2,14 @@ use island_core::{reduce, AppEvent, AppState, Effect};
 use island_platform::overlap::Rect;
 use island_platform::{KdeManager, OverlapDetector, PlatformWindow};
 use island_services::{
-    AudioService, BatteryService, CavaService, ClockService, DndService, MediaService,
-    ScreenSaverService,
+    AudioService, BatteryService, CavaService, ClockService, CursorService, DndService,
+    MediaService, NotificationService, ScreenSaverService,
 };
 use island_ui::{MainWindow, ViewModel};
 use crate::input_region;
 use crate::pet3d;
 use slint::ComponentHandle;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
@@ -177,6 +177,46 @@ impl AppRuntime {
             let _ = tx.send(AppEvent::CycleBlobCharacter);
         });
 
+        let tx = event_tx.clone();
+        ctx.on_cycle_blob_palette(move || {
+            let _ = tx.send(AppEvent::CycleBlobPalette);
+        });
+
+        let tx = event_tx.clone();
+        ctx.on_cycle_blob_expression(move || {
+            let _ = tx.send(AppEvent::CycleBlobExpression);
+        });
+
+        let tx = event_tx.clone();
+        ctx.on_toggle_avatar_selector(move || {
+            let _ = tx.send(AppEvent::ToggleAvatarSelector);
+        });
+
+        let tx = event_tx.clone();
+        ctx.on_select_blob_character(move |index| {
+            let _ = tx.send(AppEvent::SetBlobCharacter(index.max(0) as u32));
+        });
+
+        let tx = event_tx.clone();
+        ctx.on_select_blob_palette(move |index| {
+            let _ = tx.send(AppEvent::SetBlobPalette(index.max(0) as u32));
+        });
+
+        let tx = event_tx.clone();
+        ctx.on_select_blob_expression(move |index| {
+            let _ = tx.send(AppEvent::SetBlobExpression(index.max(0) as u32));
+        });
+
+        let tx = event_tx.clone();
+        ctx.on_randomize_avatar(move || {
+            let _ = tx.send(AppEvent::RandomizeAvatar);
+        });
+
+        let tx = event_tx.clone();
+        ctx.on_toggle_avatar_random(move || {
+            let _ = tx.send(AppEvent::ToggleAvatarRandom);
+        });
+
         let pet3d_cursor = pet3d.clone();
         let cursor_window = self.window.as_weak();
         ctx.on_cursor_moved(move |x, y| {
@@ -226,6 +266,16 @@ impl AppRuntime {
                 while let Some(update) = media_rx.recv().await {
                     let _ = tx3.send(AppEvent::MediaUpdated(update.track));
                     let _ = tx3.send(AppEvent::MediaSourcesUpdated(update.sources));
+                }
+            });
+
+            // Desktop notifications (session bus monitor)
+            let (notif_tx, mut notif_rx) = mpsc::unbounded_channel();
+            tokio::spawn(NotificationService::listen(notif_tx));
+            let tx_notif = event_tx_services.clone();
+            tokio::spawn(async move {
+                while notif_rx.recv().await.is_some() {
+                    let _ = tx_notif.send(AppEvent::NotificationReceived);
                 }
             });
 
@@ -287,7 +337,30 @@ impl AppRuntime {
         let notch_rect = compact_notch_rect(&geom);
         overlap_detector.start(notch_rect, overlap_tx);
 
+        // Global cursor bridge: KWin script -> D-Bus -> Bloub gaze.
+        let (cursor_tx, mut cursor_rx) = mpsc::unbounded_channel();
+        let cursor_geom = Arc::new(Mutex::new(geom));
+        let cursor_service_geom = cursor_geom.clone();
+        tokio_rt.spawn(async move {
+            CursorService::serve(cursor_service_geom, cursor_tx).await;
+        });
+        let pet3d_cursor = pet3d.clone();
+        let cursor_window = self.window.as_weak();
+        tokio_rt.spawn(async move {
+            while let Some((x, y)) = cursor_rx.recv().await {
+                let pet3d = pet3d_cursor.clone();
+                let window = cursor_window.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    pet3d.set_gaze(x, y);
+                    if let Some(win) = window.upgrade() {
+                        win.window().request_redraw();
+                    }
+                });
+            }
+        });
+
         let screen_watcher = overlap_detector.clone();
+        let cursor_screen_geom = cursor_geom.clone();
         let output_config = std::env::var_os("HOME")
             .map(std::path::PathBuf::from)
             .map(|home| home.join(".config/kwinoutputconfig.json"));
@@ -324,6 +397,7 @@ impl AppRuntime {
                     Ok(false) => {}
                     Err(err) => warn!("Failed to update KWin rule after screen change: {err}"),
                 }
+                *cursor_screen_geom.lock().unwrap() = geom;
                 screen_watcher.update_rect(compact_notch_rect(&geom));
             }
         });
@@ -335,7 +409,19 @@ impl AppRuntime {
             }
         });
 
-        // 6. Event Processing and UI Dispatch Thread
+        // 6. Avatar is static by default. Auto-random only runs after the user
+        // enables it from the avatar picker.
+        let variation_tx = event_tx.clone();
+        tokio_rt.spawn(async move {
+            let mut random = tokio::time::interval(tokio::time::Duration::from_secs(5));
+            random.tick().await;
+            loop {
+                random.tick().await;
+                let _ = variation_tx.send(AppEvent::AvatarRandomTick);
+            }
+        });
+
+        // 7. Event Processing and UI Dispatch Thread
         let window_weak_clone = window_weak.clone();
         let pet3d_events = pet3d.clone();
         let mut last_synced_state = app_state.clone();
@@ -482,7 +568,7 @@ impl AppRuntime {
             }
         });
 
-        // 7. Show Window and Run Slint GUI event loop
+        // 8. Show Window and Run Slint GUI event loop
         self.window.show()?;
         input_region::schedule_init(
             self.window.as_weak(),

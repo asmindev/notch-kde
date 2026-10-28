@@ -5,6 +5,13 @@ export struct PlayerSourceItem {
     is-playing: bool,
 }
 
+export struct AvatarChoice {
+    index: int,
+    label: string,
+    glyph: string,
+    swatch: color,
+}
+
 /// Unified IslandContext (React-style Context singleton for the Dynamic Island)
 /// Conceptually structured into 4 groups: Navigation, Domain, Presentation, Actions.
 export global IslandContext {
@@ -51,7 +58,56 @@ export global IslandContext {
 
     // Media Source Selector
     in-out property <bool> show-source-selector: false;
+    in-out property <bool> show-avatar-selector: false;
     in-out property <[PlayerSourceItem]> player-sources: [];
+    in-out property <bool> avatar-random: false;
+
+    // Avatar picker choices (shape, palette, expression)
+    in-out property <[AvatarChoice]> avatar-shapes: [
+        { index: 0, label: "Cercle", glyph: "●", swatch: #00000000 },
+        { index: 1, label: "Galet", glyph: "◒", swatch: #00000000 },
+        { index: 2, label: "Squircle", glyph: "▢", swatch: #00000000 },
+        { index: 3, label: "Capsule", glyph: "▭", swatch: #00000000 },
+        { index: 4, label: "Triangle", glyph: "△", swatch: #00000000 },
+        { index: 5, label: "Hexagone", glyph: "⬡", swatch: #00000000 },
+        { index: 6, label: "Nuage", glyph: "☁", swatch: #00000000 },
+        { index: 7, label: "Goutte", glyph: "💧", swatch: #00000000 }
+    ];
+    in-out property <[AvatarChoice]> avatar-palettes: [
+        { index: 0, label: "Clair", glyph: "", swatch: #ededef },
+        { index: 1, label: "Encre", glyph: "", swatch: #0a0a0c },
+        { index: 2, label: "Encre 2", glyph: "", swatch: #0a0a0c },
+        { index: 3, label: "Creme", glyph: "", swatch: #f1efe9 },
+        { index: 4, label: "Brun", glyph: "", swatch: #8b5e3c },
+        { index: 5, label: "Rouge", glyph: "", swatch: #e8483f },
+        { index: 6, label: "Orange", glyph: "", swatch: #f08a24 },
+        { index: 7, label: "Ambre", glyph: "", swatch: #f0b429 },
+        { index: 8, label: "Vert", glyph: "", swatch: #3ecf8e },
+        { index: 9, label: "Turquoise", glyph: "", swatch: #2fbfa0 },
+        { index: 10, label: "Bleu", glyph: "", swatch: #3b93f0 },
+        { index: 11, label: "Violet", glyph: "", swatch: #8b5cf6 },
+        { index: 12, label: "Rose", glyph: "", swatch: #e152b0 },
+        { index: 13, label: "Gris", glyph: "", swatch: #a3a3a3 }
+    ];
+    in-out property <[AvatarChoice]> avatar-expressions: [
+        { index: 0, label: "Neutre", glyph: "•", swatch: #00000000 },
+        { index: 1, label: "Attentif", glyph: "◉", swatch: #00000000 },
+        { index: 2, label: "Surpris", glyph: "○", swatch: #00000000 },
+        { index: 3, label: "Excite", glyph: "✦", swatch: #00000000 },
+        { index: 4, label: "Heureux", glyph: "☺", swatch: #00000000 },
+        { index: 5, label: "Hilare", glyph: "☻", swatch: #00000000 },
+        { index: 6, label: "Colere", glyph: "▼", swatch: #00000000 },
+        { index: 7, label: "Triste", glyph: "☹", swatch: #00000000 },
+        { index: 8, label: "Effraye", glyph: "□", swatch: #00000000 },
+        { index: 9, label: "Mefiant", glyph: "◔", swatch: #00000000 },
+        { index: 10, label: "Confus", glyph: "?", swatch: #00000000 },
+        { index: 11, label: "Curieux", glyph: "◎", swatch: #00000000 },
+        { index: 12, label: "Fier", glyph: "▲", swatch: #00000000 },
+        { index: 13, label: "Timide", glyph: "◌", swatch: #00000000 },
+        { index: 14, label: "Blase", glyph: "—", swatch: #00000000 },
+        { index: 15, label: "Somnolent", glyph: "⌣", swatch: #00000000 },
+        { index: 16, label: "Robot", glyph: "▣", swatch: #00000000 }
+    ];
 
     // ==========================================
     // 3. PRESENTATION STATE
@@ -61,7 +117,9 @@ export global IslandContext {
     in-out property <int> music-visual-mode: 0;    // 0=PetPrimary (Pet Left, Art Right), 1=ArtworkPrimary (Art Left, Pet Right)
     in-out property <bool> is-visible-state: true; // Shell docking visibility
     in-out property <int> mochi-mood: 0;           // 0=Idle, 1=Happy, 2=Annoyed, 3=Dizzy, 4=Dancing, 5=Sleeping
-    in-out property <int> blob-character: 1;       // 0=Round, 1=Nub (Bear), 2=Cloud, 3=Organic, 4=Adaptive
+    in-out property <int> blob-character: 1;       // 0=Cercle, 1=Galet, 2=Squircle, 3=Capsule, 4=Triangle, 5=Hexagone, 6=Nuage, 7=Goutte
+    in-out property <int> blob-palette: 0;         // 0=Clair, 1=Encre, 2..13=Bloub colors
+    in-out property <int> blob-expression: 0;      // 0..15 = Bloub expressions
     in-out property <bool> pet-is-happy: false;    // Interactive bouncy happy reaction
     in-out property <bool> pet-is-dizzy: false;    // Rapid poking dizzy reaction
     in-out property <bool> pet-is-sleepy: false;   // Low battery sleepy state
@@ -86,9 +144,17 @@ export global IslandContext {
     callback toggle-swap();
     callback collapse-clicked();
     callback toggle-source-selector();
+    callback toggle-avatar-selector();
     callback select-player-source(string);
     callback pet-clicked();
     callback mochi-clicked();
     callback cycle-blob-character();
+    callback cycle-blob-palette();
+    callback cycle-blob-expression();
+    callback select-blob-character(int);
+    callback select-blob-palette(int);
+    callback select-blob-expression(int);
+    callback randomize-avatar();
+    callback toggle-avatar-random();
     callback cursor-moved(float, float);
 }

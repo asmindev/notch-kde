@@ -19,9 +19,10 @@ const COMPACT_WIDTH: i32 = 156;
 const COMPACT_ALERT_WIDTH: i32 = 228;
 const COMPACT_TOUCH_HEIGHT: i32 = 42;
 const WIDE_WIDTH: i32 = 390;
-const WIDE_TOUCH_HEIGHT: i32 = 90;
+const WIDE_TOUCH_HEIGHT: i32 = 98;
 const EXPAND_WIDTH: i32 = 440;
-const EXPAND_TOUCH_HEIGHT: i32 = 164;
+const EXPAND_TOUCH_HEIGHT: i32 = 180;
+const AVATAR_EXPAND_TOUCH_HEIGHT: i32 = 188;
 const HIDDEN_TOUCH_HEIGHT: i32 = 28;
 const COMPACT_EAR: i32 = 5;
 const WIDE_EAR: i32 = 10;
@@ -40,7 +41,14 @@ pub fn rect_for_state(state: &AppState) -> Rect {
                 (width, COMPACT_TOUCH_HEIGHT, COMPACT_EAR)
             }
             IslandView::Wide => (WIDE_WIDTH, WIDE_TOUCH_HEIGHT, WIDE_EAR),
-            IslandView::Expand => (EXPAND_WIDTH, EXPAND_TOUCH_HEIGHT, WIDE_EAR),
+            IslandView::Expand => {
+                let height = if state.show_avatar_selector {
+                    AVATAR_EXPAND_TOUCH_HEIGHT
+                } else {
+                    EXPAND_TOUCH_HEIGHT
+                };
+                (EXPAND_WIDTH, height, WIDE_EAR)
+            }
         }
     };
 
@@ -271,7 +279,7 @@ mod tests {
     fn wide_region_matches_visible_touch_area() {
         assert_eq!(
             rect_for_state(&state(IslandView::Wide, true, AlertKind::None)),
-            Rect { x: 35, y: 0, w: 410, h: 90 }
+            Rect { x: 35, y: 0, w: 410, h: 98 }
         );
     }
 
@@ -279,7 +287,17 @@ mod tests {
     fn expand_region_matches_visible_touch_area() {
         assert_eq!(
             rect_for_state(&state(IslandView::Expand, true, AlertKind::None)),
-            Rect { x: 10, y: 0, w: 460, h: 164 }
+            Rect { x: 10, y: 0, w: 460, h: 180 }
+        );
+    }
+
+    #[test]
+    fn avatar_expand_region_is_taller() {
+        let mut state = state(IslandView::Expand, true, AlertKind::None);
+        state.show_avatar_selector = true;
+        assert_eq!(
+            rect_for_state(&state),
+            Rect { x: 10, y: 0, w: 460, h: 188 }
         );
     }
 

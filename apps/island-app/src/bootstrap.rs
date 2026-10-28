@@ -1,4 +1,5 @@
 use island_platform::{KdeManager, PlatformWindow};
+use island_services::CursorService;
 use island_ui::MainWindow;
 use tracing::{info, warn};
 
@@ -32,6 +33,7 @@ impl Bootstrap {
             Ok(false) => {}
             Err(err) => warn!("Failed to ensure KWin window rule: {err}"),
         }
+        CursorService::install_kwin_script();
     }
 
     pub fn create_window() -> Result<MainWindow, slint::PlatformError> {

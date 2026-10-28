@@ -40,6 +40,8 @@ acceptfocus=false\n\
 acceptfocusrule=2\n\
 decorationpolicy=none\n\
 decorationpolicyrule=2\n\
+layer=notification\n\
+layerrule=2\n\
 position={pos}\n\
 positionrule=2\n\
 screen={screen_index}\n\
@@ -236,6 +238,8 @@ fn is_rule_current(
         ("acceptfocusrule", "2".to_string()),
         ("decorationpolicy", "none".to_string()),
         ("decorationpolicyrule", "2".to_string()),
+        ("layer", "notification".to_string()),
+        ("layerrule", "2".to_string()),
         ("position", pos.to_string()),
         ("positionrule", "2".to_string()),
         ("screen", screen_index.to_string()),
@@ -400,6 +404,8 @@ acceptfocus=false\n\
 acceptfocusrule=2\n\
 decorationpolicy=none\n\
 decorationpolicyrule=2\n\
+layer=notification\n\
+layerrule=2\n\
 position=10,20\n\
 positionrule=2\n\
 screen=1\n\
@@ -442,6 +448,8 @@ acceptfocus=false\n\
 acceptfocusrule=2\n\
 decorationpolicy=none\n\
 decorationpolicyrule=2\n\
+layer=notification\n\
+layerrule=2\n\
 position=10,20\n\
 positionrule=2\n\
 screen=1\n\

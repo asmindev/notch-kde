@@ -27,7 +27,7 @@ export component IslandShell inherits Rectangle {
 
     property <length> target-h: 
         !root.is-visible-state ? ThemeMetrics.compact-height :
-        (root.active-mode == 2 ? (ThemeMetrics.expand-height + ThemeMetrics.bottom-bar-height) :
+        (root.active-mode == 2 ? ((IslandContext.show-avatar-selector ? ThemeMetrics.avatar-expand-height : ThemeMetrics.expand-height) + ThemeMetrics.bottom-bar-height) :
         (root.active-mode == 1 ? (IslandContext.is-welcome ? ThemeMetrics.welcome-height : (ThemeMetrics.wide-height + ThemeMetrics.bottom-bar-height)) :
         ThemeMetrics.compact-height));
 

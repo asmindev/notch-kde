@@ -238,27 +238,70 @@ fn test_pet_sleepy_on_low_battery() {
 }
 
 #[test]
-fn test_blobatar_character_selection_and_cycle() {
+fn test_bloub_shape_and_palette_selection_and_cycle() {
     let mut state = AppState::default();
-    assert_eq!(state.blob_character, 1); // Default to Nub (Bear Blob)
+    assert_eq!(state.blob_character, 1); // Default Galet
+    assert_eq!(state.blob_palette, 0); // Default notchde light
 
-    // Cycle through: 1 -> 2 -> 3 -> 4 -> 0 -> 1
-    reduce(&mut state, AppEvent::CycleBlobCharacter);
-    assert_eq!(state.blob_character, 2); // Cloud
+    // Cycle through all eight shapes: 1 -> 2 -> ... -> 7 -> 0 -> 1
+    for expected in [2, 3, 4, 5, 6, 7, 0, 1] {
+        reduce(&mut state, AppEvent::CycleBlobCharacter);
+        assert_eq!(state.blob_character, expected);
+    }
 
-    reduce(&mut state, AppEvent::CycleBlobCharacter);
-    assert_eq!(state.blob_character, 3); // Organic Pebble
+    // Cycle through all fourteen palettes: 0 -> ... -> 13 -> 0
+    for expected in 1..14 {
+        reduce(&mut state, AppEvent::CycleBlobPalette);
+        assert_eq!(state.blob_palette, expected);
+    }
+    reduce(&mut state, AppEvent::CycleBlobPalette);
+    assert_eq!(state.blob_palette, 0);
 
-    reduce(&mut state, AppEvent::CycleBlobCharacter);
-    assert_eq!(state.blob_character, 4); // Adaptive
+    // Direct set wraps
+    reduce(&mut state, AppEvent::SetBlobCharacter(9));
+    assert_eq!(state.blob_character, 1);
+    reduce(&mut state, AppEvent::SetBlobPalette(15));
+    assert_eq!(state.blob_palette, 1);
 
-    reduce(&mut state, AppEvent::CycleBlobCharacter);
-    assert_eq!(state.blob_character, 0); // Round
+    // Expression cycling and direct set wrap through all expressions and mark
+    // the choice as an explicit custom override.
+    assert_eq!(state.blob_expression, 0);
+    assert!(!state.blob_expression_custom);
+    for expected in 1..17 {
+        reduce(&mut state, AppEvent::CycleBlobExpression);
+        assert_eq!(state.blob_expression, expected);
+    }
+    reduce(&mut state, AppEvent::CycleBlobExpression);
+    assert_eq!(state.blob_expression, 0);
+    assert!(state.blob_expression_custom);
+    reduce(&mut state, AppEvent::SetBlobExpression(18));
+    assert_eq!(state.blob_expression, 1);
+    assert!(state.blob_expression_custom);
 
-    reduce(&mut state, AppEvent::CycleBlobCharacter);
-    assert_eq!(state.blob_character, 1); // Back to Nub
+    // One-shot shuffle always changes the avatar, auto-random only when enabled.
+    let before = (state.blob_character, state.blob_palette, state.blob_expression);
+    reduce(&mut state, AppEvent::RandomizeAvatar);
+    assert!(
+        (state.blob_character, state.blob_palette, state.blob_expression) != before
+    );
+    let before_auto = (state.blob_character, state.blob_palette, state.blob_expression);
+    reduce(&mut state, AppEvent::AvatarRandomTick);
+    assert_eq!(
+        (state.blob_character, state.blob_palette, state.blob_expression),
+        before_auto
+    );
+    reduce(&mut state, AppEvent::ToggleAvatarRandom);
+    assert!(state.avatar_random);
+    assert!(
+        (state.blob_character, state.blob_palette, state.blob_expression) != before_auto
+    );
+}
 
-    // Direct set
-    reduce(&mut state, AppEvent::SetBlobCharacter(3));
-    assert_eq!(state.blob_character, 3);
+#[test]
+fn notification_event_bumps_generation() {
+    let mut state = AppState::default();
+    assert_eq!(state.notification_generation, 0);
+    reduce(&mut state, AppEvent::NotificationReceived);
+    reduce(&mut state, AppEvent::NotificationReceived);
+    assert_eq!(state.notification_generation, 2);
 }

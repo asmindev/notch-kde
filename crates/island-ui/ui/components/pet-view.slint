@@ -4,7 +4,7 @@ import { BlobatarPet } from "blobatar-pet.slint";
 
 export component PetView inherits Rectangle {
     in property <length> pet-size: 24px;
-    out property <bool> is-hovered <=> blob.is-hovered;
+    out property <bool> is-hovered <=> touch.has-hover;
 
     width: root.pet-size;
     height: root.pet-size;
@@ -14,13 +14,30 @@ export component PetView inherits Rectangle {
     property <bool> is-happy: IslandContext.pet-is-happy || IslandContext.is-welcome;
 
     // ==========================================
-    // 1. BLOBATAR PROCEDURAL VECTOR PET
-    // Multi-character silhouettes & condition forms
+    // 1. BLOUB 3D PET (WGPU) + VECTOR FALLBACK
     // ==========================================
-    blob := BlobatarPet {
+    if IslandContext.pet-3d-ready : Image {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: root.pet-size;
+        height: root.pet-size;
+        source: IslandContext.pet-3d-image;
+        image-fit: contain;
+    }
+
+    if !IslandContext.pet-3d-ready : BlobatarPet {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         pet-size: root.pet-size;
+    }
+
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+        clicked => {
+            IslandContext.mochi-clicked();
+            IslandContext.pet-clicked();
+        }
     }
 
     // ==========================================

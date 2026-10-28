@@ -7,6 +7,5 @@ license.workspace = true
 [dependencies]
 bytemuck = { workspace = true }
 glam = { workspace = true }
-gltf = { workspace = true }
 slint = { workspace = true }
 tracing = { workspace = true }

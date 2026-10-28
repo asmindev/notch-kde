@@ -43,10 +43,12 @@ pub struct AppState {
     // Media sources selection
     pub media_sources: Vec<MediaSource>,
     pub show_source_selector: bool,
+    pub show_avatar_selector: bool,
 
     // Presentation states
     pub alert_kind: AlertKind,
     pub alert_generation: u64,
+    pub notification_generation: u64,
     pub music_visual_mode: MusicVisualMode,
     pub pet_is_happy: bool,
     pub pet_happy_generation: u64,
@@ -60,8 +62,13 @@ pub struct AppState {
     pub mochi_slap_count: u32,
     pub mochi_generation: u64,
 
-    // Blobatar Pet states
+    // Bloub Pet states
     pub blob_character: u32,
+    pub blob_palette: u32,
+    pub blob_expression: u32,
+    pub blob_expression_custom: bool,
+    pub avatar_random: bool,
+    pub avatar_seed: u64,
 
     // Welcome Greeting states
     pub is_welcome: bool,
@@ -131,8 +138,10 @@ impl Default for AppState {
             is_dnd: false,
             media_sources: Vec::new(),
             show_source_selector: false,
+            show_avatar_selector: false,
             alert_kind: AlertKind::None,
             alert_generation: 0,
+            notification_generation: 0,
             music_visual_mode: MusicVisualMode::ArtworkPrimary,
             pet_is_happy: false,
             pet_happy_generation: 0,
@@ -143,7 +152,12 @@ impl Default for AppState {
             mochi_mood: MochiMoodState::Idle,
             mochi_slap_count: 0,
             mochi_generation: 0,
-            blob_character: 1, // 1 = Nub (Bear Blob)
+            blob_character: 1, // 1 = Galet
+            blob_palette: 0, // 0 = notchde light
+            blob_expression: 0, // 0 = Neutre
+            blob_expression_custom: false,
+            avatar_random: false,
+            avatar_seed: 0x5eed_1234_abcd_9876,
             is_welcome: true,
             welcome_generation: 1,
             welcome_title: "Welcome back!".to_string(),

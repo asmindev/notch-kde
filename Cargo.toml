@@ -26,7 +26,6 @@ slint = { version = "1.18.1", features = ["renderer-femtovg-wgpu", "unstable-wgp
 slint-build = "1.18.1"
 bytemuck = { version = "1.25", features = ["derive"] }
 glam = "0.30"
-gltf = { version = "1.4", features = ["extensions", "names", "utils"] }
 tokio = { version = "1.44", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
