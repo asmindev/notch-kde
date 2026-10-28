@@ -186,35 +186,39 @@ fn test_pet_clicked_and_happy_timeout() {
 fn test_pet_rapid_poking_triggers_dizzy() {
     let mut state = AppState::default();
     assert!(!state.pet_is_dizzy);
+    assert_eq!(state.mochi_mood, island_core::state::MochiMoodState::Idle);
 
-    // Poke 1, 2, 3 times -> happy
+    // Poke 1, 2 times -> Annoyed (slaps < 3)
     reduce(&mut state, AppEvent::PetClicked);
+    assert_eq!(state.mochi_mood, island_core::state::MochiMoodState::Annoyed);
     reduce(&mut state, AppEvent::PetClicked);
-    reduce(&mut state, AppEvent::PetClicked);
-    assert!(state.pet_is_happy);
+    assert_eq!(state.mochi_mood, island_core::state::MochiMoodState::Annoyed);
     assert!(!state.pet_is_dizzy);
 
-    // Poke 4th time -> triggers dizzy!
+    // Poke 3rd time -> triggers dizzy (Coucou 3-slap mechanic)!
     let effects = reduce(&mut state, AppEvent::PetClicked);
     assert!(state.pet_is_dizzy);
+    assert_eq!(state.mochi_mood, island_core::state::MochiMoodState::Dizzy);
     assert!(!state.pet_is_happy);
     assert!(effects.contains(&island_core::events::Effect::ScheduleTimer {
-        id: "pet_dizzy_timeout",
+        id: "mochi_dizzy_timeout",
         duration_ms: 2200,
-        generation: state.pet_dizzy_generation,
+        generation: state.mochi_generation,
     }));
 
     // Dizzy timeout resets dizzy state
-    let generation = state.pet_dizzy_generation;
-    reduce(&mut state, AppEvent::PetDizzyTimeout(generation));
+    let generation = state.mochi_generation;
+    reduce(&mut state, AppEvent::MochiDizzyTimeout(generation));
     assert!(!state.pet_is_dizzy);
-    assert_eq!(state.pet_poke_count, 0);
+    assert_eq!(state.mochi_mood, island_core::state::MochiMoodState::Idle);
+    assert_eq!(state.mochi_slap_count, 0);
 }
 
 #[test]
 fn test_pet_sleepy_on_low_battery() {
     let mut state = AppState::default();
     assert!(!state.pet_is_sleepy);
+    assert_eq!(state.mochi_mood, island_core::state::MochiMoodState::Idle);
 
     // Battery drops to 15% and not charging -> sleepy
     reduce(&mut state, AppEvent::BatteryUpdated(island_core::models::BatteryState {
@@ -222,6 +226,7 @@ fn test_pet_sleepy_on_low_battery() {
         is_charging: false,
     }));
     assert!(state.pet_is_sleepy);
+    assert_eq!(state.mochi_mood, island_core::state::MochiMoodState::Sleeping);
 
     // Plug in charger -> wakes up!
     reduce(&mut state, AppEvent::BatteryUpdated(island_core::models::BatteryState {
@@ -229,4 +234,5 @@ fn test_pet_sleepy_on_low_battery() {
         is_charging: true,
     }));
     assert!(!state.pet_is_sleepy);
+    assert_eq!(state.mochi_mood, island_core::state::MochiMoodState::Idle);
 }

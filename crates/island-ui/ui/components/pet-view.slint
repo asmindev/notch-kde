@@ -1,10 +1,10 @@
 import { IslandContext } from "../context.slint";
 import { FloatingNotes } from "floating-notes.slint";
-import { MomoProceduralPet } from "momo-procedural-pet.slint";
+import { MochiPet } from "mochi-pet.slint";
 
 export component PetView inherits Rectangle {
     in property <length> pet-size: 24px;
-    out property <bool> is-hovered <=> touch.has-hover;
+    out property <bool> is-hovered <=> mochi.is-hovered;
 
     width: root.pet-size;
     height: root.pet-size;
@@ -12,20 +12,14 @@ export component PetView inherits Rectangle {
 
     property <bool> is-singing: IslandContext.is-playing;
     property <bool> is-happy: IslandContext.pet-is-happy || IslandContext.is-welcome;
-    property <bool> is-dizzy: IslandContext.pet-is-dizzy;
-    property <bool> is-sleepy: IslandContext.pet-is-sleepy;
 
     // ==========================================
-    // 1. MOMO PROCEDURAL CODE-DRAWN PET (Zero image assets)
+    // 1. COUCOU MOCHI 100% PROCEDURAL VECTOR PET
     // ==========================================
-    momo := MomoProceduralPet {
+    mochi := MochiPet {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         pet-size: root.pet-size;
-        is-singing: root.is-singing;
-        is-happy: root.is-happy;
-        is-dizzy: root.is-dizzy;
-        is-sleepy: root.is-sleepy;
     }
 
     // ==========================================
@@ -37,16 +31,5 @@ export component PetView inherits Rectangle {
         is-singing: root.is-singing;
         is-happy: root.is-happy;
         pet-size: root.pet-size;
-    }
-
-    // ==========================================
-    // 3. INTERACTIVE TOUCH TARGET (Petting / Click)
-    // ==========================================
-    touch := TouchArea {
-        width: 100%;
-        height: 100%;
-        clicked => {
-            IslandContext.pet-clicked();
-        }
     }
 }

@@ -43,6 +43,11 @@ pub enum AppEvent {
     PetHappyTimeout(u64),
     PetDizzyTimeout(u64),
     PetPokeReset(u64),
+    MochiSlapped,
+    MochiAnnoyedTimeout(u64),
+    MochiDizzyTimeout(u64),
+    MochiHappyTimeout(u64),
+    MochiSlapReset(u64),
     AlertTimeout(u64),
 }
 

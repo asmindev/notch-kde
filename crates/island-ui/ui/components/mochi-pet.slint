@@ -1,0 +1,308 @@
+import { IslandContext } from "../context.slint";
+
+component MochiEye inherits Rectangle {
+    in property <int> mood: 0; // 0=Idle, 1=Happy, 2=Annoyed, 3=Dizzy, 4=Dancing, 5=Sleeping
+    in property <bool> is-blinking: false;
+    in property <float> scale-x-factor: 1.0;
+    in property <float> scale-y-factor: 1.0;
+
+    width: 100%;
+    height: 100%;
+    background: transparent;
+
+    // Ink color from Coucou: #1A1412
+    property <color> ink: #1a1412;
+
+    // 1. IDLE / NORMAL: Classic Coucou Pill with Smooth Auto-Blink
+    if root.mood == 0: Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: parent.width * root.scale-x-factor;
+        height: root.is-blinking ? parent.height * 0.22 : parent.height * root.scale-y-factor;
+        border-radius: min(self.width, self.height) / 2;
+        background: root.ink;
+        animate height { duration: 75ms; easing: ease-in-out; }
+    }
+
+    // 2. HAPPY / DANCING: Joyful Upward Arc (^ ^)
+    if root.mood == 1 || root.mood == 4: Rectangle {
+        width: 100%;
+        height: 100%;
+        clip: true;
+
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: parent.height * 0.35;
+            width: parent.width * 0.90;
+            height: parent.height * 0.50;
+            border-top-left-radius: self.width / 2;
+            border-top-right-radius: self.width / 2;
+            border-bottom-left-radius: 0px;
+            border-bottom-right-radius: 0px;
+            background: root.ink;
+        }
+
+        // Inner cutout to create clean line arc
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: parent.height * 0.52;
+            width: parent.width * 0.60;
+            height: parent.height * 0.40;
+            border-top-left-radius: self.width / 2;
+            border-top-right-radius: self.width / 2;
+            background: #ededef;
+        }
+    }
+
+    // 3. ANNOYED (Slapped 1-2x): Flat Straight Line (- -)
+    if root.mood == 2: Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: parent.width * 0.95;
+        height: parent.height * 0.24;
+        border-radius: 2px;
+        background: root.ink;
+    }
+
+    // 4. DIZZY (Slapped 3x): Spinning Spiral (@ @)
+    if root.mood == 3: Rectangle {
+        width: 100%;
+        height: 100%;
+
+        Text {
+            width: 100%;
+            height: 100%;
+            text: "@";
+            font-size: parent.height * 0.85;
+            font-weight: 800;
+            color: root.ink;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // 5. SLEEPING: Peaceful Closed Curve (- -)
+    if root.mood == 5: Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: parent.height * 0.45;
+        width: parent.width * 0.90;
+        height: parent.height * 0.22;
+        border-radius: 2px;
+        background: root.ink;
+    }
+}
+
+export component MochiPet inherits Rectangle {
+    in property <length> pet-size: 38px;
+    out property <bool> is-hovered: touch.has-hover;
+
+    width: root.pet-size;
+    height: root.pet-size;
+    background: transparent;
+
+    // Mood state: 0=Idle, 1=Happy, 2=Annoyed, 3=Dizzy, 4=Dancing, 5=Sleeping
+    property <int> mood: IslandContext.mochi-mood;
+
+    // Audio energy from CAVA for Dancing
+    property <float> bass: (IslandContext.b0 + IslandContext.b1) * 0.5;
+    property <float> mid: (IslandContext.b2 + IslandContext.b3) * 0.5;
+
+    // Gaze direction (-1.0 to 1.0)
+    property <float> look-x: IslandContext.look-x;
+    property <float> look-y: IslandContext.look-y;
+
+    // Smooth interpolated gaze coordinates (110ms spring)
+    property <float> smooth-look-x: root.look-x;
+    property <float> smooth-look-y: root.look-y;
+    animate smooth-look-x { duration: 110ms; easing: ease-out; }
+    animate smooth-look-y { duration: 110ms; easing: ease-out; }
+
+    // Coucou 3D spherical angles: yaw (-0.55 to 0.55), pitch (-0.35 to 0.35)
+    property <float> yaw: root.smooth-look-x * 0.55;
+    property <float> pitch: root.smooth-look-y * 0.35;
+
+    // 1. Natural Blinking Loop (every 3.2s)
+    property <bool> is-blinking: false;
+    blink-timer := Timer {
+        interval: 3200ms;
+        running: root.mood == 0;
+        triggered => {
+            root.is-blinking = true;
+            blink-close-timer.running = true;
+        }
+    }
+    blink-close-timer := Timer {
+        interval: 110ms;
+        running: false;
+        triggered => {
+            root.is-blinking = false;
+            self.running = false;
+        }
+    }
+
+    // 2. Procedural Breathing & Floating Bob (every 1.8s)
+    property <bool> breath-phase: false;
+    breath-timer := Timer {
+        interval: 1800ms;
+        running: true;
+        triggered => {
+            root.breath-phase = !root.breath-phase;
+        }
+    }
+
+    // 3. Dizzy Wobble Oscillation (every 110ms)
+    property <bool> dizzy-wobble: false;
+    dizzy-timer := Timer {
+        interval: 110ms;
+        running: root.mood == 3;
+        triggered => {
+            root.dizzy-wobble = !root.dizzy-wobble;
+        }
+    }
+    property <length> wobble-offset: root.mood == 3 ? (root.dizzy-wobble ? 3px : -3px) : 0px;
+    animate wobble-offset { duration: 100ms; easing: ease-in-out; }
+
+    // 4. Physical Dynamics: Squash & Stretch Bounce
+    property <length> bounce-y: root.mood == 3 ? -1px :
+        (root.mood == 1 ? -5px :
+        (root.mood == 4 ? -(root.bass * 6px) :
+        (root.breath-phase ? -1px : 0px)));
+
+    property <float> squish-y: root.mood == 1 ? 1.12 :
+        (root.mood == 4 ? (1.0 + (root.bass * 0.18)) :
+        (root.breath-phase ? 1.02 : 1.0));
+
+    property <float> squish-x: root.mood == 1 ? 0.94 :
+        (root.mood == 4 ? (1.0 - (root.bass * 0.08)) :
+        (root.breath-phase ? 0.99 : 1.0));
+
+    // Hover scale (Coucou: 1.07x spring scale on hover)
+    property <float> hover-scale: touch.has-hover ? 1.07 : 1.0;
+    animate hover-scale { duration: 180ms; easing: ease-out; }
+
+    // Body base color & dynamic tint
+    property <color> body-color: root.mood == 3 ? #ffd3e2 : // Dizzy Pink
+        (root.mood == 4 ? #e0ecff : // Dancing Light Blue
+        (root.mood == 5 ? #dbe0ea : // Sleeping Slate
+        #ededef));                  // Classic Coucou Silver
+
+    // ==========================================
+    // MOCHI BODY ROOT CONTAINER
+    // ==========================================
+    body := Rectangle {
+        x: (parent.width - self.width) / 2 + root.wobble-offset;
+        y: (parent.height - self.height) / 2 + root.bounce-y;
+        width: root.pet-size * 0.96 * root.squish-x * root.hover-scale;
+        height: root.pet-size * 0.88 * root.squish-y * root.hover-scale;
+        background: transparent;
+
+        animate y { duration: 80ms; easing: ease-out; }
+        animate width { duration: 80ms; easing: ease-out; }
+        animate height { duration: 80ms; easing: ease-out; }
+
+        // ==========================================
+        // 1. SUPERELLIPSE LAMÉ BODY (Coucou Formula: p = 2.0 / 2.7)
+        // ==========================================
+        Path {
+            width: 100%;
+            height: 100%;
+            viewbox-x: 0;
+            viewbox-y: 0;
+            viewbox-width: 100;
+            viewbox-height: 100;
+            fill: root.body-color;
+            commands: "M 94.0 50.0 L 93.7 57.5 L 92.9 62.5 L 91.5 66.7 L 89.6 70.3 L 87.1 73.5 L 84.0 76.3 L 80.5 78.6 L 76.3 80.6 L 71.6 82.1 L 66.2 83.1 L 59.7 83.8 L 50.0 84.0 L 40.3 83.8 L 33.8 83.1 L 28.4 82.1 L 23.7 80.6 L 19.5 78.6 L 16.0 76.3 L 12.9 73.5 L 10.4 70.3 L 8.5 66.7 L 7.1 62.5 L 6.3 57.5 L 6.0 50.0 L 6.3 42.5 L 7.1 37.5 L 8.5 33.3 L 10.4 29.7 L 12.9 26.5 L 16.0 23.7 L 19.5 21.4 L 23.7 19.4 L 28.4 17.9 L 33.8 16.9 L 40.3 16.2 L 50.0 16.0 L 59.7 16.2 L 66.2 16.9 L 71.6 17.9 L 76.3 19.4 L 80.5 21.4 L 84.0 23.7 L 87.1 26.5 L 89.6 29.7 L 91.5 33.3 L 92.9 37.5 L 93.7 42.5 Z";
+        }
+
+        // Bottom subtle metallic shadow rim
+        Path {
+            width: 100%;
+            height: 100%;
+            viewbox-x: 0;
+            viewbox-y: 0;
+            viewbox-width: 100;
+            viewbox-height: 100;
+            fill: #c4c5ca;
+            opacity: 0.45;
+            commands: "M 6.0 50.0 L 7.1 62.5 L 12.9 73.5 L 23.7 80.6 L 50.0 84.0 L 76.3 80.6 L 87.1 73.5 L 92.9 62.5 L 94.0 50.0 L 89.6 58.0 L 76.3 68.0 L 50.0 72.0 L 23.7 68.0 L 10.4 58.0 Z";
+        }
+
+        // ==========================================
+        // 2. RADIAL SPECULAR HIGHLIGHT DOME (Coucou: rx*0.34, -ry*0.46)
+        // ==========================================
+        specular := Rectangle {
+            x: parent.width * 0.56;
+            y: parent.height * 0.20;
+            width: parent.width * 0.32;
+            height: parent.height * 0.24;
+            border-radius: min(self.width, self.height) / 2;
+            background: #ffffff;
+            opacity: 0.60;
+        }
+
+        // ==========================================
+        // 3. CHEEK BLUSH (Coucou: #FF7896 at rx*0.55)
+        // ==========================================
+        blush-left := Rectangle {
+            x: parent.width * 0.14 + (root.smooth-look-x * 2px);
+            y: parent.height * 0.54;
+            width: parent.width * 0.20;
+            height: parent.height * 0.12;
+            border-radius: min(self.width, self.height) / 2;
+            background: #ff7896;
+            opacity: root.mood == 3 ? 0.75 : 0.45;
+        }
+
+        blush-right := Rectangle {
+            x: parent.width * 0.66 + (root.smooth-look-x * 2px);
+            y: parent.height * 0.54;
+            width: parent.width * 0.20;
+            height: parent.height * 0.12;
+            border-radius: min(self.width, self.height) / 2;
+            background: #ff7896;
+            opacity: root.mood == 3 ? 0.75 : 0.45;
+        }
+
+        // ==========================================
+        // 4. 3D SPHERICAL EYES (Coucou: EYE_SP=0.37, EYE_P=-0.12)
+        // ==========================================
+        property <length> base-eye-w: parent.width * 0.20;
+        property <length> base-eye-h: parent.height * 0.26;
+
+        // Left Eye (-sd): Neutral at 32%, travels with gaze
+        eye-left := MochiEye {
+            x: parent.width * 0.24 + (root.smooth-look-x * parent.width * 0.14);
+            y: parent.height * 0.36 + (root.smooth-look-y * parent.height * 0.10);
+            width: body.base-eye-w * (1.0 - (root.smooth-look-x < 0.0 ? -root.smooth-look-x : root.smooth-look-x) * 0.18);
+            height: body.base-eye-h;
+            mood: root.mood;
+            is-blinking: root.is-blinking;
+            scale-x-factor: 1.0;
+            scale-y-factor: 1.0;
+        }
+
+        // Right Eye (+sd): Neutral at 60%, travels with gaze
+        eye-right := MochiEye {
+            x: parent.width * 0.56 + (root.smooth-look-x * parent.width * 0.14);
+            y: parent.height * 0.36 + (root.smooth-look-y * parent.height * 0.10);
+            width: body.base-eye-w * (1.0 - (root.smooth-look-x < 0.0 ? -root.smooth-look-x : root.smooth-look-x) * 0.18);
+            height: body.base-eye-h;
+            mood: root.mood;
+            is-blinking: root.is-blinking;
+            scale-x-factor: 1.0;
+            scale-y-factor: 1.0;
+        }
+    }
+
+    // ==========================================
+    // 5. INTERACTIVE TOUCH / SLAP HIT-TEST
+    // ==========================================
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+        clicked => {
+            IslandContext.mochi-clicked();
+            IslandContext.pet-clicked();
+        }
+    }
+}

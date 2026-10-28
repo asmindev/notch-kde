@@ -40,6 +40,18 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             let just_plugged_in = !state.battery.is_charging && bat.is_charging;
             state.battery = bat;
             state.pet_is_sleepy = state.battery.percentage <= 20 && !state.battery.is_charging;
+            if state.mochi_mood == crate::state::MochiMoodState::Idle
+                || state.mochi_mood == crate::state::MochiMoodState::Dancing
+                || state.mochi_mood == crate::state::MochiMoodState::Sleeping
+            {
+                if state.pet_is_sleepy {
+                    state.mochi_mood = crate::state::MochiMoodState::Sleeping;
+                } else if state.media.is_playing {
+                    state.mochi_mood = crate::state::MochiMoodState::Dancing;
+                } else {
+                    state.mochi_mood = crate::state::MochiMoodState::Idle;
+                }
+            }
 
             // When charger is newly connected, trigger global alert with generation ID!
             if just_plugged_in {
@@ -71,23 +83,39 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             };
         }
 
-        AppEvent::PetClicked => {
-            state.pet_poke_count += 1;
-            state.pet_happy_generation += 1;
-            let gen_id = state.pet_happy_generation;
+        AppEvent::PetClicked | AppEvent::MochiSlapped => {
+            state.mochi_slap_count += 1;
+            state.mochi_generation += 1;
+            state.pet_poke_count = state.mochi_slap_count;
+            state.pet_happy_generation = state.mochi_generation;
+            let gen_id = state.mochi_generation;
 
-            if state.pet_poke_count >= 4 {
+            // Coucou slap logic: 3+ slaps within 1.7s triggers dizzy
+            if state.mochi_slap_count >= 3 {
+                state.mochi_mood = crate::state::MochiMoodState::Dizzy;
                 state.pet_is_dizzy = true;
                 state.pet_is_happy = false;
-                state.pet_dizzy_generation += 1;
-                let dizzy_gen = state.pet_dizzy_generation;
+                state.pet_dizzy_generation = gen_id;
+                effects.push(Effect::ScheduleTimer {
+                    id: "mochi_dizzy_timeout",
+                    duration_ms: 2200,
+                    generation: gen_id,
+                });
                 effects.push(Effect::ScheduleTimer {
                     id: "pet_dizzy_timeout",
                     duration_ms: 2200,
-                    generation: dizzy_gen,
+                    generation: gen_id,
                 });
             } else {
+                // 1st or 2nd slap: Annoyed line eyes for 800ms
+                state.mochi_mood = crate::state::MochiMoodState::Annoyed;
                 state.pet_is_happy = true;
+                state.pet_is_dizzy = false;
+                effects.push(Effect::ScheduleTimer {
+                    id: "mochi_annoyed_timeout",
+                    duration_ms: 800,
+                    generation: gen_id,
+                });
                 effects.push(Effect::ScheduleTimer {
                     id: "pet_happy_timeout",
                     duration_ms: 1500,
@@ -96,27 +124,62 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             }
 
             effects.push(Effect::ScheduleTimer {
+                id: "mochi_slap_reset",
+                duration_ms: 1700,
+                generation: gen_id,
+            });
+            effects.push(Effect::ScheduleTimer {
                 id: "pet_poke_reset",
-                duration_ms: 1200,
+                duration_ms: 1700,
                 generation: gen_id,
             });
         }
 
-        AppEvent::PetHappyTimeout(target_gen) => {
-            if state.pet_happy_generation == target_gen {
-                state.pet_is_happy = false;
+        AppEvent::MochiAnnoyedTimeout(target_gen) => {
+            if state.mochi_generation == target_gen && state.mochi_mood == crate::state::MochiMoodState::Annoyed {
+                state.mochi_mood = if state.media.is_playing {
+                    crate::state::MochiMoodState::Dancing
+                } else if state.battery.percentage <= 20 && !state.battery.is_charging {
+                    crate::state::MochiMoodState::Sleeping
+                } else {
+                    crate::state::MochiMoodState::Idle
+                };
             }
         }
 
-        AppEvent::PetDizzyTimeout(target_gen) => {
-            if state.pet_dizzy_generation == target_gen {
+        AppEvent::MochiDizzyTimeout(target_gen) | AppEvent::PetDizzyTimeout(target_gen) => {
+            if state.mochi_generation == target_gen || state.pet_dizzy_generation == target_gen {
+                state.mochi_mood = if state.media.is_playing {
+                    crate::state::MochiMoodState::Dancing
+                } else if state.battery.percentage <= 20 && !state.battery.is_charging {
+                    crate::state::MochiMoodState::Sleeping
+                } else {
+                    crate::state::MochiMoodState::Idle
+                };
                 state.pet_is_dizzy = false;
+                state.mochi_slap_count = 0;
                 state.pet_poke_count = 0;
             }
         }
 
-        AppEvent::PetPokeReset(target_gen) => {
-            if state.pet_happy_generation == target_gen {
+        AppEvent::MochiHappyTimeout(target_gen) | AppEvent::PetHappyTimeout(target_gen) => {
+            if state.mochi_generation == target_gen || state.pet_happy_generation == target_gen {
+                if state.mochi_mood == crate::state::MochiMoodState::Happy {
+                    state.mochi_mood = if state.media.is_playing {
+                        crate::state::MochiMoodState::Dancing
+                    } else if state.battery.percentage <= 20 && !state.battery.is_charging {
+                        crate::state::MochiMoodState::Sleeping
+                    } else {
+                        crate::state::MochiMoodState::Idle
+                    };
+                }
+                state.pet_is_happy = false;
+            }
+        }
+
+        AppEvent::MochiSlapReset(target_gen) | AppEvent::PetPokeReset(target_gen) => {
+            if state.mochi_generation == target_gen || state.pet_happy_generation == target_gen {
+                state.mochi_slap_count = 0;
                 state.pet_poke_count = 0;
             }
         }
@@ -124,6 +187,18 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         AppEvent::MediaUpdated(track) => {
             state.media = track;
             state.update_active_module();
+            if state.mochi_mood == crate::state::MochiMoodState::Idle
+                || state.mochi_mood == crate::state::MochiMoodState::Dancing
+                || state.mochi_mood == crate::state::MochiMoodState::Sleeping
+            {
+                if state.media.is_playing {
+                    state.mochi_mood = crate::state::MochiMoodState::Dancing;
+                } else if state.battery.percentage <= 20 && !state.battery.is_charging {
+                    state.mochi_mood = crate::state::MochiMoodState::Sleeping;
+                } else {
+                    state.mochi_mood = crate::state::MochiMoodState::Idle;
+                }
+            }
         }
 
         AppEvent::MediaSourcesUpdated(sources) => {

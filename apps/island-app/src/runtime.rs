@@ -167,6 +167,11 @@ impl AppRuntime {
             let _ = tx.send(AppEvent::PetClicked);
         });
 
+        let tx = event_tx.clone();
+        ctx.on_mochi_clicked(move || {
+            let _ = tx.send(AppEvent::MochiSlapped);
+        });
+
         let pet3d_cursor = pet3d.clone();
         let cursor_window = self.window.as_weak();
         ctx.on_cursor_moved(move |x, y| {
@@ -398,6 +403,30 @@ impl AppRuntime {
                                 tokio_rt.spawn(async move {
                                     tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
                                     let _ = tx_timer.send(AppEvent::AlertTimeout(generation));
+                                });
+                            } else if id == "mochi_annoyed_timeout" {
+                                let tx_timer = event_tx_effects.clone();
+                                tokio_rt.spawn(async move {
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    let _ = tx_timer.send(AppEvent::MochiAnnoyedTimeout(generation));
+                                });
+                            } else if id == "mochi_dizzy_timeout" {
+                                let tx_timer = event_tx_effects.clone();
+                                tokio_rt.spawn(async move {
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    let _ = tx_timer.send(AppEvent::MochiDizzyTimeout(generation));
+                                });
+                            } else if id == "mochi_happy_timeout" {
+                                let tx_timer = event_tx_effects.clone();
+                                tokio_rt.spawn(async move {
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    let _ = tx_timer.send(AppEvent::MochiHappyTimeout(generation));
+                                });
+                            } else if id == "mochi_slap_reset" {
+                                let tx_timer = event_tx_effects.clone();
+                                tokio_rt.spawn(async move {
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    let _ = tx_timer.send(AppEvent::MochiSlapReset(generation));
                                 });
                             } else if id == "pet_happy_timeout" {
                                 let tx_timer = event_tx_effects.clone();

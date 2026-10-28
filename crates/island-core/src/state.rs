@@ -4,6 +4,18 @@ use crate::models::{
 };
 use crate::view_engine::{SlotContext, ViewEngine};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[repr(i32)]
+pub enum MochiMoodState {
+    #[default]
+    Idle = 0,
+    Happy = 1,
+    Annoyed = 2,
+    Dizzy = 3,
+    Dancing = 4,
+    Sleeping = 5,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct AppState {
     pub engine: ViewEngine,
@@ -42,6 +54,11 @@ pub struct AppState {
     pub pet_is_sleepy: bool,
     pub pet_poke_count: u32,
     pub pet_dizzy_generation: u64,
+
+    // Coucou Mochi states
+    pub mochi_mood: MochiMoodState,
+    pub mochi_slap_count: u32,
+    pub mochi_generation: u64,
 
     // Welcome Greeting states
     pub is_welcome: bool,
@@ -120,6 +137,9 @@ impl Default for AppState {
             pet_is_sleepy: false,
             pet_poke_count: 0,
             pet_dizzy_generation: 0,
+            mochi_mood: MochiMoodState::Idle,
+            mochi_slap_count: 0,
+            mochi_generation: 0,
             is_welcome: true,
             welcome_generation: 1,
             welcome_title: "Welcome back!".to_string(),
