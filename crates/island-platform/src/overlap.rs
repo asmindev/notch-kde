@@ -23,6 +23,13 @@ unsafe extern "C" {
     ) -> *mut c_void;
 
     fn dodge_run(ctx: *mut c_void);
+    fn dodge_update_notch(
+        ctx: *mut c_void,
+        notch_x: i32,
+        notch_y: i32,
+        notch_w: u32,
+        notch_h: u32,
+    );
     fn dodge_stop(ctx: *mut c_void);
     fn dodge_destroy(ctx: *mut c_void);
 }
@@ -102,6 +109,21 @@ impl OverlapDetector {
             info!("Native DodgeController stopped cleanly");
             running.store(false, Ordering::SeqCst);
         });
+    }
+
+    pub fn update_rect(&self, notch_rect: Rect) {
+        let ptr = self.ctx_ptr.load(Ordering::SeqCst);
+        if !ptr.is_null() {
+            unsafe {
+                dodge_update_notch(
+                    ptr,
+                    notch_rect.x,
+                    notch_rect.y,
+                    notch_rect.w,
+                    notch_rect.h,
+                );
+            }
+        }
     }
 
     pub fn stop(&self) {

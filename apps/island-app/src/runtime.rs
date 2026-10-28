@@ -1,18 +1,21 @@
 use island_core::{reduce, AppEvent, AppState, Effect};
 use island_platform::overlap::Rect;
-use island_platform::OverlapDetector;
+use island_platform::{KdeManager, OverlapDetector, PlatformWindow};
 use island_services::{
     AudioService, BatteryService, CavaService, ClockService, DndService, MediaService,
     ScreenSaverService,
 };
 use island_ui::{MainWindow, ViewModel};
+use crate::input_region;
+use crate::pet3d;
 use slint::ComponentHandle;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 const COMPACT_NOTCH_WIDTH: u32 = 156;
 const COMPACT_NOTCH_HEIGHT: u32 = 30;
+const ISLAND_WINDOW_WIDTH: u32 = 480;
 
 fn compact_notch_rect(geom: &island_platform::kde::ScreenGeometry) -> Rect {
     Rect {
@@ -26,6 +29,10 @@ fn compact_notch_rect(geom: &island_platform::kde::ScreenGeometry) -> Rect {
         w: COMPACT_NOTCH_WIDTH,
         h: COMPACT_NOTCH_HEIGHT,
     }
+}
+
+fn window_x_for(geom: &island_platform::kde::ScreenGeometry) -> i32 {
+    geom.x + (geom.width.saturating_sub(ISLAND_WINDOW_WIDTH) / 2) as i32
 }
 
 pub struct AppRuntime {
@@ -72,6 +79,14 @@ impl AppRuntime {
 
         // Sync initial state to UI
         ViewModel::sync_state_to_ui(&self.window, &app_state);
+
+        let input_region = input_region::InputRegionHandle::spawn();
+        let initial_input_rect = input_region::rect_for_state(&app_state);
+
+        // Install the offscreen Momo renderer before the window is shown.
+        let pet3d = pet3d::install(&self.window);
+        pet3d.update_from_state(&app_state);
+        pet3d.tick();
 
         // 2. Wire UI Callbacks to Event Channel
         let tx = event_tx.clone();
@@ -150,6 +165,17 @@ impl AppRuntime {
         let tx = event_tx.clone();
         ctx.on_pet_clicked(move || {
             let _ = tx.send(AppEvent::PetClicked);
+        });
+
+        let pet3d_cursor = pet3d.clone();
+        let cursor_window = self.window.as_weak();
+        ctx.on_cursor_moved(move |x, y| {
+            pet3d_cursor.set_gaze(x, y);
+            if pet3d_cursor.tick().dirty
+                && let Some(win) = cursor_window.upgrade()
+            {
+                win.window().request_redraw();
+            }
         });
 
         // 3. Start Tokio Async Runtime for Background Services
@@ -247,9 +273,50 @@ impl AppRuntime {
         // 5. Start Wayland Overlap Detector
         let overlap_detector = Arc::new(OverlapDetector::new());
         let (overlap_tx, mut overlap_rx) = mpsc::unbounded_channel();
-        let geom = island_platform::KdeManager::get_primary_screen_geometry();
+        let geom = KdeManager::get_primary_screen_geometry();
         let notch_rect = compact_notch_rect(&geom);
         overlap_detector.start(notch_rect, overlap_tx);
+
+        let screen_watcher = overlap_detector.clone();
+        let output_config = std::env::var_os("HOME")
+            .map(std::path::PathBuf::from)
+            .map(|home| home.join(".config/kwinoutputconfig.json"));
+        std::thread::spawn(move || {
+            let mut last_mtime = output_config
+                .as_ref()
+                .and_then(|path| std::fs::metadata(path).ok())
+                .and_then(|meta| meta.modified().ok());
+            let mut last_periodic = std::time::Instant::now();
+
+            loop {
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                let mtime = output_config
+                    .as_ref()
+                    .and_then(|path| std::fs::metadata(path).ok())
+                    .and_then(|meta| meta.modified().ok());
+                let changed = mtime != last_mtime;
+                let periodic = last_periodic.elapsed() >= std::time::Duration::from_secs(10);
+                if !changed && !periodic {
+                    continue;
+                }
+                last_mtime = mtime;
+                last_periodic = std::time::Instant::now();
+
+                let Some(geom) = KdeManager::try_get_primary_screen_geometry() else {
+                    last_mtime = None;
+                    continue;
+                };
+                let window_x = window_x_for(&geom);
+                match PlatformWindow::ensure_kwin_rules(window_x, geom.y, geom.screen_index) {
+                    Ok(true) => {
+                        std::thread::sleep(std::time::Duration::from_millis(500));
+                    }
+                    Ok(false) => {}
+                    Err(err) => warn!("Failed to update KWin rule after screen change: {err}"),
+                }
+                screen_watcher.update_rect(compact_notch_rect(&geom));
+            }
+        });
 
         let tx6 = event_tx.clone();
         tokio_rt.spawn(async move {
@@ -260,11 +327,20 @@ impl AppRuntime {
 
         // 6. Event Processing and UI Dispatch Thread
         let window_weak_clone = window_weak.clone();
+        let pet3d_events = pet3d.clone();
         let mut last_synced_state = app_state.clone();
         let event_tx_effects = event_tx.clone();
+        let input_region_events = input_region.clone();
+        let mut last_input_rect = initial_input_rect;
         std::thread::spawn(move || {
             while let Some(event) = event_rx.blocking_recv() {
                 let effects = reduce(&mut app_state, event);
+
+                let input_rect = input_region::rect_for_state(&app_state);
+                if input_rect != last_input_rect {
+                    input_region_events.set_rect(input_rect);
+                    last_input_rect = input_rect;
+                }
 
                 // Execute any side effects
                 for effect in effects {
@@ -346,9 +422,14 @@ impl AppRuntime {
                     last_synced_state = app_state.clone();
                     let state_clone = app_state.clone();
                     let w = window_weak_clone.clone();
+                    let pet3d = pet3d_events.clone();
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(win) = w.upgrade() {
                             ViewModel::sync_state_to_ui(&win, &state_clone);
+                            pet3d.update_from_state(&state_clone);
+                            if pet3d.tick().dirty {
+                                win.window().request_redraw();
+                            }
                         }
                     });
                 }
@@ -357,6 +438,13 @@ impl AppRuntime {
 
         // 7. Show Window and Run Slint GUI event loop
         self.window.show()?;
+        input_region::schedule_init(
+            self.window.as_weak(),
+            input_region,
+            initial_input_rect,
+            20,
+        );
+        let _pet3d_timer = pet3d::start_timer(pet3d.clone(), self.window.as_weak());
         self.window.run()
     }
 }

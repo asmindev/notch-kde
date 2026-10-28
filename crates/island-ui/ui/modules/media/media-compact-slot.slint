@@ -17,7 +17,7 @@ export component MediaCompactSlot inherits HorizontalLayout {
     VerticalLayout {
         alignment: center;
         PetView {
-            pet-size: max(16px, min(24px, parent.height * 0.7));
+            pet-size: parent.height;
         }
     }
 

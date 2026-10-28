@@ -13,7 +13,7 @@ export component PetView inherits Rectangle {
     property <float> mid: (IslandContext.b2 + IslandContext.b3) * 0.5;
 
     property <bool> is-singing: IslandContext.is-playing;
-    property <bool> is-happy: IslandContext.pet-is-happy;
+    property <bool> is-happy: IslandContext.pet-is-happy || IslandContext.is-welcome;
     property <bool> is-hovered-state: touch.has-hover;
 
     // Audio-reactive bounce offset
@@ -31,23 +31,7 @@ export component PetView inherits Rectangle {
         : (root.is-singing ? (1.0 - (root.bass * 0.06)) : (root.is-hovered-state ? 1.06 : 1.0));
 
     // ==========================================
-    // 1. SOFT GLOW AURA (Behind Labubu)
-    // ==========================================
-    Rectangle {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2 + root.bounce-y;
-        width: root.pet-size * 1.15;
-        height: root.pet-size * 1.15;
-        border-radius: self.width / 2;
-        background: root.is-happy 
-            ? #f472b622 
-            : (root.is-singing ? #60a5fa20 : (root.is-hovered-state ? #ffffff15 : transparent));
-
-        animate background { duration: 180ms; }
-    }
-
-    // ==========================================
-    // 2. 3D LABUBU CHARACTER (Multi-State Sprites)
+    // 1. MOMO CHARACTER (WGPU render, sprites as fallback)
     // ==========================================
     char-container := Rectangle {
         x: (parent.width - self.width) / 2;
@@ -59,45 +43,60 @@ export component PetView inherits Rectangle {
         animate width { duration: 60ms; easing: ease-out; }
         animate height { duration: 60ms; easing: ease-out; }
 
-        // State 0: Idle Pose (Default sweet toothy grin)
         Image {
             width: 100%;
             height: 100%;
-            source: @image-url("../../assets/pet/labubu_idle.png");
+            source: IslandContext.pet-3d-image;
             image-fit: contain;
-            opacity: (!root.is-singing && !root.is-happy) ? 1.0 : 0.0;
-            visible: self.opacity > 0.01;
-
-            animate opacity { duration: 160ms; easing: ease-out; }
+            visible: IslandContext.pet-3d-ready;
         }
 
-        // State 1: Singing Pose (With cute headphones & singing mouth)
-        Image {
+        Rectangle {
             width: 100%;
             height: 100%;
-            source: @image-url("../../assets/pet/labubu_singing.png");
-            image-fit: contain;
-            opacity: (root.is-singing && !root.is-happy) ? 1.0 : 0.0;
-            visible: self.opacity > 0.01;
+            background: transparent;
+            visible: !IslandContext.pet-3d-ready;
 
-            animate opacity { duration: 160ms; easing: ease-out; }
-        }
+            // State 0: Idle Pose (Default sweet toothy grin)
+            Image {
+                width: 100%;
+                height: 100%;
+                source: @image-url("../../assets/pet/labubu_idle.png");
+                image-fit: contain;
+                opacity: (!root.is-singing && !root.is-happy) ? 1.0 : 0.0;
+                visible: self.opacity > 0.01;
 
-        // State 2: Happy Petting Pose (Blushing cheeks & jump)
-        Image {
-            width: 100%;
-            height: 100%;
-            source: @image-url("../../assets/pet/labubu_happy.png");
-            image-fit: contain;
-            opacity: root.is-happy ? 1.0 : 0.0;
-            visible: self.opacity > 0.01;
+                animate opacity { duration: 160ms; easing: ease-out; }
+            }
 
-            animate opacity { duration: 140ms; easing: ease-out; }
+            // State 1: Singing Pose (With cute headphones & singing mouth)
+            Image {
+                width: 100%;
+                height: 100%;
+                source: @image-url("../../assets/pet/labubu_singing.png");
+                image-fit: contain;
+                opacity: (root.is-singing && !root.is-happy) ? 1.0 : 0.0;
+                visible: self.opacity > 0.01;
+
+                animate opacity { duration: 160ms; easing: ease-out; }
+            }
+
+            // State 2: Happy Petting Pose (Blushing cheeks & jump)
+            Image {
+                width: 100%;
+                height: 100%;
+                source: @image-url("../../assets/pet/labubu_happy.png");
+                image-fit: contain;
+                opacity: root.is-happy ? 1.0 : 0.0;
+                visible: self.opacity > 0.01;
+
+                animate opacity { duration: 140ms; easing: ease-out; }
+            }
         }
     }
 
     // ==========================================
-    // 3. FLOATING MUSICAL NOTES & PARTICLES
+    // 2. FLOATING MUSICAL NOTES & PARTICLES
     // ==========================================
     notes := FloatingNotes {
         x: (parent.width - self.width) / 2;
@@ -108,7 +107,7 @@ export component PetView inherits Rectangle {
     }
 
     // ==========================================
-    // 4. INTERACTIVE TOUCH TARGET (Petting / Click)
+    // 3. INTERACTIVE TOUCH TARGET (Petting / Click)
     // ==========================================
     touch := TouchArea {
         width: 100%;

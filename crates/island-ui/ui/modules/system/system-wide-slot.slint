@@ -25,7 +25,7 @@ export component SystemWideSlot inherits Rectangle {
         VerticalLayout {
             alignment: center;
             PetView {
-                pet-size: max(22px, min(44px, root.content-h * 0.85));
+                pet-size: root.content-h;
             }
         }
 

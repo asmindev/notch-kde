@@ -61,8 +61,10 @@ export global IslandContext {
     in-out property <int> music-visual-mode: 0;    // 0=PetPrimary (Pet Left, Art Right), 1=ArtworkPrimary (Art Left, Pet Right)
     in-out property <bool> is-visible-state: true; // Shell docking visibility
     in-out property <bool> pet-is-happy: false;    // Interactive bouncy happy reaction
+    in-out property <image> pet-3d-image;          // Offscreen wgpu render of Momo
+    in-out property <bool> pet-3d-ready: false;     // True once the 3D texture is available
     in-out property <bool> is-welcome: false;      // Welcome greeting banner active
-    in-out property <string> welcome-title: "Welcome back, Labubu!";
+    in-out property <string> welcome-title: "Welcome back, Momo!";
     in-out property <string> welcome-subtitle: "Have a wonderful day ✨";
 
     // ==========================================
@@ -79,4 +81,5 @@ export global IslandContext {
     callback toggle-source-selector();
     callback select-player-source(string);
     callback pet-clicked();
+    callback cursor-moved(float, float);
 }

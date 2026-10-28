@@ -231,6 +231,8 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         AppEvent::ScreenUnlocked | AppEvent::TriggerWelcome => {
             state.is_welcome = true;
             state.pet_is_happy = true;
+            state.pet_happy_generation += 1;
+            let happy_gen = state.pet_happy_generation;
             state.welcome_generation += 1;
             let gen_id = state.welcome_generation;
             state.overlap_reveal_generation += 1;
@@ -238,6 +240,11 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.engine.cancel_overlap_sequences();
             state.engine.set_view(IslandView::Wide);
             state.update_active_module();
+            effects.push(Effect::ScheduleTimer {
+                id: "pet_happy_timeout",
+                duration_ms: 1500,
+                generation: happy_gen,
+            });
             effects.push(Effect::ScheduleTimer {
                 id: "welcome_timeout",
                 duration_ms: 3500,

@@ -1,4 +1,6 @@
 mod bootstrap;
+mod input_region;
+mod pet3d;
 mod runtime;
 
 use bootstrap::Bootstrap;

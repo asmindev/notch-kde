@@ -13,7 +13,7 @@ impl PlatformWindow {
         window_x: i32,
         window_y: i32,
         screen_index: u32,
-    ) -> Result<(), String> {
+    ) -> Result<bool, String> {
         let pos = format!("{},{}", window_x, window_y);
         let home = std::env::var("HOME").map_err(|e| e.to_string())?;
         let config_path = PathBuf::from(home).join(".config/kwinrulesrc");
@@ -29,7 +29,7 @@ impl PlatformWindow {
                 "KWin window rule for island-app already up-to-date (screen: {}, pos: {})",
                 screen_index, pos
             );
-            return Ok(());
+            return Ok(false);
         }
 
         let rule_body = format!(
@@ -68,7 +68,7 @@ wmclassmatch=1\n"
         }
 
         notify_kwin_reconfigure();
-        Ok(())
+        Ok(true)
     }
 }
 

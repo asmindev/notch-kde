@@ -34,11 +34,21 @@ fn test_screen_unlocked_triggers_welcome() {
     assert_eq!(state.mode, IslandMode::Wide);
     assert!(state.is_welcome);
     assert!(state.pet_is_happy);
-    assert_eq!(effects, vec![island_core::events::Effect::ScheduleTimer {
-        id: "welcome_timeout",
-        duration_ms: 3500,
-        generation: 2,
-    }]);
+    assert_eq!(
+        effects,
+        vec![
+            island_core::events::Effect::ScheduleTimer {
+                id: "pet_happy_timeout",
+                duration_ms: 1500,
+                generation: 1,
+            },
+            island_core::events::Effect::ScheduleTimer {
+                id: "welcome_timeout",
+                duration_ms: 3500,
+                generation: 2,
+            },
+        ]
+    );
 
     // Timeout settles it back to compact
     reduce(&mut state, AppEvent::WelcomeTimeout);

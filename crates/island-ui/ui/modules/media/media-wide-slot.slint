@@ -12,6 +12,7 @@ export component MediaWideSlot inherits Rectangle {
     property <length> margin-x: max(12px, min(24px, ThemeMetrics.wide-width * 0.04));
     property <length> content-h: ThemeMetrics.wide-height * 0.82;
     property <length> art-dim: min(self.content-h, 56px);
+    property <bool> show-pet: IslandContext.music-visual-mode == 1;
 
     width: 100%;
     height: 100%;
@@ -35,11 +36,11 @@ export component MediaWideSlot inherits Rectangle {
                 art-container := Rectangle {
                     width: root.art-dim;
                     height: root.art-dim;
-                    border-radius: root.art-dim * 0.22;
-                    background: #141418;
-                    border-width: 1px;
-                    border-color: #27272a;
-                    clip: true;
+                    border-radius: root.show-pet ? 0px : root.art-dim * 0.22;
+                    background: root.show-pet ? transparent : #141418;
+                    border-width: root.show-pet ? 0px : 1px;
+                    border-color: root.show-pet ? transparent : #27272a;
+                    clip: !root.show-pet;
 
                     // Mode 0: Album Art Cover (Default)
                     art-view := Rectangle {
@@ -67,7 +68,7 @@ export component MediaWideSlot inherits Rectangle {
                         VerticalLayout {
                             alignment: center;
                             PetView {
-                                pet-size: root.art-dim * 0.85;
+                                pet-size: root.art-dim;
                             }
                         }
                     }

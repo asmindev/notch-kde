@@ -42,7 +42,7 @@ export component SystemExpandSlot inherits VerticalLayout {
         VerticalLayout {
             alignment: center;
             PetView {
-                pet-size: max(26px, min(52px, root.slot-h * 0.52));
+                pet-size: parent.height;
             }
         }
     }

@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 island-core = { workspace = true }
 island-ui = { workspace = true }
+island-pet3d = { workspace = true }
 island-platform = { workspace = true }
 island-services = { workspace = true }
 
@@ -15,3 +16,5 @@ chrono = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+raw-window-handle = { workspace = true }
+wayland-client = { workspace = true, features = ["system"] }

@@ -55,6 +55,23 @@ export component IslandShell inherits Rectangle {
 
         changed has-hover => {
             root.hover-changed(self.has-hover);
+            if (!self.has-hover) {
+                IslandContext.cursor-moved(0.0, 0.0);
+            }
+        }
+
+        changed mouse-x => {
+            IslandContext.cursor-moved(
+                (self.mouse-x / self.width) * 2 - 1,
+                (self.mouse-y / self.height) * 2 - 1
+            );
+        }
+
+        changed mouse-y => {
+            IslandContext.cursor-moved(
+                (self.mouse-x / self.width) * 2 - 1,
+                (self.mouse-y / self.height) * 2 - 1
+            );
         }
 
         clicked => {
