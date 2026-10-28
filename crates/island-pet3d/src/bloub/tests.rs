@@ -85,6 +85,7 @@ fn transient_states_end_without_artifacts() {
         StateId::Swirl,
         StateId::Wink,
         StateId::Notify,
+        StateId::Ping,
         StateId::Alert,
         StateId::Burst,
         StateId::Bounce,

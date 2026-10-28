@@ -15,6 +15,7 @@ pub enum StateId {
     Orbit,
     Sleep,
     Notify,
+    Ping,
     Play,
     Alert,
     Burst,
@@ -28,13 +29,14 @@ pub enum StateId {
 }
 
 impl StateId {
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 17] = [
         Self::Idle,
         Self::Swirl,
         Self::Wink,
         Self::Orbit,
         Self::Sleep,
         Self::Notify,
+        Self::Ping,
         Self::Play,
         Self::Alert,
         Self::Burst,
@@ -63,6 +65,7 @@ impl StateId {
             Self::Orbit => "orbit",
             Self::Sleep => "sleep",
             Self::Notify => "notify",
+            Self::Ping => "ping",
             Self::Play => "play",
             Self::Alert => "alert",
             Self::Burst => "burst",
@@ -92,7 +95,7 @@ impl StateId {
             Self::Orbit | Self::Burst | Self::Backflip => ExpressionId::Surpris,
             Self::RotateX => ExpressionId::Excite,
             Self::Sleep | Self::Egg => ExpressionId::Somnolent,
-            Self::Notify => ExpressionId::Excite,
+            Self::Notify | Self::Ping => ExpressionId::Excite,
             Self::Play => ExpressionId::Hilare,
             Self::Alert => ExpressionId::Curieux,
             Self::Shake => ExpressionId::Effraye,
@@ -105,7 +108,7 @@ impl StateId {
         match self {
             Self::Swirl => 1.3,
             Self::Wink => 1.5,
-            Self::Notify => 2.4,
+            Self::Notify | Self::Ping => 2.4,
             Self::Alert => 2.0,
             Self::Burst => 1.2,
             Self::Bounce => 1.0,
@@ -309,6 +312,15 @@ pub fn pose(state: StateId, t: f32) -> Pose {
             p.off_y = -(1.0 - ease_out_cubic(u)) * 0.08;
             p.gaze = REST_GAZE.offset(0.25, -0.35);
             add_notif(&mut p);
+            p
+        }
+        StateId::Ping => {
+            let u = clamp01(t / 1.15);
+            p.off_y = -((u * std::f32::consts::PI * 2.0).sin().abs()) * 0.16;
+            p.off_x = (t * 11.0).sin() * 0.025 * (1.0 - u);
+            p.gaze = REST_GAZE.offset(0.70, -0.30);
+            add_notif(&mut p);
+            add_ring(&mut p, 0.0, 0.55 * (1.0 - u), 0.018, 0.56, true);
             p
         }
         StateId::Play => {

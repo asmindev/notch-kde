@@ -9,7 +9,7 @@ use island_pet3d::{
 };
 use island_ui::{IslandContext, MainWindow, SettingsWindow};
 use slint::{ComponentHandle, GraphicsAPI, RenderingState};
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 const FRAME_INTERVAL: Duration = Duration::from_millis(33);
 const GAZE_TIMEOUT: Duration = Duration::from_millis(2600);
@@ -79,7 +79,9 @@ impl Default for Pet3dInput {
 }
 
 fn resolve_state(input: &Pet3dInput) -> StateId {
-    if input.is_dizzy {
+    if input.notification_active {
+        StateId::Ping
+    } else if input.is_dizzy {
         match input.pet_dizzy_generation % 3 {
             0 => StateId::Orbit,
             1 => StateId::Shake,
@@ -98,8 +100,6 @@ fn resolve_state(input: &Pet3dInput) -> StateId {
         }
     } else if input.mochi_mood == MochiMoodState::Annoyed {
         StateId::Alert
-    } else if input.notification_active {
-        StateId::Notify
     } else if input.is_singing {
         StateId::Orbit
     } else if input.alert_kind == AlertKind::LowBattery {
@@ -121,7 +121,7 @@ fn resolve_expression(input: &Pet3dInput, target_state: StateId) -> ExpressionId
         ExpressionId::Surpris
     } else if target_state == StateId::Bounce {
         ExpressionId::Heureux
-    } else if target_state == StateId::Notify {
+    } else if matches!(target_state, StateId::Notify | StateId::Ping) {
         ExpressionId::Excite
     } else if input.is_sleepy {
         ExpressionId::Somnolent
@@ -297,6 +297,10 @@ impl Pet3dInner {
             timing.last_notification_generation = input.notification_generation;
         }
         if input.notification_generation != timing.last_notification_generation {
+            debug!(
+                generation = input.notification_generation,
+                "Bloub notification reaction started"
+            );
             timing.notification_start = Some(now);
         }
         input.notification_active = input.notification_reactions_enabled
@@ -340,7 +344,7 @@ impl Pet3dInner {
             ))
             || (dizzy_restart && matches!(target_state, StateId::Orbit | StateId::Shake | StateId::RotateX))
             || (welcome_restart && target_state == StateId::Swirl)
-            || (notification_restart && target_state == StateId::Notify)
+            || (notification_restart && target_state == StateId::Ping)
         {
             engine.restart_state(target_state, t);
         } else {
@@ -673,7 +677,13 @@ mod tests {
 
         input.alert_kind = AlertKind::None;
         input.notification_active = true;
-        assert_eq!(resolve_state(&input), StateId::Notify);
+        assert_eq!(resolve_state(&input), StateId::Ping);
+        input.is_charging = true;
+        assert_eq!(resolve_state(&input), StateId::Ping);
+        input.is_charging = false;
+        input.is_sleepy = true;
+        assert_eq!(resolve_state(&input), StateId::Ping);
+        input.is_sleepy = false;
         input.notification_active = false;
 
         input.is_singing = true;
