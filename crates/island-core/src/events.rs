@@ -41,6 +41,8 @@ pub enum AppEvent {
     ToggleSwapPetArt,
     PetClicked,
     PetHappyTimeout(u64),
+    PetDizzyTimeout(u64),
+    PetPokeReset(u64),
     AlertTimeout(u64),
 }
 

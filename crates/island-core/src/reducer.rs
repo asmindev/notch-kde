@@ -39,6 +39,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         AppEvent::BatteryUpdated(bat) => {
             let just_plugged_in = !state.battery.is_charging && bat.is_charging;
             state.battery = bat;
+            state.pet_is_sleepy = state.battery.percentage <= 20 && !state.battery.is_charging;
 
             // When charger is newly connected, trigger global alert with generation ID!
             if just_plugged_in {
@@ -71,12 +72,32 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         }
 
         AppEvent::PetClicked => {
+            state.pet_poke_count += 1;
             state.pet_happy_generation += 1;
-            state.pet_is_happy = true;
             let gen_id = state.pet_happy_generation;
+
+            if state.pet_poke_count >= 4 {
+                state.pet_is_dizzy = true;
+                state.pet_is_happy = false;
+                state.pet_dizzy_generation += 1;
+                let dizzy_gen = state.pet_dizzy_generation;
+                effects.push(Effect::ScheduleTimer {
+                    id: "pet_dizzy_timeout",
+                    duration_ms: 2200,
+                    generation: dizzy_gen,
+                });
+            } else {
+                state.pet_is_happy = true;
+                effects.push(Effect::ScheduleTimer {
+                    id: "pet_happy_timeout",
+                    duration_ms: 1500,
+                    generation: gen_id,
+                });
+            }
+
             effects.push(Effect::ScheduleTimer {
-                id: "pet_happy_timeout",
-                duration_ms: 1500,
+                id: "pet_poke_reset",
+                duration_ms: 1200,
                 generation: gen_id,
             });
         }
@@ -84,6 +105,19 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         AppEvent::PetHappyTimeout(target_gen) => {
             if state.pet_happy_generation == target_gen {
                 state.pet_is_happy = false;
+            }
+        }
+
+        AppEvent::PetDizzyTimeout(target_gen) => {
+            if state.pet_dizzy_generation == target_gen {
+                state.pet_is_dizzy = false;
+                state.pet_poke_count = 0;
+            }
+        }
+
+        AppEvent::PetPokeReset(target_gen) => {
+            if state.pet_happy_generation == target_gen {
+                state.pet_poke_count = 0;
             }
         }
 

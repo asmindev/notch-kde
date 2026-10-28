@@ -157,21 +157,21 @@ fn test_pet_clicked_and_happy_timeout() {
     let effects = reduce(&mut state, AppEvent::PetClicked);
     assert!(state.pet_is_happy);
     assert_eq!(state.pet_happy_generation, 1);
-    assert_eq!(effects, vec![island_core::events::Effect::ScheduleTimer {
+    assert!(effects.contains(&island_core::events::Effect::ScheduleTimer {
         id: "pet_happy_timeout",
         duration_ms: 1500,
         generation: 1,
-    }]);
+    }));
 
     // Another click updates generation
     let effects2 = reduce(&mut state, AppEvent::PetClicked);
     assert!(state.pet_is_happy);
     assert_eq!(state.pet_happy_generation, 2);
-    assert_eq!(effects2, vec![island_core::events::Effect::ScheduleTimer {
+    assert!(effects2.contains(&island_core::events::Effect::ScheduleTimer {
         id: "pet_happy_timeout",
         duration_ms: 1500,
         generation: 2,
-    }]);
+    }));
 
     // Stale timeout generation 1 does not reset happy state
     reduce(&mut state, AppEvent::PetHappyTimeout(1));
@@ -180,4 +180,53 @@ fn test_pet_clicked_and_happy_timeout() {
     // Matching timeout generation 2 resets happy state
     reduce(&mut state, AppEvent::PetHappyTimeout(2));
     assert!(!state.pet_is_happy);
+}
+
+#[test]
+fn test_pet_rapid_poking_triggers_dizzy() {
+    let mut state = AppState::default();
+    assert!(!state.pet_is_dizzy);
+
+    // Poke 1, 2, 3 times -> happy
+    reduce(&mut state, AppEvent::PetClicked);
+    reduce(&mut state, AppEvent::PetClicked);
+    reduce(&mut state, AppEvent::PetClicked);
+    assert!(state.pet_is_happy);
+    assert!(!state.pet_is_dizzy);
+
+    // Poke 4th time -> triggers dizzy!
+    let effects = reduce(&mut state, AppEvent::PetClicked);
+    assert!(state.pet_is_dizzy);
+    assert!(!state.pet_is_happy);
+    assert!(effects.contains(&island_core::events::Effect::ScheduleTimer {
+        id: "pet_dizzy_timeout",
+        duration_ms: 2200,
+        generation: state.pet_dizzy_generation,
+    }));
+
+    // Dizzy timeout resets dizzy state
+    let generation = state.pet_dizzy_generation;
+    reduce(&mut state, AppEvent::PetDizzyTimeout(generation));
+    assert!(!state.pet_is_dizzy);
+    assert_eq!(state.pet_poke_count, 0);
+}
+
+#[test]
+fn test_pet_sleepy_on_low_battery() {
+    let mut state = AppState::default();
+    assert!(!state.pet_is_sleepy);
+
+    // Battery drops to 15% and not charging -> sleepy
+    reduce(&mut state, AppEvent::BatteryUpdated(island_core::models::BatteryState {
+        percentage: 15,
+        is_charging: false,
+    }));
+    assert!(state.pet_is_sleepy);
+
+    // Plug in charger -> wakes up!
+    reduce(&mut state, AppEvent::BatteryUpdated(island_core::models::BatteryState {
+        percentage: 15,
+        is_charging: true,
+    }));
+    assert!(!state.pet_is_sleepy);
 }

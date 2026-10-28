@@ -38,6 +38,10 @@ pub struct AppState {
     pub music_visual_mode: MusicVisualMode,
     pub pet_is_happy: bool,
     pub pet_happy_generation: u64,
+    pub pet_is_dizzy: bool,
+    pub pet_is_sleepy: bool,
+    pub pet_poke_count: u32,
+    pub pet_dizzy_generation: u64,
 
     // Welcome Greeting states
     pub is_welcome: bool,
@@ -112,6 +116,10 @@ impl Default for AppState {
             music_visual_mode: MusicVisualMode::ArtworkPrimary,
             pet_is_happy: false,
             pet_happy_generation: 0,
+            pet_is_dizzy: false,
+            pet_is_sleepy: false,
+            pet_poke_count: 0,
+            pet_dizzy_generation: 0,
             is_welcome: true,
             welcome_generation: 1,
             welcome_title: "Welcome back!".to_string(),

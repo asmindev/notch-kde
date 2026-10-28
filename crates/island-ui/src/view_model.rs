@@ -30,6 +30,8 @@ impl ViewModel {
         ctx.set_has_audio(state.media.is_playing || state.spectrum.bars.iter().any(|&b| b > 0.05));
         ctx.set_music_visual_mode(state.music_visual_mode as i32);
         ctx.set_pet_is_happy(state.pet_is_happy);
+        ctx.set_pet_is_dizzy(state.pet_is_dizzy);
+        ctx.set_pet_is_sleepy(state.pet_is_sleepy);
         ctx.set_is_welcome(state.is_welcome);
         ctx.set_welcome_title(state.welcome_title.clone().into());
         ctx.set_welcome_subtitle(state.welcome_subtitle.clone().into());

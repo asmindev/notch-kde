@@ -1,0 +1,435 @@
+import { IslandContext } from "../context.slint";
+
+component MomoEye inherits Rectangle {
+    in property <bool> is-happy: false;
+    in property <bool> is-sleepy: false;
+    in property <bool> is-dizzy: false;
+    in property <bool> is-blinking: false;
+    in property <length> pupil-shift-x: 0px;
+    in property <length> pupil-shift-y: 0px;
+    in property <float> pupil-scale-x: 1.0;
+    in property <float> pupil-scale-y: 1.0;
+
+    border-radius: self.width / 2;
+    background: #4b3f36;
+    clip: true;
+
+    // 1. Normal state with eye gaze tracking
+    if !root.is-happy && !root.is-sleepy && !root.is-dizzy : Rectangle {
+        width: 100%;
+        height: 100%;
+
+        // Pupil (moves within limits)
+        Rectangle {
+            x: (parent.width - self.width) / 2 + root.pupil-shift-x;
+            y: (parent.height - self.height) / 2 + root.pupil-shift-y;
+            width: parent.width * 0.68 * root.pupil-scale-x;
+            height: parent.height * 0.72 * root.pupil-scale-y;
+            border-radius: self.width / 2;
+            background: #2b231d;
+        }
+
+        // Corneal Specular Primary Glint (Fixed top-right for glass dome depth)
+        Rectangle {
+            x: parent.width * 0.36;
+            y: parent.height * 0.10;
+            width: parent.width * 0.44;
+            height: parent.height * 0.44;
+            border-radius: self.width / 2;
+            background: #ffffff;
+        }
+
+        // Secondary small sparkle glint
+        Rectangle {
+            x: parent.width * 0.16;
+            y: parent.height * 0.62;
+            width: parent.width * 0.20;
+            height: parent.height * 0.20;
+            border-radius: self.width / 2;
+            background: #ffffff;
+            opacity: 0.80;
+        }
+
+        // Natural Eyelid Blink
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: 100%;
+            height: root.is-blinking ? parent.height : 0px;
+            background: #fdf3e3;
+            border-bottom-left-radius: parent.width / 2;
+            border-bottom-right-radius: parent.width / 2;
+            animate height { duration: 60ms; easing: ease-in-out; }
+        }
+    }
+
+    // 2. Happy joy arc (^)
+    if root.is-happy : Rectangle {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+
+        // Top body cutout
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: 100%;
+            height: parent.height * 0.52;
+            background: #fdf8f1;
+        }
+        // Arch
+        Rectangle {
+            x: parent.width * 0.08;
+            y: parent.height * 0.36;
+            width: parent.width * 0.84;
+            height: parent.height * 0.32;
+            border-top-left-radius: self.width / 2;
+            border-top-right-radius: self.width / 2;
+            background: #4b3f36;
+        }
+    }
+
+    // 3. Sleepy slit (-)
+    if root.is-sleepy && !root.is-happy && !root.is-dizzy : Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #fdf3e3;
+
+        Rectangle {
+            x: parent.width * 0.10;
+            y: parent.height * 0.48;
+            width: parent.width * 0.80;
+            height: parent.height * 0.15;
+            border-radius: 2px;
+            background: #4b3f36;
+        }
+    }
+
+    // 4. Dizzy state (@)
+    if root.is-dizzy : Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #ffe6db;
+
+        Text {
+            width: 100%;
+            height: 100%;
+            text: "@";
+            font-size: parent.height * 0.70;
+            font-weight: 800;
+            color: #4b3f36;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component MomoProceduralPet inherits Rectangle {
+    in property <length> pet-size: 38px;
+    in property <bool> is-singing: IslandContext.is-playing;
+    in property <bool> is-happy: IslandContext.pet-is-happy || IslandContext.is-welcome;
+    in property <bool> is-dizzy: IslandContext.pet-is-dizzy;
+    in property <bool> is-sleepy: IslandContext.pet-is-sleepy;
+
+    width: root.pet-size;
+    height: root.pet-size;
+    background: transparent;
+
+    // Audio-reactive CAVA bass & mid energies
+    property <float> bass: (IslandContext.b0 + IslandContext.b1) * 0.5;
+    property <float> mid: (IslandContext.b2 + IslandContext.b3) * 0.5;
+
+    // Gaze direction (-1.0 to 1.0)
+    property <float> look-x: IslandContext.look-x;
+    property <float> look-y: IslandContext.look-y;
+
+    // Smooth interpolated gaze coordinates
+    property <float> smooth-look-x: root.look-x;
+    property <float> smooth-look-y: root.look-y;
+    animate smooth-look-x { duration: 110ms; easing: ease-out; }
+    animate smooth-look-y { duration: 110ms; easing: ease-out; }
+
+    // Procedural Natural Blinking Loop
+    property <bool> is-blinking: false;
+    blink-timer := Timer {
+        interval: 3400ms;
+        running: !root.is-sleepy && !root.is-dizzy;
+        triggered => {
+            root.is-blinking = true;
+            blink-close-timer.running = true;
+        }
+    }
+    blink-close-timer := Timer {
+        interval: 110ms;
+        running: false;
+        triggered => {
+            root.is-blinking = false;
+            self.running = false;
+        }
+    }
+
+    // Procedural Breathing & Bobbing Cycle
+    property <bool> breath-phase: false;
+    breath-timer := Timer {
+        interval: 1800ms;
+        running: true;
+        triggered => {
+            root.breath-phase = !root.breath-phase;
+        }
+    }
+
+    // Squash & Stretch Spring Physics
+    property <length> bounce-y: root.is-dizzy ? -2px :
+        (root.is-happy ? -6px :
+        (root.is-singing ? -(root.bass * 6px) :
+        (root.breath-phase ? -1px : 0px)));
+
+    property <float> squish-y: root.is-happy ? 1.15 :
+        (root.is-singing ? (1.0 + (root.bass * 0.16)) :
+        (root.breath-phase ? 1.03 : 1.0));
+
+    property <float> squish-x: root.is-happy ? 0.92 :
+        (root.is-singing ? (1.0 - (root.bass * 0.08)) :
+        (root.breath-phase ? 0.98 : 1.0));
+
+    // Dizzy wobble oscillation
+    property <bool> dizzy-toggle: false;
+    dizzy-timer := Timer {
+        interval: 120ms;
+        running: root.is-dizzy;
+        triggered => {
+            root.dizzy-toggle = !root.dizzy-toggle;
+        }
+    }
+    property <length> wobble-x: root.is-dizzy ? (root.dizzy-toggle ? 3px : -3px) : 0px;
+    animate wobble-x { duration: 100ms; easing: ease-in-out; }
+
+    // Proportional dimensions
+    property <length> body-w: root.pet-size * 0.88 * root.squish-x;
+    property <length> body-h: root.pet-size * 0.84 * root.squish-y;
+    property <length> eye-w: root.body-w * 0.28;
+    property <length> eye-h: root.body-h * 0.36;
+    property <length> max-shift-x: root.eye-w * 0.22;
+    property <length> max-shift-y: root.eye-h * 0.24;
+    property <length> pupil-shift-x: root.smooth-look-x * root.max-shift-x;
+    property <length> pupil-shift-y: root.smooth-look-y * root.max-shift-y;
+    property <float> pupil-scale-x: 1.0 - (root.smooth-look-x < 0.0 ? -root.smooth-look-x : root.smooth-look-x) * 0.20;
+    property <float> pupil-scale-y: 1.0 - (root.smooth-look-y < 0.0 ? -root.smooth-look-y : root.smooth-look-y) * 0.20;
+
+    // ==========================================
+    // 1. FLOATING SPIRIT WISP (Golden flame above head)
+    // ==========================================
+    wisp := Rectangle {
+        x: (parent.width - self.width) / 2 + root.wobble-x * 0.5;
+        y: root.bounce-y - (root.pet-size * 0.16) + (root.breath-phase ? -2px : 0px);
+        width: root.pet-size * 0.22;
+        height: root.pet-size * 0.30;
+        background: transparent;
+
+        animate y { duration: 180ms; easing: ease-out; }
+
+        // Outer warm glow aura
+        Rectangle {
+            width: 100%;
+            height: 100%;
+            border-radius: self.width / 2;
+            background: #ffe9a8;
+            opacity: 0.45;
+        }
+
+        // Inner golden droplet wisp
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: parent.width * 0.72;
+            height: parent.height * 0.82;
+            border-top-left-radius: self.width / 2;
+            border-top-right-radius: self.width / 2;
+            border-bottom-left-radius: self.width * 0.4;
+            border-bottom-right-radius: self.width * 0.4;
+            background: #ffe9a8;
+
+            // Bright core glint
+            Rectangle {
+                x: parent.width * 0.25;
+                y: parent.height * 0.2;
+                width: parent.width * 0.35;
+                height: parent.height * 0.35;
+                border-radius: self.width / 2;
+                background: #ffffff;
+                opacity: 0.9;
+            }
+        }
+    }
+
+    // ==========================================
+    // 2. MAIN SQUIRCLE GHOST BODY
+    // ==========================================
+    body-container := Rectangle {
+        x: (parent.width - self.width) / 2 + root.wobble-x;
+        y: root.bounce-y + (root.pet-size * 0.10);
+        width: root.body-w;
+        height: root.body-h;
+
+        animate y { duration: 70ms; easing: ease-out; }
+        animate width { duration: 70ms; easing: ease-out; }
+        animate height { duration: 70ms; easing: ease-out; }
+
+        // STUBBY ARMS (Left & Right)
+        arm-l := Rectangle {
+            x: -parent.width * 0.08;
+            y: parent.height * 0.52 + (root.is-happy || root.is-singing ? -3px : 0px);
+            width: parent.width * 0.24;
+            height: parent.height * 0.22;
+            border-radius: self.width / 2;
+            background: #fdf3e3;
+            animate y { duration: 120ms; easing: ease-out; }
+        }
+
+        arm-r := Rectangle {
+            x: parent.width * 0.84;
+            y: parent.height * 0.52 + (root.is-happy || root.is-singing ? -3px : 0px);
+            width: parent.width * 0.24;
+            height: parent.height * 0.22;
+            border-radius: self.width / 2;
+            background: #fdf3e3;
+            animate y { duration: 120ms; easing: ease-out; }
+        }
+
+        // GHOST SKIRT SCALLOPS (Wavy bottom hem)
+        scallop-1 := Rectangle {
+            x: parent.width * 0.06;
+            y: parent.height * 0.86;
+            width: parent.width * 0.24;
+            height: parent.height * 0.18;
+            border-radius: self.width / 2;
+            background: #f3e1ca;
+        }
+        scallop-2 := Rectangle {
+            x: parent.width * 0.28;
+            y: parent.height * 0.89;
+            width: parent.width * 0.24;
+            height: parent.height * 0.18;
+            border-radius: self.width / 2;
+            background: #f3e1ca;
+        }
+        scallop-3 := Rectangle {
+            x: parent.width * 0.50;
+            y: parent.height * 0.88;
+            width: parent.width * 0.24;
+            height: parent.height * 0.18;
+            border-radius: self.width / 2;
+            background: #f3e1ca;
+        }
+        scallop-4 := Rectangle {
+            x: parent.width * 0.70;
+            y: parent.height * 0.85;
+            width: parent.width * 0.24;
+            height: parent.height * 0.18;
+            border-radius: self.width / 2;
+            background: #f3e1ca;
+        }
+
+        // TORSO CORE (Soft Warm Pastel Cream Squircle)
+        body-core := Rectangle {
+            width: 100%;
+            height: 94%;
+            border-top-left-radius: self.width * 0.46;
+            border-top-right-radius: self.width * 0.46;
+            border-bottom-left-radius: self.width * 0.38;
+            border-bottom-right-radius: self.width * 0.38;
+            background: #fdf8f1;
+            clip: false;
+
+            // Subtle top highlight specular dome
+            Rectangle {
+                x: parent.width * 0.16;
+                y: parent.height * 0.05;
+                width: parent.width * 0.68;
+                height: parent.height * 0.35;
+                border-radius: self.width / 2;
+                background: #ffffff;
+                opacity: 0.28;
+            }
+
+            // PEACH CHEEK BLUSH
+            blush-left := Rectangle {
+                x: parent.width * 0.10;
+                y: parent.height * 0.58;
+                width: parent.width * 0.22;
+                height: parent.height * 0.14;
+                border-radius: self.width / 2;
+                background: #ffd6c6;
+                opacity: 0.85;
+            }
+
+            blush-right := Rectangle {
+                x: parent.width * 0.68;
+                y: parent.height * 0.58;
+                width: parent.width * 0.22;
+                height: parent.height * 0.14;
+                border-radius: self.width / 2;
+                background: #ffd6c6;
+                opacity: 0.85;
+            }
+
+            // ==========================================
+            // 3. EYES (3D Spherical Gaze Tracking)
+            // ==========================================
+            eye-left := MomoEye {
+                x: parent.width * 0.18;
+                y: parent.height * 0.32;
+                width: root.eye-w;
+                height: root.eye-h;
+                is-happy: root.is-happy;
+                is-sleepy: root.is-sleepy;
+                is-dizzy: root.is-dizzy;
+                is-blinking: root.is-blinking;
+                pupil-shift-x: root.pupil-shift-x;
+                pupil-shift-y: root.pupil-shift-y;
+                pupil-scale-x: root.pupil-scale-x;
+                pupil-scale-y: root.pupil-scale-y;
+            }
+
+            eye-right := MomoEye {
+                x: parent.width * 0.54;
+                y: parent.height * 0.32;
+                width: root.eye-w;
+                height: root.eye-h;
+                is-happy: root.is-happy;
+                is-sleepy: root.is-sleepy;
+                is-dizzy: root.is-dizzy;
+                is-blinking: root.is-blinking;
+                pupil-shift-x: root.pupil-shift-x;
+                pupil-shift-y: root.pupil-shift-y;
+                pupil-scale-x: root.pupil-scale-x;
+                pupil-scale-y: root.pupil-scale-y;
+            }
+
+            // ==========================================
+            // 4. MOUTH (Cute cat-like smile / open singing)
+            // ==========================================
+            mouth := Rectangle {
+                x: (parent.width - self.width) / 2;
+                y: parent.height * 0.64;
+                width: (root.is-happy || root.is-singing) ? parent.width * 0.16 : parent.width * 0.10;
+                height: (root.is-happy || root.is-singing) ? parent.height * 0.14 : parent.height * 0.06;
+                border-radius: (root.is-happy || root.is-singing) ? self.width / 2 : 2px;
+                background: (root.is-happy || root.is-singing) ? #c26d6d : #4b3f36;
+
+                animate width { duration: 120ms; easing: ease-out; }
+                animate height { duration: 120ms; easing: ease-out; }
+
+                // Tongue highlight in open mouth
+                if (root.is-happy || root.is-singing): Rectangle {
+                    x: (parent.width - self.width) / 2;
+                    y: parent.height * 0.45;
+                    width: parent.width * 0.75;
+                    height: parent.height * 0.55;
+                    border-radius: self.width / 2;
+                    background: #e07a7a;
+                }
+            }
+        }
+    }
+}

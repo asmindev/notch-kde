@@ -405,6 +405,18 @@ impl AppRuntime {
                                     tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
                                     let _ = tx_timer.send(AppEvent::PetHappyTimeout(generation));
                                 });
+                            } else if id == "pet_dizzy_timeout" {
+                                let tx_timer = event_tx_effects.clone();
+                                tokio_rt.spawn(async move {
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    let _ = tx_timer.send(AppEvent::PetDizzyTimeout(generation));
+                                });
+                            } else if id == "pet_poke_reset" {
+                                let tx_timer = event_tx_effects.clone();
+                                tokio_rt.spawn(async move {
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    let _ = tx_timer.send(AppEvent::PetPokeReset(generation));
+                                });
                             } else if id == "welcome_timeout" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {

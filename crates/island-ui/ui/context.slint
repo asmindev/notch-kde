@@ -61,6 +61,11 @@ export global IslandContext {
     in-out property <int> music-visual-mode: 0;    // 0=PetPrimary (Pet Left, Art Right), 1=ArtworkPrimary (Art Left, Pet Right)
     in-out property <bool> is-visible-state: true; // Shell docking visibility
     in-out property <bool> pet-is-happy: false;    // Interactive bouncy happy reaction
+    in-out property <bool> pet-is-dizzy: false;    // Rapid poking dizzy reaction
+    in-out property <bool> pet-is-sleepy: false;   // Low battery sleepy state
+    in-out property <float> look-x: 0.0;           // Normalized gaze X (-1.0=Left, +1.0=Right)
+    in-out property <float> look-y: 0.0;           // Normalized gaze Y (-1.0=Up, +1.0=Down)
+    in-out property <bool> look-active: false;     // True when cursor is hovering over island
     in-out property <image> pet-3d-image;          // Offscreen wgpu render of Momo
     in-out property <bool> pet-3d-ready: false;     // True once the 3D texture is available
     in-out property <bool> is-welcome: false;      // Welcome greeting banner active

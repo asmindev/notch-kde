@@ -55,23 +55,28 @@ export component IslandShell inherits Rectangle {
 
         changed has-hover => {
             root.hover-changed(self.has-hover);
+            IslandContext.look-active = self.has-hover;
             if (!self.has-hover) {
+                IslandContext.look-x = 0.0;
+                IslandContext.look-y = 0.0;
                 IslandContext.cursor-moved(0.0, 0.0);
             }
         }
 
         changed mouse-x => {
-            IslandContext.cursor-moved(
-                (self.mouse-x / self.width) * 2 - 1,
-                (self.mouse-y / self.height) * 2 - 1
-            );
+            if (self.has-hover && self.width > 0px && self.height > 0px) {
+                IslandContext.look-x = max(-1.0, min(1.0, (self.mouse-x / self.width) * 2.0 - 1.0));
+                IslandContext.look-y = max(-1.0, min(1.0, (self.mouse-y / self.height) * 2.0 - 1.0));
+                IslandContext.cursor-moved(IslandContext.look-x, IslandContext.look-y);
+            }
         }
 
         changed mouse-y => {
-            IslandContext.cursor-moved(
-                (self.mouse-x / self.width) * 2 - 1,
-                (self.mouse-y / self.height) * 2 - 1
-            );
+            if (self.has-hover && self.width > 0px && self.height > 0px) {
+                IslandContext.look-x = max(-1.0, min(1.0, (self.mouse-x / self.width) * 2.0 - 1.0));
+                IslandContext.look-y = max(-1.0, min(1.0, (self.mouse-y / self.height) * 2.0 - 1.0));
+                IslandContext.cursor-moved(IslandContext.look-x, IslandContext.look-y);
+            }
         }
 
         clicked => {

@@ -1,5 +1,6 @@
 import { IslandContext } from "../context.slint";
 import { FloatingNotes } from "floating-notes.slint";
+import { MomoProceduralPet } from "momo-procedural-pet.slint";
 
 export component PetView inherits Rectangle {
     in property <length> pet-size: 24px;
@@ -9,90 +10,22 @@ export component PetView inherits Rectangle {
     height: root.pet-size;
     background: transparent;
 
-    property <float> bass: (IslandContext.b0 + IslandContext.b1) * 0.5;
-    property <float> mid: (IslandContext.b2 + IslandContext.b3) * 0.5;
-
     property <bool> is-singing: IslandContext.is-playing;
     property <bool> is-happy: IslandContext.pet-is-happy || IslandContext.is-welcome;
-    property <bool> is-hovered-state: touch.has-hover;
-
-    // Audio-reactive bounce offset
-    property <length> bounce-y: root.is-happy 
-        ? -6px 
-        : (root.is-singing ? -(root.bass * 5px) : 0px);
-
-    // Audio-reactive squash and stretch scale
-    property <float> scale-y: root.is-happy 
-        ? 1.14 
-        : (root.is-singing ? (1.0 + (root.bass * 0.12)) : (root.is-hovered-state ? 1.06 : 1.0));
-
-    property <float> scale-x: root.is-happy 
-        ? 0.92 
-        : (root.is-singing ? (1.0 - (root.bass * 0.06)) : (root.is-hovered-state ? 1.06 : 1.0));
+    property <bool> is-dizzy: IslandContext.pet-is-dizzy;
+    property <bool> is-sleepy: IslandContext.pet-is-sleepy;
 
     // ==========================================
-    // 1. MOMO CHARACTER (WGPU render, sprites as fallback)
+    // 1. MOMO PROCEDURAL CODE-DRAWN PET (Zero image assets)
     // ==========================================
-    char-container := Rectangle {
+    momo := MomoProceduralPet {
         x: (parent.width - self.width) / 2;
-        y: root.bounce-y;
-        width: root.pet-size * root.scale-x;
-        height: root.pet-size * root.scale-y;
-
-        animate y { duration: 60ms; easing: ease-out; }
-        animate width { duration: 60ms; easing: ease-out; }
-        animate height { duration: 60ms; easing: ease-out; }
-
-        Image {
-            width: 100%;
-            height: 100%;
-            source: IslandContext.pet-3d-image;
-            image-fit: contain;
-            visible: IslandContext.pet-3d-ready;
-        }
-
-        Rectangle {
-            width: 100%;
-            height: 100%;
-            background: transparent;
-            visible: !IslandContext.pet-3d-ready;
-
-            // State 0: Idle Pose (Default sweet toothy grin)
-            Image {
-                width: 100%;
-                height: 100%;
-                source: @image-url("../../assets/pet/labubu_idle.png");
-                image-fit: contain;
-                opacity: (!root.is-singing && !root.is-happy) ? 1.0 : 0.0;
-                visible: self.opacity > 0.01;
-
-                animate opacity { duration: 160ms; easing: ease-out; }
-            }
-
-            // State 1: Singing Pose (With cute headphones & singing mouth)
-            Image {
-                width: 100%;
-                height: 100%;
-                source: @image-url("../../assets/pet/labubu_singing.png");
-                image-fit: contain;
-                opacity: (root.is-singing && !root.is-happy) ? 1.0 : 0.0;
-                visible: self.opacity > 0.01;
-
-                animate opacity { duration: 160ms; easing: ease-out; }
-            }
-
-            // State 2: Happy Petting Pose (Blushing cheeks & jump)
-            Image {
-                width: 100%;
-                height: 100%;
-                source: @image-url("../../assets/pet/labubu_happy.png");
-                image-fit: contain;
-                opacity: root.is-happy ? 1.0 : 0.0;
-                visible: self.opacity > 0.01;
-
-                animate opacity { duration: 140ms; easing: ease-out; }
-            }
-        }
+        y: (parent.height - self.height) / 2;
+        pet-size: root.pet-size;
+        is-singing: root.is-singing;
+        is-happy: root.is-happy;
+        is-dizzy: root.is-dizzy;
+        is-sleepy: root.is-sleepy;
     }
 
     // ==========================================
