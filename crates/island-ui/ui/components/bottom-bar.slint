@@ -4,66 +4,10 @@ import { Icons } from "../theme/icons.slint";
 import { IslandContext } from "../context.slint";
 import { IconButton } from "icon-button.slint";
 
-component AvatarButton inherits Rectangle {
-    in property <string> glyph: "";
-    in property <color> swatch: transparent;
-    in property <bool> swatch-only: false;
-    in property <bool> show-swatch-dot: false;
-    in property <bool> active: false;
-    in property <length> btn-size: 22px;
-    out property <bool> has-hover <=> touch.has-hover;
-
-    callback clicked();
-
-    width: root.btn-size;
-    height: root.btn-size;
-    border-radius: root.btn-size / 2;
-    background: touch.has-hover
-        ? ThemeColors.surface-hover
-        : (root.active ? ThemeColors.surface-hover : ThemeColors.surface);
-    border-width: 1px;
-    border-color: root.active ? ThemeColors.accent : ThemeColors.border;
-    animate background { duration: ThemeMetrics.fast-anim; }
-
-    if !root.swatch-only: Text {
-        text: root.glyph;
-        color: ThemeColors.foreground;
-        font-size: max(8px, root.btn-size * 0.44);
-        horizontal-alignment: center;
-        vertical-alignment: center;
-    }
-
-    if root.swatch-only: Rectangle {
-        width: root.btn-size * 0.62;
-        height: root.btn-size * 0.62;
-        border-radius: root.btn-size * 0.31;
-        background: root.swatch;
-        border-width: 1px;
-        border-color: #ffffff33;
-    }
-
-    if root.show-swatch-dot: Rectangle {
-        x: parent.width - root.btn-size * 0.36;
-        y: parent.height - root.btn-size * 0.36;
-        width: root.btn-size * 0.32;
-        height: root.btn-size * 0.32;
-        border-radius: root.btn-size * 0.16;
-        background: root.swatch;
-        border-width: 1px;
-        border-color: #ffffff55;
-    }
-
-    touch := TouchArea {
-        width: 100%;
-        height: 100%;
-        clicked => { root.clicked(); }
-    }
-}
-
 export component BottomBar inherits VerticalLayout {
     in property <length> btn-dim: 22px;
     out property <bool> is-hovered: music-btn.has-hover || mute-btn.has-hover || dnd-btn.has-hover
-        || avatar-btn.has-hover;
+        || settings-btn.has-hover;
 
     alignment: center;
     spacing: 3px;
@@ -76,7 +20,7 @@ export component BottomBar inherits VerticalLayout {
         opacity: 0.8;
     }
 
-    // Action Buttons Row (System controls + Avatar picker)
+    // Action Buttons Row (System controls + Settings)
     HorizontalLayout {
         alignment: center;
         spacing: max(10px, min(16px, root.btn-dim * 0.62));
@@ -129,14 +73,12 @@ export component BottomBar inherits VerticalLayout {
             background: ThemeColors.divider;
         }
 
-        // Avatar picker opens its own view instead of crowding the bottom bar.
-        avatar-btn := AvatarButton {
-            glyph: IslandContext.avatar-shapes[IslandContext.blob-character].glyph;
-            swatch: IslandContext.avatar-palettes[IslandContext.blob-palette].swatch;
-            show-swatch-dot: true;
-            active: IslandContext.show-avatar-selector;
+        settings-btn := IconButton {
+            icon: Icons.settings;
             btn-size: root.btn-dim;
-            clicked => { IslandContext.toggle-avatar-selector(); }
+            icon-size: root.btn-dim * 0.52;
+            active: IslandContext.settings-open;
+            clicked => { IslandContext.open-settings(); }
         }
     }
 }

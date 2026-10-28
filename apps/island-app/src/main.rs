@@ -2,6 +2,7 @@ mod bootstrap;
 mod input_region;
 mod pet3d;
 mod runtime;
+mod settings_store;
 
 use bootstrap::Bootstrap;
 use runtime::AppRuntime;

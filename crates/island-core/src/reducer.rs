@@ -1,5 +1,6 @@
 use crate::events::{AppEvent, Effect};
 use crate::models::IslandView;
+use crate::settings::{AvatarSettings, PetBehaviorSettings};
 use crate::state::AppState;
 
 fn begin_overlap_dismissal(state: &mut AppState, effects: &mut Vec<Effect>) {
@@ -82,32 +83,39 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
 
         AppEvent::CycleBlobCharacter => {
             state.blob_character = (state.blob_character + 1) % 8;
+            effects.push(Effect::PersistSettings);
         }
 
         AppEvent::SetBlobCharacter(ch) => {
             state.blob_character = ch % 8;
+            effects.push(Effect::PersistSettings);
         }
 
         AppEvent::CycleBlobPalette => {
             state.blob_palette = (state.blob_palette + 1) % 14;
+            effects.push(Effect::PersistSettings);
         }
 
         AppEvent::SetBlobPalette(palette) => {
             state.blob_palette = palette % 14;
+            effects.push(Effect::PersistSettings);
         }
 
         AppEvent::CycleBlobExpression => {
             state.blob_expression = (state.blob_expression + 1) % 17;
             state.blob_expression_custom = true;
+            effects.push(Effect::PersistSettings);
         }
 
         AppEvent::SetBlobExpression(expression) => {
             state.blob_expression = expression % 17;
             state.blob_expression_custom = true;
+            effects.push(Effect::PersistSettings);
         }
 
         AppEvent::RandomizeAvatar => {
             randomize_avatar(state);
+            effects.push(Effect::PersistSettings);
         }
 
         AppEvent::AvatarRandomTick => {
@@ -121,6 +129,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             if state.avatar_random {
                 randomize_avatar(state);
             }
+            effects.push(Effect::PersistSettings);
         }
 
         AppEvent::ToggleSwapPetArt => {
@@ -128,9 +137,13 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
                 crate::models::MusicVisualMode::PetPrimary => crate::models::MusicVisualMode::ArtworkPrimary,
                 crate::models::MusicVisualMode::ArtworkPrimary => crate::models::MusicVisualMode::PetPrimary,
             };
+            effects.push(Effect::PersistSettings);
         }
 
         AppEvent::PetClicked | AppEvent::MochiSlapped => {
+            if !state.behavior.click_stunts {
+                return effects;
+            }
             state.mochi_slap_count += 1;
             state.mochi_generation += 1;
             state.pet_poke_count = state.mochi_slap_count;
@@ -255,16 +268,77 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         AppEvent::ToggleSourceSelector => {
             state.show_source_selector = !state.show_source_selector;
             if state.show_source_selector {
-                state.show_avatar_selector = false;
                 state.active_module = crate::models::ActiveModule::Media;
             }
         }
 
-        AppEvent::ToggleAvatarSelector => {
-            state.show_avatar_selector = !state.show_avatar_selector;
-            if state.show_avatar_selector {
-                state.show_source_selector = false;
-            }
+        AppEvent::OpenSettings => {
+            state.settings_open = true;
+        }
+
+        AppEvent::CloseSettings => {
+            state.settings_open = false;
+        }
+
+        AppEvent::SetSettingsTab(tab) => {
+            state.settings_tab = tab;
+        }
+
+        AppEvent::SetCursorGaze(enabled) => {
+            state.behavior.cursor_gaze = enabled;
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetIdleActing(enabled) => {
+            state.behavior.idle_acting = enabled;
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetClickStunts(enabled) => {
+            state.behavior.click_stunts = enabled;
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetNotificationReactions(enabled) => {
+            state.behavior.notification_reactions = enabled;
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetMusicReactions(enabled) => {
+            state.behavior.music_reactions = enabled;
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetSleepyOnLowBattery(enabled) => {
+            state.behavior.sleepy_on_low_battery = enabled;
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetMediaVisualMode(mode) => {
+            state.music_visual_mode = mode;
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::ResetAvatar => {
+            let avatar = AvatarSettings::default();
+            state.blob_character = avatar.character;
+            state.blob_palette = avatar.palette;
+            state.blob_expression = avatar.expression;
+            state.blob_expression_custom = avatar.expression_custom;
+            state.avatar_random = avatar.random;
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::ResetSettings => {
+            let avatar = AvatarSettings::default();
+            state.blob_character = avatar.character;
+            state.blob_palette = avatar.palette;
+            state.blob_expression = avatar.expression;
+            state.blob_expression_custom = avatar.expression_custom;
+            state.avatar_random = avatar.random;
+            state.behavior = PetBehaviorSettings::default();
+            state.music_visual_mode = crate::models::MusicVisualMode::ArtworkPrimary;
+            effects.push(Effect::PersistSettings);
         }
 
         AppEvent::SelectMediaSource(id) => {

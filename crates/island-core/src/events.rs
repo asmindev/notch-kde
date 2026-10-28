@@ -1,4 +1,7 @@
-use crate::models::{ActiveModule, BatteryState, IslandView, MediaSource, MediaTrack, TimeInfo};
+use crate::models::{
+    ActiveModule, BatteryState, IslandView, MediaSource, MediaTrack, MusicVisualMode, TimeInfo,
+};
+use crate::settings::SettingsTab;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppEvent {
@@ -36,7 +39,18 @@ pub enum AppEvent {
     MuteToggleClicked,
     DndToggleClicked,
     ToggleSourceSelector,
-    ToggleAvatarSelector,
+    OpenSettings,
+    CloseSettings,
+    SetSettingsTab(SettingsTab),
+    SetCursorGaze(bool),
+    SetIdleActing(bool),
+    SetClickStunts(bool),
+    SetNotificationReactions(bool),
+    SetMusicReactions(bool),
+    SetSleepyOnLowBattery(bool),
+    SetMediaVisualMode(MusicVisualMode),
+    ResetAvatar,
+    ResetSettings,
     SelectMediaSource(String),
     IslandClicked,
     CollapseClicked,
@@ -69,6 +83,7 @@ pub enum Effect {
     PreviousTrack,
     ToggleMute,
     ToggleDnd,
+    PersistSettings,
     SelectMediaSource(String),
     ScheduleTimer { id: &'static str, duration_ms: u64, generation: u64 },
     CancelTimer { id: &'static str },

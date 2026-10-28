@@ -2,6 +2,7 @@ use crate::models::{
     ActiveModule, AlertKind, AudioSpectrum, BatteryState, IslandView, MediaSource, MediaTrack,
     MusicVisualMode, TimeInfo,
 };
+use crate::settings::{PetBehaviorSettings, SettingsTab};
 use crate::view_engine::{SlotContext, ViewEngine};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -43,7 +44,9 @@ pub struct AppState {
     // Media sources selection
     pub media_sources: Vec<MediaSource>,
     pub show_source_selector: bool,
-    pub show_avatar_selector: bool,
+    pub settings_open: bool,
+    pub settings_tab: SettingsTab,
+    pub behavior: PetBehaviorSettings,
 
     // Presentation states
     pub alert_kind: AlertKind,
@@ -138,7 +141,9 @@ impl Default for AppState {
             is_dnd: false,
             media_sources: Vec::new(),
             show_source_selector: false,
-            show_avatar_selector: false,
+            settings_open: false,
+            settings_tab: SettingsTab::Avatar,
+            behavior: PetBehaviorSettings::default(),
             alert_kind: AlertKind::None,
             alert_generation: 0,
             notification_generation: 0,

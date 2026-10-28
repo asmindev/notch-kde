@@ -7,7 +7,7 @@ use island_core::state::{AppState, MochiMoodState};
 use island_pet3d::{
     BloubEngine, BloubFrame, BloubPalette, BloubRenderer, ExpressionId, ShapeId, StateId,
 };
-use island_ui::{IslandContext, MainWindow};
+use island_ui::{IslandContext, MainWindow, SettingsWindow};
 use slint::{ComponentHandle, GraphicsAPI, RenderingState};
 use tracing::{info, warn};
 
@@ -40,6 +40,9 @@ struct Pet3dInput {
     gaze_x: f32,
     gaze_y: f32,
     gaze_active: bool,
+    cursor_gaze_enabled: bool,
+    idle_acting_enabled: bool,
+    notification_reactions_enabled: bool,
 }
 
 impl Default for Pet3dInput {
@@ -68,6 +71,9 @@ impl Default for Pet3dInput {
             gaze_x: 0.0,
             gaze_y: 0.0,
             gaze_active: false,
+            cursor_gaze_enabled: true,
+            idle_acting_enabled: true,
+            notification_reactions_enabled: true,
         }
     }
 }
@@ -163,10 +169,19 @@ pub struct Pet3dInner {
     timing: Mutex<Pet3dTiming>,
     engine: Mutex<BloubEngine>,
     renderer: Mutex<Option<BloubRenderer>>,
+    preview: bool,
 }
 
 impl Pet3dInner {
     fn new() -> Self {
+        Self::with_preview(false)
+    }
+
+    fn new_preview() -> Self {
+        Self::with_preview(true)
+    }
+
+    fn with_preview(preview: bool) -> Self {
         let now = Instant::now();
         Self {
             start: now,
@@ -189,47 +204,76 @@ impl Pet3dInner {
             }),
             engine: Mutex::new(BloubEngine::new()),
             renderer: Mutex::new(None),
+            preview,
         }
     }
 
     pub fn update_from_state(&self, app_state: &AppState) {
         let mut input = self.input.lock().unwrap();
-        input.is_singing = app_state.media.is_playing;
-        input.bass =
-            ((app_state.spectrum.bars[0] + app_state.spectrum.bars[1]) * 0.5).clamp(0.0, 1.0);
+        let preview = self.preview;
+        input.is_singing = !preview
+            && app_state.media.is_playing
+            && app_state.behavior.music_reactions;
+        input.bass = if preview {
+            0.0
+        } else {
+            ((app_state.spectrum.bars[0] + app_state.spectrum.bars[1]) * 0.5).clamp(0.0, 1.0)
+        };
         input.pet_is_happy = app_state.pet_is_happy;
         input.pet_happy_generation = app_state.pet_happy_generation;
         input.pet_dizzy_generation = app_state.pet_dizzy_generation;
-        input.is_welcome = app_state.is_welcome;
+        input.is_welcome = !preview && app_state.is_welcome;
         input.welcome_generation = app_state.welcome_generation;
         input.is_dizzy = app_state.pet_is_dizzy;
-        input.is_sleepy = app_state.pet_is_sleepy;
-        input.is_charging = app_state.battery.is_charging;
-        input.alert_kind = app_state.alert_kind;
-        input.notification_generation = app_state.notification_generation;
-        input.is_compact = matches!(app_state.mode, IslandView::Compact);
-        input.mochi_mood = app_state.mochi_mood;
+        input.is_sleepy =
+            !preview && app_state.pet_is_sleepy && app_state.behavior.sleepy_on_low_battery;
+        input.is_charging = !preview && app_state.battery.is_charging;
+        input.alert_kind = if preview {
+            AlertKind::None
+        } else {
+            app_state.alert_kind
+        };
+        input.notification_generation = if preview {
+            0
+        } else {
+            app_state.notification_generation
+        };
+        input.is_compact = !preview && matches!(app_state.mode, IslandView::Compact);
+        input.mochi_mood = if preview {
+            MochiMoodState::Idle
+        } else {
+            app_state.mochi_mood
+        };
         input.blob_character = app_state.blob_character;
         input.blob_palette = app_state.blob_palette;
         input.blob_expression = app_state.blob_expression;
         input.blob_expression_custom = app_state.blob_expression_custom;
-        input.welcome_age = 0.0;
+        input.cursor_gaze_enabled = !preview && app_state.behavior.cursor_gaze;
+        input.idle_acting_enabled = app_state.behavior.idle_acting;
+        input.notification_reactions_enabled = !preview && app_state.behavior.notification_reactions;
+        input.welcome_age = if preview { -1.0 } else { 0.0 };
 
         let mut timing = self.timing.lock().unwrap();
-        if app_state.welcome_generation != timing.last_welcome_generation {
+        if preview {
+            timing.welcome_start = None;
+        } else if app_state.welcome_generation != timing.last_welcome_generation {
             timing.welcome_start = if app_state.is_welcome {
                 Some(Instant::now())
             } else {
                 None
             };
         }
-        if !app_state.is_welcome {
+        if !preview && !app_state.is_welcome {
             timing.welcome_start = None;
         }
     }
 
     pub fn set_gaze(&self, x: f32, y: f32) {
         let mut input = self.input.lock().unwrap();
+        if !input.cursor_gaze_enabled {
+            input.gaze_active = false;
+            return;
+        }
         input.gaze_x = x.clamp(-1.0, 1.0);
         input.gaze_y = y.clamp(-1.0, 1.0);
         input.gaze_active = true;
@@ -242,16 +286,23 @@ impl Pet3dInner {
         let mut input = *self.input.lock().unwrap();
         let mut timing = self.timing.lock().unwrap();
 
-        if input.gaze_active && now.duration_since(timing.last_gaze) > GAZE_TIMEOUT {
+        if !input.cursor_gaze_enabled
+            || (input.gaze_active && now.duration_since(timing.last_gaze) > GAZE_TIMEOUT)
+        {
             input.gaze_active = false;
         }
 
+        if !input.notification_reactions_enabled {
+            timing.notification_start = None;
+            timing.last_notification_generation = input.notification_generation;
+        }
         if input.notification_generation != timing.last_notification_generation {
             timing.notification_start = Some(now);
         }
-        input.notification_active = timing
-            .notification_start
-            .is_some_and(|start| now.duration_since(start) < Duration::from_secs_f32(2.4));
+        input.notification_active = input.notification_reactions_enabled
+            && timing
+                .notification_start
+                .is_some_and(|start| now.duration_since(start) < Duration::from_secs_f32(2.4));
 
         if input.is_welcome {
             if let Some(start) = timing.welcome_start {
@@ -307,7 +358,9 @@ impl Pet3dInner {
         }
         engine.set_energy(input.bass);
         engine.set_compact(input.is_compact);
-        engine.set_idle_acting(target_state == StateId::Idle && !input.blob_expression_custom);
+        engine.set_idle_acting(
+            target_state == StateId::Idle && !input.blob_expression_custom && input.idle_acting_enabled,
+        );
         let frame = engine.sample(t);
         drop(engine);
 
@@ -319,24 +372,22 @@ impl Pet3dInner {
         TickResult { dirty: true }
     }
 
-    fn notify(
+    fn notify<F>(
         &self,
         state: RenderingState,
         graphics_api: &GraphicsAPI<'_>,
-        window: &slint::Weak<MainWindow>,
-    ) {
+        set_ready: &F,
+    ) where
+        F: Fn(Option<slint::Image>),
+    {
         match state {
             RenderingState::RenderingSetup => {
                 let (device, queue) = match graphics_api {
-                    GraphicsAPI::WGPU30 { device, queue, .. } => {
-                        (device.clone(), queue.clone())
-                    }
+                    GraphicsAPI::WGPU30 { device, queue, .. } => (device.clone(), queue.clone()),
                     _ => {
                         warn!("Bloub 3D renderer requires the WGPU backend; using vector fallback");
                         self.shared.lock().unwrap().failed = true;
-                        if let Some(win) = window.upgrade() {
-                            win.global::<IslandContext>().set_pet_3d_ready(false);
-                        }
+                        set_ready(None);
                         return;
                     }
                 };
@@ -357,18 +408,12 @@ impl Pet3dInner {
                             Err(err) => {
                                 warn!("Could not import Bloub texture into Slint: {err}");
                                 self.shared.lock().unwrap().failed = true;
-                                if let Some(win) = window.upgrade() {
-                                    win.global::<IslandContext>().set_pet_3d_ready(false);
-                                }
+                                set_ready(None);
                                 return;
                             }
                         };
 
-                        if let Some(win) = window.upgrade() {
-                            let ctx = win.global::<IslandContext>();
-                            ctx.set_pet_3d_image(image);
-                            ctx.set_pet_3d_ready(true);
-                        }
+                        set_ready(Some(image));
 
                         *self.renderer.lock().unwrap() = Some(renderer);
                         let mut shared = self.shared.lock().unwrap();
@@ -380,9 +425,7 @@ impl Pet3dInner {
                     Err(err) => {
                         warn!("Could not initialize Bloub 3D renderer: {err}");
                         self.shared.lock().unwrap().failed = true;
-                        if let Some(win) = window.upgrade() {
-                            win.global::<IslandContext>().set_pet_3d_ready(false);
-                        }
+                        set_ready(None);
                     }
                 }
             }
@@ -414,21 +457,56 @@ impl Pet3dInner {
     }
 }
 
+fn install_notifier<F>(
+    window: &slint::Window,
+    inner: &Arc<Pet3dInner>,
+    set_ready: F,
+) where
+    F: Fn(Option<slint::Image>) + 'static,
+{
+    let inner_cb = inner.clone();
+    if let Err(err) = window.set_rendering_notifier(move |state, graphics_api| {
+        inner_cb.notify(state, graphics_api, &set_ready);
+    }) {
+        warn!("Could not install Bloub rendering notifier: {err}");
+    }
+}
+
 pub fn install(window: &MainWindow) -> Arc<Pet3dInner> {
     let inner = Arc::new(Pet3dInner::new());
     inner.tick();
 
     let weak = window.as_weak();
-    let inner_cb = inner.clone();
-    if let Err(err) = window
-        .window()
-        .set_rendering_notifier(move |state, graphics_api| {
-            inner_cb.notify(state, graphics_api, &weak);
-        })
-    {
-        warn!("Could not install Bloub rendering notifier: {err}");
-    }
+    install_notifier(window.window(), &inner, move |image| {
+        if let Some(win) = weak.upgrade() {
+            let ctx = win.global::<IslandContext>();
+            if let Some(image) = image {
+                ctx.set_pet_3d_image(image);
+                ctx.set_pet_3d_ready(true);
+            } else {
+                ctx.set_pet_3d_ready(false);
+            }
+        }
+    });
+    inner
+}
 
+pub fn install_settings(window: &SettingsWindow) -> Arc<Pet3dInner> {
+    let inner = Arc::new(Pet3dInner::new_preview());
+    inner.tick();
+
+    let weak = window.as_weak();
+    install_notifier(window.window(), &inner, move |image| {
+        if let Some(win) = weak.upgrade() {
+            let ctx = win.global::<IslandContext>();
+            if let Some(image) = image {
+                ctx.set_pet_3d_image(image);
+                ctx.set_pet_3d_ready(true);
+            } else {
+                ctx.set_pet_3d_ready(false);
+            }
+        }
+    });
     inner
 }
 
@@ -448,6 +526,24 @@ pub fn start_timer(
     timer
 }
 
+pub fn start_settings_timer(
+    inner: Arc<Pet3dInner>,
+    window: slint::Weak<SettingsWindow>,
+) -> Rc<slint::Timer> {
+    let timer = Rc::new(slint::Timer::default());
+    timer.start(slint::TimerMode::Repeated, FRAME_INTERVAL, move || {
+        let Some(win) = window.upgrade() else {
+            return;
+        };
+        if !win.window().is_visible() {
+            return;
+        }
+        if inner.tick().dirty {
+            win.window().request_redraw();
+        }
+    });
+    timer
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -496,6 +592,74 @@ mod tests {
             input.pet_happy_generation = generation as u64;
             assert_eq!(resolve_state(&input), state);
         }
+    }
+
+    #[test]
+    fn preview_ignores_cursor_gaze() {
+        let inner = Pet3dInner::new_preview();
+        let mut state = AppState::default();
+        state.behavior.cursor_gaze = true;
+        inner.update_from_state(&state);
+
+        inner.set_gaze(0.75, -0.35);
+        assert!(!inner.input.lock().unwrap().gaze_active);
+    }
+
+    #[test]
+    fn preview_ignores_welcome_media_and_alerts() {
+        let inner = Pet3dInner::new_preview();
+        let mut state = AppState::default();
+        state.media.is_playing = true;
+        state.is_welcome = true;
+        state.battery.is_charging = true;
+        state.alert_kind = AlertKind::Charging;
+        state.blob_character = 4;
+        state.blob_palette = 9;
+
+        inner.update_from_state(&state);
+        inner.tick();
+
+        let input = *inner.input.lock().unwrap();
+        assert!(!input.is_singing);
+        assert!(!input.is_welcome);
+        assert!(!input.is_charging);
+        assert_eq!(input.alert_kind, AlertKind::None);
+        assert_eq!(input.blob_character, 4);
+        assert_eq!(input.blob_palette, 9);
+
+        let shared = inner.shared.lock().unwrap();
+        assert!(shared.frame.is_some());
+    }
+
+    #[test]
+    fn disabled_gaze_ignores_cursor_updates() {
+        let inner = Pet3dInner::new();
+        inner.input.lock().unwrap().cursor_gaze_enabled = false;
+        inner.set_gaze(0.8, -0.4);
+        assert!(!inner.input.lock().unwrap().gaze_active);
+    }
+
+    #[test]
+    fn disabled_behavior_gates_pet_inputs() {
+        let mut state = AppState::default();
+        state.media.is_playing = true;
+        state.pet_is_sleepy = true;
+        state.notification_generation = 1;
+        state.behavior.music_reactions = false;
+        state.behavior.sleepy_on_low_battery = false;
+        state.behavior.notification_reactions = false;
+
+        let inner = Pet3dInner::new();
+        inner.update_from_state(&state);
+        {
+            let input = inner.input.lock().unwrap();
+            assert!(!input.is_singing);
+            assert!(!input.is_sleepy);
+            assert!(!input.notification_reactions_enabled);
+        }
+
+        inner.tick();
+        assert!(!inner.input.lock().unwrap().notification_active);
     }
 
     #[test]

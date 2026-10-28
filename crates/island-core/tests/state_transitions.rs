@@ -305,3 +305,62 @@ fn notification_event_bumps_generation() {
     reduce(&mut state, AppEvent::NotificationReceived);
     assert_eq!(state.notification_generation, 2);
 }
+
+#[test]
+fn test_settings_events_open_tab_toggle_and_persist() {
+    let mut state = AppState::default();
+
+    reduce(&mut state, AppEvent::OpenSettings);
+    assert!(state.settings_open);
+
+    reduce(&mut state, AppEvent::SetSettingsTab(island_core::SettingsTab::System));
+    assert_eq!(state.settings_tab, island_core::SettingsTab::System);
+
+    let effects = reduce(&mut state, AppEvent::SetMusicReactions(false));
+    assert!(!state.behavior.music_reactions);
+    assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
+
+    reduce(&mut state, AppEvent::CloseSettings);
+    assert!(!state.settings_open);
+}
+
+#[test]
+fn test_reset_settings_restores_defaults_and_persists() {
+    let mut state = AppState::default();
+    state.blob_character = 6;
+    state.blob_palette = 11;
+    state.blob_expression = 14;
+    state.blob_expression_custom = true;
+    state.avatar_random = true;
+    state.behavior.cursor_gaze = false;
+    state.behavior.music_reactions = false;
+    state.music_visual_mode = island_core::models::MusicVisualMode::PetPrimary;
+
+    let effects = reduce(&mut state, AppEvent::ResetSettings);
+
+    assert_eq!(state.blob_character, 1);
+    assert_eq!(state.blob_palette, 0);
+    assert_eq!(state.blob_expression, 0);
+    assert!(!state.blob_expression_custom);
+    assert!(!state.avatar_random);
+    assert!(state.behavior.cursor_gaze);
+    assert!(state.behavior.music_reactions);
+    assert_eq!(
+        state.music_visual_mode,
+        island_core::models::MusicVisualMode::ArtworkPrimary
+    );
+    assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
+}
+
+#[test]
+fn test_click_stunts_can_be_disabled() {
+    let mut state = AppState::default();
+    reduce(&mut state, AppEvent::SetClickStunts(false));
+    let generation = state.mochi_generation;
+
+    let effects = reduce(&mut state, AppEvent::PetClicked);
+
+    assert!(effects.is_empty());
+    assert_eq!(state.mochi_generation, generation);
+    assert!(!state.pet_is_happy);
+}

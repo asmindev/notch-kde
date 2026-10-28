@@ -1,4 +1,4 @@
-use crate::{ContentRouter, IslandContext, MainWindow};
+use crate::{ContentRouter, IslandContext, MainWindow, SettingsWindow};
 use island_core::models::ActiveModule;
 use island_core::state::AppState;
 use slint::ComponentHandle;
@@ -33,14 +33,22 @@ impl ViewModel {
         ctx.set_blob_character(state.blob_character as i32);
         ctx.set_blob_palette(state.blob_palette as i32);
         ctx.set_blob_expression(state.blob_expression as i32);
-        ctx.set_show_avatar_selector(state.show_avatar_selector);
         ctx.set_avatar_random(state.avatar_random);
+        ctx.set_settings_open(state.settings_open);
+        ctx.set_settings_tab(state.settings_tab as i32);
+        ctx.set_cursor_gaze_enabled(state.behavior.cursor_gaze);
+        ctx.set_idle_acting_enabled(state.behavior.idle_acting);
+        ctx.set_click_stunts_enabled(state.behavior.click_stunts);
+        ctx.set_notification_reactions_enabled(state.behavior.notification_reactions);
+        ctx.set_music_reactions_enabled(state.behavior.music_reactions);
+        ctx.set_sleepy_on_low_battery(state.behavior.sleepy_on_low_battery);
         ctx.set_pet_is_happy(state.pet_is_happy);
         ctx.set_pet_is_dizzy(state.pet_is_dizzy);
-        ctx.set_pet_is_sleepy(state.pet_is_sleepy);
+        ctx.set_pet_is_sleepy(state.pet_is_sleepy && state.behavior.sleepy_on_low_battery);
         ctx.set_is_welcome(state.is_welcome);
         ctx.set_welcome_title(state.welcome_title.clone().into());
         ctx.set_welcome_subtitle(state.welcome_subtitle.clone().into());
+        ctx.set_app_version(env!("CARGO_PKG_VERSION").into());
 
         // Resolve Album Art image
         if !state.media.art_url.is_empty() {
@@ -85,5 +93,28 @@ impl ViewModel {
         ctx.set_b5(state.spectrum.bars[5]);
         ctx.set_b6(state.spectrum.bars[6]);
         ctx.set_b7(state.spectrum.bars[7]);
+    }
+
+    pub fn sync_settings_to_ui(settings: &SettingsWindow, state: &AppState) {
+        let ctx = settings.global::<IslandContext>();
+
+        ctx.set_settings_open(state.settings_open);
+        ctx.set_settings_tab(state.settings_tab as i32);
+        ctx.set_blob_character(state.blob_character as i32);
+        ctx.set_blob_palette(state.blob_palette as i32);
+        ctx.set_blob_expression(state.blob_expression as i32);
+        ctx.set_avatar_random(state.avatar_random);
+        ctx.set_cursor_gaze_enabled(state.behavior.cursor_gaze);
+        ctx.set_idle_acting_enabled(state.behavior.idle_acting);
+        ctx.set_click_stunts_enabled(state.behavior.click_stunts);
+        ctx.set_notification_reactions_enabled(state.behavior.notification_reactions);
+        ctx.set_music_reactions_enabled(state.behavior.music_reactions);
+        ctx.set_sleepy_on_low_battery(state.behavior.sleepy_on_low_battery);
+        ctx.set_music_visual_mode(state.music_visual_mode as i32);
+        ctx.set_pet_is_happy(state.pet_is_happy);
+        ctx.set_pet_is_dizzy(state.pet_is_dizzy);
+        ctx.set_pet_is_sleepy(state.pet_is_sleepy && state.behavior.sleepy_on_low_battery);
+        ctx.set_is_playing(false);
+        ctx.set_app_version(env!("CARGO_PKG_VERSION").into());
     }
 }

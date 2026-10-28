@@ -1,15 +1,16 @@
-use island_core::{reduce, AppEvent, AppState, Effect};
+use island_core::{reduce, AppEvent, AppState, Effect, PersistedSettings, SettingsTab};
 use island_platform::overlap::Rect;
 use island_platform::{KdeManager, OverlapDetector, PlatformWindow};
 use island_services::{
-    AudioService, BatteryService, CavaService, ClockService, CursorService, DndService,
+    AudioService, BatteryService, CavaService, ClockService, DndService,
     MediaService, NotificationService, ScreenSaverService,
 };
-use island_ui::{MainWindow, ViewModel};
+use island_ui::{IslandContext, MainWindow, SettingsWindow, ViewModel};
 use crate::input_region;
 use crate::pet3d;
+use crate::settings_store::SettingsStore;
 use slint::ComponentHandle;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
@@ -49,6 +50,7 @@ impl AppRuntime {
 
         // 1. Initial State
         let mut app_state = AppState::default();
+        SettingsStore::load().apply_to_state(&mut app_state);
         app_state.time = ClockService::get_current_time();
         app_state.battery = BatteryService::read_battery();
         app_state.is_muted = AudioService::check_muted_sync();
@@ -77,8 +79,11 @@ impl AppRuntime {
         };
         app_state.welcome_subtitle = greeting_sub;
 
+        let settings_window = SettingsWindow::new()?;
+
         // Sync initial state to UI
         ViewModel::sync_state_to_ui(&self.window, &app_state);
+        ViewModel::sync_settings_to_ui(&settings_window, &app_state);
 
         let input_region = input_region::InputRegionHandle::spawn();
         let initial_input_rect = input_region::rect_for_state(&app_state);
@@ -87,6 +92,11 @@ impl AppRuntime {
         let pet3d = pet3d::install(&self.window);
         pet3d.update_from_state(&app_state);
         pet3d.tick();
+
+        // The Settings window has its own WGPU context, so it needs its own renderer.
+        let settings_pet3d = pet3d::install_settings(&settings_window);
+        settings_pet3d.update_from_state(&app_state);
+        settings_pet3d.tick();
 
         // 2. Wire UI Callbacks to Event Channel
         let tx = event_tx.clone();
@@ -188,11 +198,6 @@ impl AppRuntime {
         });
 
         let tx = event_tx.clone();
-        ctx.on_toggle_avatar_selector(move || {
-            let _ = tx.send(AppEvent::ToggleAvatarSelector);
-        });
-
-        let tx = event_tx.clone();
         ctx.on_select_blob_character(move |index| {
             let _ = tx.send(AppEvent::SetBlobCharacter(index.max(0) as u32));
         });
@@ -215,6 +220,97 @@ impl AppRuntime {
         let tx = event_tx.clone();
         ctx.on_toggle_avatar_random(move || {
             let _ = tx.send(AppEvent::ToggleAvatarRandom);
+        });
+
+        let tx = event_tx.clone();
+        ctx.on_open_settings(move || {
+            let _ = tx.send(AppEvent::OpenSettings);
+        });
+
+        // Settings window callbacks use the same event channel as the island.
+        let settings_ctx = settings_window.global::<IslandContext>();
+        let tx = event_tx.clone();
+        settings_ctx.on_close_settings(move || {
+            let _ = tx.send(AppEvent::CloseSettings);
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_select_settings_tab(move |index| {
+            let _ = tx.send(AppEvent::SetSettingsTab(SettingsTab::from_index(index)));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_cursor_gaze(move |enabled| {
+            let _ = tx.send(AppEvent::SetCursorGaze(enabled));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_idle_acting(move |enabled| {
+            let _ = tx.send(AppEvent::SetIdleActing(enabled));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_click_stunts(move |enabled| {
+            let _ = tx.send(AppEvent::SetClickStunts(enabled));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_notification_reactions(move |enabled| {
+            let _ = tx.send(AppEvent::SetNotificationReactions(enabled));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_music_reactions(move |enabled| {
+            let _ = tx.send(AppEvent::SetMusicReactions(enabled));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_sleepy_on_low_battery(move |enabled| {
+            let _ = tx.send(AppEvent::SetSleepyOnLowBattery(enabled));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_media_visual_mode(move |mode| {
+            let visual_mode = if mode == 1 {
+                island_core::models::MusicVisualMode::PetPrimary
+            } else {
+                island_core::models::MusicVisualMode::ArtworkPrimary
+            };
+            let _ = tx.send(AppEvent::SetMediaVisualMode(visual_mode));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_reset_avatar(move || {
+            let _ = tx.send(AppEvent::ResetAvatar);
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_reset_settings(move || {
+            let _ = tx.send(AppEvent::ResetSettings);
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_select_blob_character(move |index| {
+            let _ = tx.send(AppEvent::SetBlobCharacter(index.max(0) as u32));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_select_blob_palette(move |index| {
+            let _ = tx.send(AppEvent::SetBlobPalette(index.max(0) as u32));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_select_blob_expression(move |index| {
+            let _ = tx.send(AppEvent::SetBlobExpression(index.max(0) as u32));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_randomize_avatar(move || {
+            let _ = tx.send(AppEvent::RandomizeAvatar);
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_toggle_avatar_random(move || {
+            let _ = tx.send(AppEvent::ToggleAvatarRandom);
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_pet_clicked(move || {
+            let _ = tx.send(AppEvent::PetClicked);
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_mochi_clicked(move || {
+            let _ = tx.send(AppEvent::MochiSlapped);
+        });
+
+        let settings_close_tx = event_tx.clone();
+        settings_window.window().on_close_requested(move || {
+            let _ = settings_close_tx.send(AppEvent::CloseSettings);
+            slint::CloseRequestResponse::HideWindow
         });
 
         let pet3d_cursor = pet3d.clone();
@@ -337,30 +433,7 @@ impl AppRuntime {
         let notch_rect = compact_notch_rect(&geom);
         overlap_detector.start(notch_rect, overlap_tx);
 
-        // Global cursor bridge: KWin script -> D-Bus -> Bloub gaze.
-        let (cursor_tx, mut cursor_rx) = mpsc::unbounded_channel();
-        let cursor_geom = Arc::new(Mutex::new(geom));
-        let cursor_service_geom = cursor_geom.clone();
-        tokio_rt.spawn(async move {
-            CursorService::serve(cursor_service_geom, cursor_tx).await;
-        });
-        let pet3d_cursor = pet3d.clone();
-        let cursor_window = self.window.as_weak();
-        tokio_rt.spawn(async move {
-            while let Some((x, y)) = cursor_rx.recv().await {
-                let pet3d = pet3d_cursor.clone();
-                let window = cursor_window.clone();
-                let _ = slint::invoke_from_event_loop(move || {
-                    pet3d.set_gaze(x, y);
-                    if let Some(win) = window.upgrade() {
-                        win.window().request_redraw();
-                    }
-                });
-            }
-        });
-
         let screen_watcher = overlap_detector.clone();
-        let cursor_screen_geom = cursor_geom.clone();
         let output_config = std::env::var_os("HOME")
             .map(std::path::PathBuf::from)
             .map(|home| home.join(".config/kwinoutputconfig.json"));
@@ -397,7 +470,6 @@ impl AppRuntime {
                     Ok(false) => {}
                     Err(err) => warn!("Failed to update KWin rule after screen change: {err}"),
                 }
-                *cursor_screen_geom.lock().unwrap() = geom;
                 screen_watcher.update_rect(compact_notch_rect(&geom));
             }
         });
@@ -423,8 +495,11 @@ impl AppRuntime {
 
         // 7. Event Processing and UI Dispatch Thread
         let window_weak_clone = window_weak.clone();
+        let settings_weak_events = settings_window.as_weak();
         let pet3d_events = pet3d.clone();
+        let settings_pet3d_events = settings_pet3d.clone();
         let mut last_synced_state = app_state.clone();
+        let mut last_settings_open = app_state.settings_open;
         let event_tx_effects = event_tx.clone();
         let input_region_events = input_region.clone();
         let mut last_input_rect = initial_input_rect;
@@ -457,6 +532,9 @@ impl AppRuntime {
                         Effect::ToggleDnd => {
                             debug!("Toggling notification Do-Not-Disturb");
                             tokio_rt.spawn(async { DndService::toggle_dnd().await; });
+                        }
+                        Effect::PersistSettings => {
+                            SettingsStore::save(&PersistedSettings::from_state(&app_state));
                         }
                         Effect::SelectMediaSource(player_id) => {
                             debug!("Switching active media source to: {}", player_id);
@@ -554,13 +632,43 @@ impl AppRuntime {
                     last_synced_state = app_state.clone();
                     let state_clone = app_state.clone();
                     let w = window_weak_clone.clone();
+                    let settings_w = settings_weak_events.clone();
                     let pet3d = pet3d_events.clone();
+                    let settings_pet3d = settings_pet3d_events.clone();
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(win) = w.upgrade() {
                             ViewModel::sync_state_to_ui(&win, &state_clone);
                             pet3d.update_from_state(&state_clone);
                             if pet3d.tick().dirty {
                                 win.window().request_redraw();
+                            }
+                            if let Some(settings) = settings_w.upgrade() {
+                                ViewModel::sync_settings_to_ui(&settings, &state_clone);
+                                settings_pet3d.update_from_state(&state_clone);
+                                if settings.window().is_visible() {
+                                    settings_pet3d.tick();
+                                    settings.window().request_redraw();
+                                }
+                            }
+                        }
+                    });
+                }
+
+                if app_state.settings_open != last_settings_open {
+                    last_settings_open = app_state.settings_open;
+                    let settings_w = settings_weak_events.clone();
+                    let state_clone = app_state.clone();
+                    let settings_pet3d = settings_pet3d_events.clone();
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(settings) = settings_w.upgrade() {
+                            if state_clone.settings_open {
+                                ViewModel::sync_settings_to_ui(&settings, &state_clone);
+                                settings_pet3d.update_from_state(&state_clone);
+                                settings_pet3d.tick();
+                                settings.window().request_redraw();
+                                let _ = settings.show();
+                            } else {
+                                let _ = settings.hide();
                             }
                         }
                     });
@@ -577,6 +685,8 @@ impl AppRuntime {
             20,
         );
         let _pet3d_timer = pet3d::start_timer(pet3d.clone(), self.window.as_weak());
+        let _settings_pet3d_timer =
+            pet3d::start_settings_timer(settings_pet3d.clone(), settings_window.as_weak());
         self.window.run()
     }
 }

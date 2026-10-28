@@ -10,7 +10,7 @@ export component PetView inherits Rectangle {
     height: root.pet-size;
     background: transparent;
 
-    property <bool> is-singing: IslandContext.is-playing;
+    property <bool> is-singing: IslandContext.is-playing && IslandContext.music-reactions-enabled;
     property <bool> is-happy: IslandContext.pet-is-happy || IslandContext.is-welcome;
 
     // ==========================================

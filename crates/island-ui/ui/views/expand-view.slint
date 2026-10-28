@@ -6,14 +6,12 @@ import { IslandContext } from "../context.slint";
 import { IconButton } from "../components/icon-button.slint";
 import { BottomBar } from "../components/bottom-bar.slint";
 import { SourceSelectorBar } from "../components/source-selector.slint";
-import { AvatarSelectorView } from "../components/avatar-selector.slint";
 import { SystemExpandSlot } from "../modules/system/system-expand-slot.slint";
 import { MediaExpandSlot } from "../modules/media/media-expand-slot.slint";
 
 export component ExpandView inherits VerticalLayout {
     out property <bool> is-hovered: collapse-btn.has-hover 
         || bottom-bar.is-hovered
-        || IslandContext.show-avatar-selector
         || (IslandContext.active-module == 1 && media-slot.is-hovered) 
         || (IslandContext.active-module == 0 && system-slot.is-hovered);
 
@@ -22,8 +20,8 @@ export component ExpandView inherits VerticalLayout {
     spacing: 0px;
     padding: 0px;
 
-    // 1. Primary Expand Content Container (Grows for the avatar picker)
-    property <length> content-h: IslandContext.show-avatar-selector ? ThemeMetrics.avatar-expand-height : ThemeMetrics.expand-height;
+    // 1. Primary Expand Content Container
+    property <length> content-h: ThemeMetrics.expand-height;
     property <length> hdr-h: max(18px, min(26px, root.content-h * 0.18));
 
     VerticalLayout {
@@ -54,12 +52,12 @@ export component ExpandView inherits VerticalLayout {
                     y: (parent.height - self.height) / 2;
                 }
 
-                if IslandContext.show-source-selector && IslandContext.active-module == 1 && !IslandContext.show-avatar-selector: SourceSelectorBar {
+                if IslandContext.show-source-selector && IslandContext.active-module == 1: SourceSelectorBar {
                     bar-height: root.hdr-h;
                 }
 
-                if !IslandContext.show-source-selector || IslandContext.active-module != 1 || IslandContext.show-avatar-selector: Text {
-                    text: IslandContext.show-avatar-selector ? "Avatar" : (IslandContext.active-module == 1 ? "Now Playing" : "System Overview");
+                if !IslandContext.show-source-selector || IslandContext.active-module != 1: Text {
+                    text: IslandContext.active-module == 1 ? "Now Playing" : "System Overview";
                     color: ThemeColors.muted;
                     font-family: ThemeTypography.font-family;
                     font-size: ThemeTypography.size-xs;
@@ -88,20 +86,14 @@ export component ExpandView inherits VerticalLayout {
 
             // Slot 0: System Module Expand Slot
             system-slot := SystemExpandSlot {
-                visible: IslandContext.active-module == 0 && !IslandContext.show-avatar-selector;
-                opacity: (IslandContext.active-module == 0 && !IslandContext.show-avatar-selector) ? 1.0 : 0.0;
+                visible: IslandContext.active-module == 0;
+                opacity: IslandContext.active-module == 0 ? 1.0 : 0.0;
             }
 
             // Slot 1: Media Module Expand Slot
             media-slot := MediaExpandSlot {
-                visible: IslandContext.active-module == 1 && !IslandContext.show-avatar-selector;
-                opacity: (IslandContext.active-module == 1 && !IslandContext.show-avatar-selector) ? 1.0 : 0.0;
-            }
-
-            // Slot 2: Avatar picker
-            if IslandContext.show-avatar-selector: AvatarSelectorView {
-                width: 100%;
-                height: 100%;
+                visible: IslandContext.active-module == 1;
+                opacity: IslandContext.active-module == 1 ? 1.0 : 0.0;
             }
         }
     }

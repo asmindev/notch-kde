@@ -54,6 +54,8 @@ skipswitcher=true\n\
 skipswitcherrule=2\n\
 skiptaskbar=true\n\
 skiptaskbarrule=2\n\
+title=island-app\n\
+titlematch=1\n\
 wmclass=island-app\n\
 wmclassmatch=1\n"
         );
@@ -252,6 +254,8 @@ fn is_rule_current(
         ("skipswitcherrule", "2".to_string()),
         ("skiptaskbar", "true".to_string()),
         ("skiptaskbarrule", "2".to_string()),
+        ("title", "island-app".to_string()),
+        ("titlematch", "1".to_string()),
         ("wmclass", "island-app".to_string()),
         ("wmclassmatch", "1".to_string()),
     ];
@@ -418,6 +422,8 @@ skipswitcher=true\n\
 skipswitcherrule=2\n\
 skiptaskbar=true\n\
 skiptaskbarrule=2\n\
+title=island-app\n\
+titlematch=1\n\
 wmclass=island-app\n\
 wmclassmatch=1\n",
             &collect_rule_groups(LEGACY),
@@ -462,6 +468,8 @@ skipswitcher=true\n\
 skipswitcherrule=2\n\
 skiptaskbar=true\n\
 skiptaskbarrule=2\n\
+title=island-app\n\
+titlematch=1\n\
 wmclass=island-app\n\
 wmclassmatch=1\n",
             &collect_rule_groups(LEGACY),

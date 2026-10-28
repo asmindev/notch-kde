@@ -58,9 +58,16 @@ export global IslandContext {
 
     // Media Source Selector
     in-out property <bool> show-source-selector: false;
-    in-out property <bool> show-avatar-selector: false;
+    in-out property <bool> settings-open: false;
+    in-out property <int> settings-tab: 0; // 0=Avatar, 1=Perilaku, 2=Sistem, 3=Tentang
     in-out property <[PlayerSourceItem]> player-sources: [];
     in-out property <bool> avatar-random: false;
+    in-out property <bool> cursor-gaze-enabled: true;
+    in-out property <bool> idle-acting-enabled: true;
+    in-out property <bool> click-stunts-enabled: true;
+    in-out property <bool> notification-reactions-enabled: true;
+    in-out property <bool> music-reactions-enabled: true;
+    in-out property <bool> sleepy-on-low-battery: true;
 
     // Avatar picker choices (shape, palette, expression)
     in-out property <[AvatarChoice]> avatar-shapes: [
@@ -114,7 +121,7 @@ export global IslandContext {
     // Menentukan hak tampil, layout variant, dan alert aktif
     // ==========================================
     in-out property <int> alert-kind: 0;           // 0=None, 1=Charging, 2=LowBattery
-    in-out property <int> music-visual-mode: 0;    // 0=PetPrimary (Pet Left, Art Right), 1=ArtworkPrimary (Art Left, Pet Right)
+    in-out property <int> music-visual-mode: 0;    // 0=ArtworkPrimary (Art Left, Pet Right), 1=PetPrimary (Pet Left, Art Right)
     in-out property <bool> is-visible-state: true; // Shell docking visibility
     in-out property <int> mochi-mood: 0;           // 0=Idle, 1=Happy, 2=Annoyed, 3=Dizzy, 4=Dancing, 5=Sleeping
     in-out property <int> blob-character: 1;       // 0=Cercle, 1=Galet, 2=Squircle, 3=Capsule, 4=Triangle, 5=Hexagone, 6=Nuage, 7=Goutte
@@ -131,6 +138,7 @@ export global IslandContext {
     in-out property <bool> is-welcome: false;      // Welcome greeting banner active
     in-out property <string> welcome-title: "Welcome back, Momo!";
     in-out property <string> welcome-subtitle: "Have a wonderful day ✨";
+    in-out property <string> app-version: "0.1.0";
 
     // ==========================================
     // 4. ACTIONS
@@ -144,7 +152,6 @@ export global IslandContext {
     callback toggle-swap();
     callback collapse-clicked();
     callback toggle-source-selector();
-    callback toggle-avatar-selector();
     callback select-player-source(string);
     callback pet-clicked();
     callback mochi-clicked();
@@ -157,4 +164,16 @@ export global IslandContext {
     callback randomize-avatar();
     callback toggle-avatar-random();
     callback cursor-moved(float, float);
+    callback open-settings();
+    callback close-settings();
+    callback select-settings-tab(int);
+    callback set-cursor-gaze(bool);
+    callback set-idle-acting(bool);
+    callback set-click-stunts(bool);
+    callback set-notification-reactions(bool);
+    callback set-music-reactions(bool);
+    callback set-sleepy-on-low-battery(bool);
+    callback set-media-visual-mode(int);
+    callback reset-avatar();
+    callback reset-settings();
 }

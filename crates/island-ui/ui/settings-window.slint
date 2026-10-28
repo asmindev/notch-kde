@@ -1,0 +1,572 @@
+import { IslandContext } from "context.slint";
+import { ThemeColors } from "theme/colors.slint";
+import { ThemeTypography } from "theme/typography.slint";
+import { PetView } from "components/pet-view.slint";
+import {
+    SettingsActionButton,
+    SettingsCard,
+    SettingsChip,
+    SettingsDivider,
+    SettingsNavItem,
+    SettingsSegmentButton,
+    SettingsSwatch,
+    SettingsToggleRow,
+} from "components/settings-controls.slint";
+
+component SettingsPageHeader inherits VerticalLayout {
+    in property <string> title: "";
+    in property <string> subtitle: "";
+
+    spacing: 2px;
+    alignment: start;
+
+    Text {
+        text: root.title;
+        color: ThemeColors.foreground;
+        font-family: ThemeTypography.font-family;
+        font-size: ThemeTypography.size-xl;
+        font-weight: ThemeTypography.weight-bold;
+    }
+
+    Text {
+        text: root.subtitle;
+        color: ThemeColors.subtle;
+        font-family: ThemeTypography.font-family;
+        font-size: ThemeTypography.size-sm;
+    }
+}
+
+component AvatarSettingsPage inherits Rectangle {
+    HorizontalLayout {
+        spacing: 16px;
+        alignment: start;
+
+        VerticalLayout {
+            width: 270px;
+            spacing: 10px;
+
+            SettingsCard {
+                title: "Bentuk";
+                description: "Siluet dasar Bloub.";
+
+                HorizontalLayout {
+                    spacing: 5px;
+                    alignment: start;
+
+                    for shape in IslandContext.avatar-shapes: SettingsChip {
+                        glyph: shape.glyph;
+                        active: IslandContext.blob-character == shape.index;
+                        clicked => { IslandContext.select-blob-character(shape.index); }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Warna";
+                description: "Palet warna tubuh dan aksen.";
+
+                GridLayout {
+                    spacing: 7px;
+
+                    Row {
+                        for i in 7: SettingsSwatch {
+                            swatch: IslandContext.avatar-palettes[i].swatch;
+                            active: IslandContext.blob-palette == IslandContext.avatar-palettes[i].index;
+                            clicked => { IslandContext.select-blob-palette(IslandContext.avatar-palettes[i].index); }
+                        }
+                    }
+
+                    Row {
+                        for i in 7: SettingsSwatch {
+                            swatch: IslandContext.avatar-palettes[i + 7].swatch;
+                            active: IslandContext.blob-palette == IslandContext.avatar-palettes[i + 7].index;
+                            clicked => { IslandContext.select-blob-palette(IslandContext.avatar-palettes[i + 7].index); }
+                        }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Ekspresi";
+                description: "Ekspresi manual menimpa reaksi otomatis.";
+
+                GridLayout {
+                    spacing: 5px;
+
+                    Row {
+                        for i in 6: SettingsChip {
+                            glyph: IslandContext.avatar-expressions[i].glyph;
+                            active: IslandContext.blob-expression == IslandContext.avatar-expressions[i].index;
+                            clicked => { IslandContext.select-blob-expression(IslandContext.avatar-expressions[i].index); }
+                        }
+                    }
+
+                    Row {
+                        for i in 6: SettingsChip {
+                            glyph: IslandContext.avatar-expressions[i + 6].glyph;
+                            active: IslandContext.blob-expression == IslandContext.avatar-expressions[i + 6].index;
+                            clicked => { IslandContext.select-blob-expression(IslandContext.avatar-expressions[i + 6].index); }
+                        }
+                    }
+
+                    Row {
+                        for i in 5: SettingsChip {
+                            glyph: IslandContext.avatar-expressions[i + 12].glyph;
+                            active: IslandContext.blob-expression == IslandContext.avatar-expressions[i + 12].index;
+                            clicked => { IslandContext.select-blob-expression(IslandContext.avatar-expressions[i + 12].index); }
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            height: 100%;
+            border-radius: 14px;
+            background: #101014;
+            border-width: 1px;
+            border-color: ThemeColors.border;
+
+            VerticalLayout {
+                padding: 16px;
+                spacing: 10px;
+                alignment: center;
+
+                Text {
+                    text: "Pratinjau langsung";
+                    color: ThemeColors.subtle;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-xs;
+                    font-weight: ThemeTypography.weight-bold;
+                    horizontal-alignment: center;
+                }
+
+                PetView {
+                    pet-size: 144px;
+                }
+
+                Text {
+                    text: IslandContext.avatar-shapes[IslandContext.blob-character].label
+                        + " · " + IslandContext.avatar-palettes[IslandContext.blob-palette].label
+                        + " · " + IslandContext.avatar-expressions[IslandContext.blob-expression].label;
+                    color: ThemeColors.muted;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-xs;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalLayout {
+                    spacing: 6px;
+                    alignment: center;
+
+                    SettingsActionButton {
+                        label: "Acak";
+                        compact: true;
+                        clicked => { IslandContext.randomize-avatar(); }
+                    }
+
+                    SettingsActionButton {
+                        label: IslandContext.avatar-random ? "Auto ✓" : "Auto";
+                        compact: true;
+                        clicked => { IslandContext.toggle-avatar-random(); }
+                    }
+                }
+
+                Text {
+                    text: "Klik Bloub untuk mencoba reaksi";
+                    color: ThemeColors.subtle;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-xs;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}
+
+component BehaviorSettingsPage inherits Rectangle {
+    SettingsCard {
+        title: "Interaksi Bloub";
+        description: "Atur kapan Bloub bereaksi terhadap sekitar.";
+
+        SettingsToggleRow {
+            title: "Mengikuti kursor";
+            subtitle: "Mata mengikuti gerakan kursor di sekitar island.";
+            checked: IslandContext.cursor-gaze-enabled;
+            toggled(value) => { IslandContext.set-cursor-gaze(value); }
+        }
+
+        SettingsDivider {}
+
+        SettingsToggleRow {
+            title: "Akting saat diam";
+            subtitle: "Bloub melakukan gerakan kecil ketika sedang santai.";
+            checked: IslandContext.idle-acting-enabled;
+            toggled(value) => { IslandContext.set-idle-acting(value); }
+        }
+
+        SettingsDivider {}
+
+        SettingsToggleRow {
+            title: "Reaksi klik";
+            subtitle: "Melompat, senang, atau pusing saat Bloub diklik.";
+            checked: IslandContext.click-stunts-enabled;
+            toggled(value) => { IslandContext.set-click-stunts(value); }
+        }
+
+        SettingsDivider {}
+
+        SettingsToggleRow {
+            title: "Reaksi notifikasi";
+            subtitle: "Bloub menoleh saat notifikasi masuk.";
+            checked: IslandContext.notification-reactions-enabled;
+            toggled(value) => { IslandContext.set-notification-reactions(value); }
+        }
+
+        SettingsDivider {}
+
+        SettingsToggleRow {
+            title: "Reaksi musik";
+            subtitle: "Bloub ikut bernyanyi dan bergerak saat musik diputar.";
+            checked: IslandContext.music-reactions-enabled;
+            toggled(value) => { IslandContext.set-music-reactions(value); }
+        }
+
+        SettingsDivider {}
+
+        SettingsToggleRow {
+            title: "Mengantuk saat baterai lemah";
+            subtitle: "Bloub terlihat mengantuk ketika baterai di bawah 20%.";
+            checked: IslandContext.sleepy-on-low-battery;
+            toggled(value) => { IslandContext.set-sleepy-on-low-battery(value); }
+        }
+    }
+}
+
+component SystemSettingsPage inherits Rectangle {
+    VerticalLayout {
+        spacing: 10px;
+
+        SettingsCard {
+            title: "Tampilan media";
+            description: "Pilih fokus utama saat musik diputar.";
+
+            Rectangle {
+                height: 32px;
+                border-radius: 9px;
+                background: #0f0f12;
+                border-width: 1px;
+                border-color: ThemeColors.divider;
+
+                HorizontalLayout {
+                    spacing: 4px;
+                    padding: 3px;
+                    alignment: start;
+
+                    SettingsSegmentButton {
+                        label: "Artwork";
+                        active: IslandContext.music-visual-mode == 0;
+                        clicked => { IslandContext.set-media-visual-mode(0); }
+                    }
+
+                    SettingsSegmentButton {
+                        label: "Bloub";
+                        active: IslandContext.music-visual-mode == 1;
+                        clicked => { IslandContext.set-media-visual-mode(1); }
+                    }
+                }
+            }
+        }
+
+        SettingsCard {
+            title: "Notifikasi";
+            description: "Pemantau notifikasi desktop.";
+
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+
+                Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: ThemeColors.success;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                Text {
+                    text: "Aktif · Bloub akan menoleh saat notifikasi masuk";
+                    color: ThemeColors.muted;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-sm;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        SettingsCard {
+            title: "Reset";
+            description: "Kembalikan pengaturan ke kondisi awal.";
+
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+
+                SettingsActionButton {
+                    label: "Reset avatar";
+                    clicked => { IslandContext.reset-avatar(); }
+                }
+
+                SettingsActionButton {
+                    label: "Reset semua";
+                    clicked => { IslandContext.reset-settings(); }
+                }
+            }
+        }
+    }
+}
+
+component AboutSettingsPage inherits Rectangle {
+    VerticalLayout {
+        height: 100%;
+        alignment: start;
+
+        SettingsCard {
+            width: 100%;
+            title: "notchde";
+            description: "Dynamic island untuk KDE Plasma.";
+
+            VerticalLayout {
+                spacing: 8px;
+                padding-top: 6px;
+
+                Text {
+                    text: "Versi " + IslandContext.app-version;
+                    color: ThemeColors.muted;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-sm;
+                }
+
+                SettingsDivider {}
+
+                Text {
+                    text: "Bloub";
+                    color: ThemeColors.foreground;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-base;
+                    font-weight: ThemeTypography.weight-bold;
+                }
+
+                Text {
+                    text: "Maskot prosedural oleh Bloub, dilisensikan di bawah MIT.";
+                    color: ThemeColors.subtle;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-sm;
+                    wrap: word-wrap;
+                }
+
+                Text {
+                    text: "Dibuat dengan Slint, Rust, dan KDE Plasma.";
+                    color: ThemeColors.subtle;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-sm;
+                }
+            }
+        }
+    }
+}
+
+export component SettingsWindow inherits Window {
+    title: "Pengaturan notchde";
+    width: 720px;
+    height: 520px;
+    background: ThemeColors.background;
+
+    HorizontalLayout {
+        width: 100%;
+        height: 100%;
+        spacing: 0;
+
+        Rectangle {
+            width: 184px;
+            height: 100%;
+            background: #101013;
+            border-width: 1px;
+            border-color: #1c1c20;
+
+            VerticalLayout {
+                padding-left: 14px;
+                padding-right: 14px;
+                padding-top: 20px;
+                padding-bottom: 20px;
+                spacing: 5px;
+
+                HorizontalLayout {
+                    height: 44px;
+                    spacing: 10px;
+                    alignment: start;
+
+                    Rectangle {
+                        width: 34px;
+                        height: 34px;
+                        border-radius: 10px;
+                        background: #5aa2ff22;
+                        border-width: 1px;
+                        border-color: #5aa2ff44;
+
+                        Text {
+                            text: "◒";
+                            color: ThemeColors.accent;
+                            font-size: 18px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    VerticalLayout {
+                        spacing: 1px;
+                        alignment: center;
+
+                        Text {
+                            text: "notchde";
+                            color: ThemeColors.foreground;
+                            font-family: ThemeTypography.font-family;
+                            font-size: ThemeTypography.size-base;
+                            font-weight: ThemeTypography.weight-bold;
+                        }
+
+                        Text {
+                            text: "Pengaturan";
+                            color: ThemeColors.subtle;
+                            font-family: ThemeTypography.font-family;
+                            font-size: ThemeTypography.size-xs;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    height: 12px;
+                    background: transparent;
+                }
+
+                SettingsNavItem {
+                    label: "Avatar";
+                    glyph: "◉";
+                    active: IslandContext.settings-tab == 0;
+                    clicked => { IslandContext.select-settings-tab(0); }
+                }
+
+                SettingsNavItem {
+                    label: "Perilaku";
+                    glyph: "✦";
+                    active: IslandContext.settings-tab == 1;
+                    clicked => { IslandContext.select-settings-tab(1); }
+                }
+
+                SettingsNavItem {
+                    label: "Sistem";
+                    glyph: "⚙";
+                    active: IslandContext.settings-tab == 2;
+                    clicked => { IslandContext.select-settings-tab(2); }
+                }
+
+                SettingsNavItem {
+                    label: "Tentang";
+                    glyph: "ⓘ";
+                    active: IslandContext.settings-tab == 3;
+                    clicked => { IslandContext.select-settings-tab(3); }
+                }
+
+                Rectangle {
+                    vertical-stretch: 1;
+                    background: transparent;
+                }
+
+                Text {
+                    text: "v" + IslandContext.app-version;
+                    color: ThemeColors.subtle;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-xs;
+                }
+            }
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            height: 100%;
+            padding-left: 24px;
+            padding-right: 24px;
+            padding-top: 20px;
+            padding-bottom: 16px;
+            spacing: 12px;
+
+            HorizontalLayout {
+                height: 42px;
+                alignment: space-between;
+
+                SettingsPageHeader {
+                    title: IslandContext.settings-tab == 0 ? "Avatar"
+                        : IslandContext.settings-tab == 1 ? "Perilaku"
+                        : IslandContext.settings-tab == 2 ? "Sistem"
+                        : "Tentang";
+                    subtitle: IslandContext.settings-tab == 0 ? "Sesuaikan penampilan Bloub."
+                        : IslandContext.settings-tab == 1 ? "Atur cara Bloub bereaksi."
+                        : IslandContext.settings-tab == 2 ? "Preferensi tampilan dan reset."
+                        : "Informasi aplikasi dan kredit.";
+                }
+
+                SettingsActionButton {
+                    label: "Selesai";
+                    primary: true;
+                    clicked => { IslandContext.close-settings(); }
+                }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+                background: transparent;
+
+                if IslandContext.settings-tab == 0: AvatarSettingsPage {
+                    width: 100%;
+                    height: 100%;
+                }
+
+                if IslandContext.settings-tab == 1: BehaviorSettingsPage {
+                    width: 100%;
+                    height: 100%;
+                }
+
+                if IslandContext.settings-tab == 2: SystemSettingsPage {
+                    width: 100%;
+                    height: 100%;
+                }
+
+                if IslandContext.settings-tab == 3: AboutSettingsPage {
+                    width: 100%;
+                    height: 100%;
+                }
+            }
+
+            HorizontalLayout {
+                height: 30px;
+                alignment: space-between;
+
+                SettingsActionButton {
+                    label: "Reset ke default";
+                    compact: true;
+                    clicked => { IslandContext.reset-settings(); }
+                }
+
+                Text {
+                    text: "Perubahan tersimpan otomatis";
+                    color: ThemeColors.subtle;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-xs;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

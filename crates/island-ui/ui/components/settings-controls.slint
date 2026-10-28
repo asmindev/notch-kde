@@ -1,0 +1,254 @@
+import { ThemeColors } from "../theme/colors.slint";
+import { ThemeTypography } from "../theme/typography.slint";
+
+export component SettingsNavItem inherits Rectangle {
+    in property <string> label: "";
+    in property <string> glyph: "";
+    in property <bool> active: false;
+    callback clicked();
+
+    height: 38px;
+    border-radius: 9px;
+    background: root.active ? #5aa2ff24 : (touch.has-hover ? #ffffff0a : transparent);
+    border-width: 1px;
+    border-color: root.active ? #5aa2ff66 : transparent;
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 10px;
+        alignment: start;
+
+        Text {
+            text: root.glyph;
+            color: root.active ? ThemeColors.accent : ThemeColors.subtle;
+            font-size: ThemeTypography.size-base;
+            font-weight: ThemeTypography.weight-bold;
+            vertical-alignment: center;
+            width: 16px;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.label;
+            color: root.active ? ThemeColors.foreground : ThemeColors.muted;
+            font-family: ThemeTypography.font-family;
+            font-size: ThemeTypography.size-base;
+            font-weight: root.active ? ThemeTypography.weight-bold : ThemeTypography.weight-medium;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export component SettingsToggle inherits Rectangle {
+    in property <bool> checked: false;
+    callback toggled(bool);
+
+    width: 34px;
+    height: 18px;
+    border-radius: 9px;
+    background: root.checked ? ThemeColors.accent : #3f3f46;
+    animate background { duration: 120ms; }
+
+    knob := Rectangle {
+        x: root.checked ? root.width - self.width - 2px : 2px;
+        y: 2px;
+        width: 14px;
+        height: 14px;
+        border-radius: 7px;
+        background: #ffffff;
+        animate x { duration: 120ms; easing: ease-out; }
+    }
+
+    touch := TouchArea {
+        clicked => { root.toggled(!root.checked); }
+    }
+}
+
+export component SettingsToggleRow inherits Rectangle {
+    in property <string> title: "";
+    in property <string> subtitle: "";
+    in property <bool> checked: false;
+    callback toggled(bool);
+
+    height: 42px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 12px;
+        alignment: space-between;
+        padding-left: 2px;
+        padding-right: 2px;
+
+        VerticalLayout {
+            spacing: 1px;
+            alignment: center;
+            horizontal-stretch: 1;
+
+            Text {
+                text: root.title;
+                color: ThemeColors.foreground;
+                font-family: ThemeTypography.font-family;
+                font-size: ThemeTypography.size-base;
+                font-weight: ThemeTypography.weight-medium;
+                overflow: elide;
+            }
+
+            Text {
+                text: root.subtitle;
+                color: ThemeColors.subtle;
+                font-family: ThemeTypography.font-family;
+                font-size: ThemeTypography.size-xs;
+                overflow: elide;
+            }
+        }
+
+        SettingsToggle {
+            checked: root.checked;
+            toggled(value) => { root.toggled(value); }
+        }
+    }
+}
+
+export component SettingsChip inherits Rectangle {
+    in property <string> glyph: "";
+    in property <bool> active: false;
+    callback clicked();
+
+    width: 25px;
+    height: 25px;
+    border-radius: 8px;
+    background: root.active ? #5aa2ff2e : (touch.has-hover ? #ffffff12 : #ffffff08);
+    border-width: 1px;
+    border-color: root.active ? ThemeColors.accent : transparent;
+
+    Text {
+        text: root.glyph;
+        color: root.active ? ThemeColors.accent : ThemeColors.muted;
+        font-size: ThemeTypography.size-base;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export component SettingsSwatch inherits Rectangle {
+    in property <color> swatch: #ffffff;
+    in property <bool> active: false;
+    callback clicked();
+
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    background: root.swatch;
+    border-width: root.active ? 2px : 1px;
+    border-color: root.active ? #ffffff : #ffffff24;
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export component SettingsActionButton inherits Rectangle {
+    in property <string> label: "";
+    in property <bool> primary: false;
+    in property <bool> compact: false;
+    callback clicked();
+
+    width: max(84px, label-text.preferred-width + (root.compact ? 20px : 28px));
+    height: root.compact ? 26px : 30px;
+    border-radius: root.compact ? 7px : 9px;
+    background: root.primary
+        ? (touch.has-hover ? #74b1ff : ThemeColors.accent)
+        : (touch.has-hover ? ThemeColors.surface-hover : ThemeColors.surface);
+    border-width: 1px;
+    border-color: root.primary ? transparent : ThemeColors.border;
+
+    label-text := Text {
+        text: root.label;
+        color: root.primary ? #07111f : ThemeColors.foreground;
+        font-family: ThemeTypography.font-family;
+        font-size: ThemeTypography.size-sm;
+        font-weight: ThemeTypography.weight-bold;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export component SettingsSegmentButton inherits Rectangle {
+    in property <string> label: "";
+    in property <bool> active: false;
+    callback clicked();
+
+    width: 92px;
+    height: 26px;
+    border-radius: 7px;
+    background: root.active ? ThemeColors.surface-hover : transparent;
+    border-width: 1px;
+    border-color: root.active ? ThemeColors.border : transparent;
+
+    Text {
+        text: root.label;
+        color: root.active ? ThemeColors.foreground : ThemeColors.subtle;
+        font-family: ThemeTypography.font-family;
+        font-size: ThemeTypography.size-sm;
+        font-weight: ThemeTypography.weight-medium;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export component SettingsCard inherits Rectangle {
+    in property <string> title: "";
+    in property <string> description: "";
+
+    border-radius: 12px;
+    background: ThemeColors.surface;
+    border-width: 1px;
+    border-color: ThemeColors.border;
+    height: card-layout.preferred-height;
+
+    card-layout := VerticalLayout {
+        height: self.preferred-height;
+        padding: 14px;
+        spacing: 7px;
+
+        Text {
+            text: root.title;
+            color: ThemeColors.foreground;
+            font-family: ThemeTypography.font-family;
+            font-size: ThemeTypography.size-base;
+            font-weight: ThemeTypography.weight-bold;
+        }
+
+        if root.description != "": Text {
+            text: root.description;
+            color: ThemeColors.subtle;
+            font-family: ThemeTypography.font-family;
+            font-size: ThemeTypography.size-xs;
+            wrap: word-wrap;
+        }
+
+        @children
+    }
+}
+
+export component SettingsDivider inherits Rectangle {
+    height: 1px;
+    background: ThemeColors.divider;
+}
