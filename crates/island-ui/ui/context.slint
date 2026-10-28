@@ -61,6 +61,7 @@ export global IslandContext {
     in-out property <int> music-visual-mode: 0;    // 0=PetPrimary (Pet Left, Art Right), 1=ArtworkPrimary (Art Left, Pet Right)
     in-out property <bool> is-visible-state: true; // Shell docking visibility
     in-out property <int> mochi-mood: 0;           // 0=Idle, 1=Happy, 2=Annoyed, 3=Dizzy, 4=Dancing, 5=Sleeping
+    in-out property <int> blob-character: 1;       // 0=Round, 1=Nub (Bear), 2=Cloud, 3=Organic, 4=Adaptive
     in-out property <bool> pet-is-happy: false;    // Interactive bouncy happy reaction
     in-out property <bool> pet-is-dizzy: false;    // Rapid poking dizzy reaction
     in-out property <bool> pet-is-sleepy: false;   // Low battery sleepy state
@@ -88,5 +89,6 @@ export global IslandContext {
     callback select-player-source(string);
     callback pet-clicked();
     callback mochi-clicked();
+    callback cycle-blob-character();
     callback cursor-moved(float, float);
 }

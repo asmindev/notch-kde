@@ -76,6 +76,14 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             }
         }
 
+        AppEvent::CycleBlobCharacter => {
+            state.blob_character = (state.blob_character + 1) % 5;
+        }
+
+        AppEvent::SetBlobCharacter(ch) => {
+            state.blob_character = ch % 5;
+        }
+
         AppEvent::ToggleSwapPetArt => {
             state.music_visual_mode = match state.music_visual_mode {
                 crate::models::MusicVisualMode::PetPrimary => crate::models::MusicVisualMode::ArtworkPrimary,

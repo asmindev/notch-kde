@@ -60,6 +60,9 @@ pub struct AppState {
     pub mochi_slap_count: u32,
     pub mochi_generation: u64,
 
+    // Blobatar Pet states
+    pub blob_character: u32,
+
     // Welcome Greeting states
     pub is_welcome: bool,
     pub welcome_generation: u64,
@@ -140,6 +143,7 @@ impl Default for AppState {
             mochi_mood: MochiMoodState::Idle,
             mochi_slap_count: 0,
             mochi_generation: 0,
+            blob_character: 1, // 1 = Nub (Bear Blob)
             is_welcome: true,
             welcome_generation: 1,
             welcome_title: "Welcome back!".to_string(),

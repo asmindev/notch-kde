@@ -19,11 +19,47 @@ export component SystemExpandSlot inherits VerticalLayout {
         alignment: space-between;
         height: root.slot-h * 0.58;
 
-        // Left Column: PetView (Consistent with Compact, Wide, and Media slots)
-        VerticalLayout {
-            alignment: center;
-            PetView {
-                pet-size: parent.height;
+        // Left Column: PetView (Consistent with Compact, Wide, and Media slots) & Quick Switcher
+        HorizontalLayout {
+            alignment: start;
+            spacing: 8px;
+
+            VerticalLayout {
+                alignment: center;
+                PetView {
+                    pet-size: parent.height;
+                }
+            }
+
+            // Quick Blobatar Character Switcher Badge
+            VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 12px;
+                    background: ThemeColors.surface-hover;
+                    border-width: 1px;
+                    border-color: ThemeColors.border;
+
+                    Text {
+                        text: (IslandContext.blob-character == 0) ? "●" :
+                              ((IslandContext.blob-character == 1) ? "🐻" :
+                              ((IslandContext.blob-character == 2) ? "☁" :
+                              ((IslandContext.blob-character == 3) ? "💧" : "✨")));
+                        font-size: 11px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    TouchArea {
+                        width: 100%;
+                        height: 100%;
+                        clicked => {
+                            IslandContext.cycle-blob-character();
+                        }
+                    }
+                }
             }
         }
 

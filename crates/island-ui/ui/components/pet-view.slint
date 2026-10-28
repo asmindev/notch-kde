@@ -1,10 +1,10 @@
 import { IslandContext } from "../context.slint";
 import { FloatingNotes } from "floating-notes.slint";
-import { MochiPet } from "mochi-pet.slint";
+import { BlobatarPet } from "blobatar-pet.slint";
 
 export component PetView inherits Rectangle {
     in property <length> pet-size: 24px;
-    out property <bool> is-hovered <=> mochi.is-hovered;
+    out property <bool> is-hovered <=> blob.is-hovered;
 
     width: root.pet-size;
     height: root.pet-size;
@@ -14,9 +14,10 @@ export component PetView inherits Rectangle {
     property <bool> is-happy: IslandContext.pet-is-happy || IslandContext.is-welcome;
 
     // ==========================================
-    // 1. COUCOU MOCHI 100% PROCEDURAL VECTOR PET
+    // 1. BLOBATAR PROCEDURAL VECTOR PET
+    // Multi-character silhouettes & condition forms
     // ==========================================
-    mochi := MochiPet {
+    blob := BlobatarPet {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         pet-size: root.pet-size;

@@ -30,6 +30,7 @@ impl ViewModel {
         ctx.set_has_audio(state.media.is_playing || state.spectrum.bars.iter().any(|&b| b > 0.05));
         ctx.set_music_visual_mode(state.music_visual_mode as i32);
         ctx.set_mochi_mood(state.mochi_mood as i32);
+        ctx.set_blob_character(state.blob_character as i32);
         ctx.set_pet_is_happy(state.pet_is_happy);
         ctx.set_pet_is_dizzy(state.pet_is_dizzy);
         ctx.set_pet_is_sleepy(state.pet_is_sleepy);

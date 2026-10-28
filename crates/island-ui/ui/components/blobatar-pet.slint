@@ -1,0 +1,498 @@
+import { IslandContext } from "../context.slint";
+
+component BlobatarEye inherits Rectangle {
+    in property <int> expression: 0; // 0=Idle, 1=Happy, 2=Sleepy, 3=Wink, 4=Mad, 5=Dizzy, 6=Surprised
+    in property <bool> is-right-eye: false;
+    in property <bool> is-blinking: false;
+    in property <color> ink: #1a1412;
+
+    width: 100%;
+    height: 100%;
+    background: transparent;
+
+    // 0. IDLE: Blobatar vertical portrait capsule with specular white highlight
+    if root.expression == 0: Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: parent.width * 0.85;
+        height: root.is-blinking ? parent.height * 0.18 : parent.height * 0.95;
+        border-radius: min(self.width, self.height) / 2;
+        background: root.ink;
+        animate height { duration: 75ms; easing: ease-in-out; }
+
+        // White specular gleam dot
+        if !root.is-blinking: Rectangle {
+            x: parent.width * 0.44;
+            y: parent.height * 0.16;
+            width: parent.width * 0.36;
+            height: parent.width * 0.36;
+            border-radius: min(self.width, self.height) / 2;
+            background: #ffffff;
+            opacity: 0.85;
+        }
+    }
+
+    // 1. HAPPY: Joyful smiling upward curved arc (^ ^)
+    if root.expression == 1: Path {
+        width: 100%;
+        height: 100%;
+        viewbox-x: 0;
+        viewbox-y: 0;
+        viewbox-width: 20;
+        viewbox-height: 20;
+        fill: root.ink;
+        commands: "M 2 13 C 4 4, 16 4, 18 13 C 16 8, 4 8, 2 13 Z";
+    }
+
+    // 2. SLEEPY: Peaceful resting horizontal bar (- -)
+    if root.expression == 2: Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: parent.height * 0.50;
+        width: parent.width * 0.95;
+        height: parent.height * 0.24;
+        border-radius: min(self.width, self.height) / 2;
+        background: root.ink;
+    }
+
+    // 3. WINK: Left eye = smiling arc (^), Right eye = open capsule (•)
+    if root.expression == 3: Rectangle {
+        width: 100%;
+        height: 100%;
+
+        if !root.is-right-eye: Path {
+            width: 100%;
+            height: 100%;
+            viewbox-x: 0;
+            viewbox-y: 0;
+            viewbox-width: 20;
+            viewbox-height: 20;
+            fill: root.ink;
+            commands: "M 2 13 C 4 4, 16 4, 18 13 C 16 8, 4 8, 2 13 Z";
+        }
+
+        if root.is-right-eye: Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: parent.width * 0.85;
+            height: parent.height * 0.95;
+            border-radius: min(self.width, self.height) / 2;
+            background: root.ink;
+
+            Rectangle {
+                x: parent.width * 0.44;
+                y: parent.height * 0.16;
+                width: parent.width * 0.36;
+                height: parent.width * 0.36;
+                border-radius: min(self.width, self.height) / 2;
+                background: #ffffff;
+                opacity: 0.85;
+            }
+        }
+    }
+
+    // 4. MAD: Angled inward V-bars (\ /)
+    if root.expression == 4: Path {
+        width: 100%;
+        height: 100%;
+        viewbox-x: 0;
+        viewbox-y: 0;
+        viewbox-width: 20;
+        viewbox-height: 20;
+        fill: root.ink;
+        commands: root.is-right-eye ?
+            "M 6.07 5.41 L 16.04 10.06 C 17.29 10.64, 17.83 12.13, 17.25 13.38 C 16.67 14.63, 15.18 15.17, 13.93 14.59 L 3.96 9.94 C 2.71 9.36, 2.17 7.87, 2.75 6.62 C 3.33 5.37, 4.82 4.83, 6.07 5.41 Z" :
+            "M 3.96 10.06 L 13.93 5.41 C 15.18 4.83, 16.67 5.37, 17.25 6.62 C 17.83 7.87, 17.29 9.36, 16.04 9.94 L 6.07 14.59 C 4.82 15.17, 3.33 14.63, 2.75 13.38 C 2.17 12.13, 2.71 10.64, 3.96 10.06 Z";
+    }
+
+    // 5. DIZZY: Spinning spiral (@ @)
+    if root.expression == 5: Text {
+        width: 100%;
+        height: 100%;
+        text: "@";
+        font-size: parent.height * 0.85;
+        font-weight: 800;
+        color: root.ink;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    // 6. SURPRISED: Large circular eye (O O) with pupil
+    if root.expression == 6: Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: min(parent.width, parent.height) * 0.90;
+        height: self.width;
+        border-radius: min(self.width, self.height) / 2;
+        background: root.ink;
+
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: parent.width * 0.38;
+            height: self.width;
+            border-radius: min(self.width, self.height) / 2;
+            background: #ffffff;
+        }
+    }
+}
+
+export component BlobatarPet inherits Rectangle {
+    in property <length> pet-size: 38px;
+    out property <bool> is-hovered: touch.has-hover;
+
+    width: root.pet-size;
+    height: root.pet-size;
+    background: transparent;
+
+    // Mood & condition inputs
+    property <int> mood: IslandContext.mochi-mood;
+    property <bool> is-playing: IslandContext.is-playing;
+    property <bool> is-sleepy: IslandContext.pet-is-sleepy;
+    property <bool> is-welcome: IslandContext.is-welcome;
+    property <bool> is-dizzy: IslandContext.pet-is-dizzy || root.mood == 3;
+    property <bool> is-happy: IslandContext.pet-is-happy || root.mood == 1;
+
+    // Audio energy from CAVA for Dancing
+    property <float> bass: (IslandContext.b0 + IslandContext.b1) * 0.5;
+    property <float> mid: (IslandContext.b2 + IslandContext.b3) * 0.5;
+
+    // Gaze direction (-1.0 to 1.0)
+    property <float> look-x: IslandContext.look-x;
+    property <float> look-y: IslandContext.look-y;
+
+    // Smooth interpolated gaze coordinates (110ms spring)
+    property <float> smooth-look-x: root.look-x;
+    property <float> smooth-look-y: root.look-y;
+    animate smooth-look-x { duration: 110ms; easing: ease-out; }
+    animate smooth-look-y { duration: 110ms; easing: ease-out; }
+
+    // ==========================================
+    // EFFECTIVE CHARACTER SILHOUETTE
+    // 0=Round (Classic Squircle), 1=Nub (Bear Blob), 2=Cloud (Fluffy Cloud), 3=Organic (Wobbly Pebble), 4=Adaptive
+    // ==========================================
+    property <int> active-char:
+        (IslandContext.blob-character == 4) ?
+            (root.is-playing ? 2 :                           // Cloud for Music Dancing
+            (root.is-sleepy ? 3 :                            // Organic Pebble for Sleepy
+            (root.is-welcome ? 1 :                           // Bear Nub for Welcome Greeting
+            0))) :                                           // Round for Normal Standby
+        IslandContext.blob-character;
+
+    // ==========================================
+    // EFFECTIVE EXPRESSION POSE
+    // 0=Idle, 1=Happy, 2=Sleepy, 3=Wink, 4=Mad, 5=Dizzy, 6=Surprised
+    // ==========================================
+    property <int> active-expression:
+        root.is-dizzy ? 5 :                                 // Dizzy (@ @)
+        ((root.mood == 2) ? 4 :                             // Mad / Annoyed (\ /)
+        (root.is-happy ? 3 :                                // Poked -> Playful Wink (^ •)
+        (root.is-welcome ? 3 :                              // Welcome Greeting -> Wink (^ •)
+        (IslandContext.is-charging ? 3 :                    // Charging Connected -> Wink (^ •)
+        (root.is-sleepy ? 2 :                               // Low Battery -> Sleepy (- -)
+        (root.is-playing ? 1 :                              // Music Playing -> Happy Arc (^ ^)
+        0))))));                                            // Default -> Idle Portrait Capsules
+
+    // 1. Natural Blinking Loop (every 3.2s)
+    property <bool> is-blinking: false;
+    blink-timer := Timer {
+        interval: 3200ms;
+        running: root.active-expression == 0;
+        triggered => {
+            root.is-blinking = true;
+            blink-close-timer.running = true;
+        }
+    }
+    blink-close-timer := Timer {
+        interval: 110ms;
+        running: false;
+        triggered => {
+            root.is-blinking = false;
+            self.running = false;
+        }
+    }
+
+    // 2. Procedural Breathing & Bobbing
+    property <bool> breath-phase: false;
+    breath-timer := Timer {
+        interval: root.is-sleepy ? 2800ms : 1800ms;
+        running: true;
+        triggered => {
+            root.breath-phase = !root.breath-phase;
+        }
+    }
+
+    // 3. Dizzy / Mad Tremor Shake Oscillation (every 95ms)
+    property <bool> shake-phase: false;
+    shake-timer := Timer {
+        interval: 95ms;
+        running: root.is-dizzy || root.active-expression == 4;
+        triggered => {
+            root.shake-phase = !root.shake-phase;
+        }
+    }
+    property <length> shake-offset: (root.is-dizzy || root.active-expression == 4) ?
+        (root.shake-phase ? 2.5px : -2.5px) : 0px;
+    animate shake-offset { duration: 80ms; easing: ease-in-out; }
+
+    // 4. Physical Dynamics: Squash & Stretch Bounce
+    property <length> bounce-y:
+        root.is-dizzy ? -1px :
+        (root.active-expression == 1 ? -(root.bass * 6px) : // Dance to CAVA bass
+        (root.is-sleepy ? 3px :                             // Sunk down when sleepy
+        (root.active-expression == 3 ? -3px :               // Playful hop when winking
+        (root.breath-phase ? -1px : 0px))));
+
+    property <float> squish-y:
+        root.active-expression == 1 ? (1.0 + (root.bass * 0.18)) :
+        (root.is-sleepy ? 0.94 :
+        (root.breath-phase ? 1.02 : 1.0));
+
+    property <float> squish-x:
+        root.active-expression == 1 ? (1.0 - (root.bass * 0.08)) :
+        (root.is-sleepy ? 1.05 :
+        (root.breath-phase ? 0.99 : 1.0));
+
+    // Hover scale spring
+    property <float> hover-scale: touch.has-hover ? 1.07 : 1.0;
+    animate hover-scale { duration: 180ms; easing: ease-out; }
+
+    // Body base color & dynamic tint (Blobatar heatTint & condition hues)
+    property <color> body-color:
+        (root.is-dizzy || root.active-expression == 4) ? #ffd3e2 : // Mad / Dizzy Heat Flush
+        (root.active-expression == 1 ? #e2ecff :                   // Dancing Happy Soft Sky Blue
+        (root.is-sleepy ? #dbe1ea :                               // Low Battery Peaceful Slate
+        #ededef));                                                // Classic Blobatar Clean Silver
+
+    // Blush color & intensity
+    property <color> blush-color: (root.is-dizzy || root.active-expression == 4) ? #ff4d6d : #ff7896;
+    property <float> blush-opacity:
+        (root.is-dizzy || root.active-expression == 4) ? 0.75 :
+        (root.active-expression == 1 ? 0.65 :
+        (root.active-expression == 3 ? 0.70 :
+        (root.is-sleepy ? 0.25 : 0.40)));
+
+    // ==========================================
+    // BLOBATAR BODY ROOT CONTAINER
+    // ==========================================
+    body := Rectangle {
+        x: (parent.width - self.width) / 2 + root.shake-offset;
+        y: (parent.height - self.height) / 2 + root.bounce-y;
+        width: root.pet-size * 0.96 * root.squish-x * root.hover-scale;
+        height: root.pet-size * 0.88 * root.squish-y * root.hover-scale;
+        background: transparent;
+
+        animate y { duration: 80ms; easing: ease-out; }
+        animate width { duration: 80ms; easing: ease-out; }
+        animate height { duration: 80ms; easing: ease-out; }
+
+        // ==========================================
+        // SILHOUETTE 1: BEAR NUB EARS (Attached behind body)
+        // ==========================================
+        if root.active-char == 1: Rectangle {
+            width: 100%;
+            height: 100%;
+
+            // Left Ear
+            Rectangle {
+                x: parent.width * 0.12;
+                y: -parent.height * 0.14;
+                width: parent.width * 0.30;
+                height: self.width;
+                border-radius: min(self.width, self.height) / 2;
+                background: root.body-color;
+
+                // Inner pink ear
+                Rectangle {
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    width: parent.width * 0.48;
+                    height: self.width;
+                    border-radius: min(self.width, self.height) / 2;
+                    background: #ffb8c8;
+                    opacity: 0.65;
+                }
+            }
+
+            // Right Ear
+            Rectangle {
+                x: parent.width * 0.58;
+                y: -parent.height * 0.14;
+                width: parent.width * 0.30;
+                height: self.width;
+                border-radius: min(self.width, self.height) / 2;
+                background: root.body-color;
+
+                // Inner pink ear
+                Rectangle {
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    width: parent.width * 0.48;
+                    height: self.width;
+                    border-radius: min(self.width, self.height) / 2;
+                    background: #ffb8c8;
+                    opacity: 0.65;
+                }
+            }
+        }
+
+        // ==========================================
+        // SILHOUETTE 2: CLOUD PUFFY LOBES (Attached behind body)
+        // ==========================================
+        if root.active-char == 2: Rectangle {
+            width: 100%;
+            height: 100%;
+
+            // Lobe 1 (Leftmost)
+            Rectangle {
+                x: parent.width * 0.08;
+                y: -parent.height * 0.08;
+                width: parent.width * 0.28;
+                height: self.width;
+                border-radius: min(self.width, self.height) / 2;
+                background: root.body-color;
+            }
+
+            // Lobe 2 (Center Left)
+            Rectangle {
+                x: parent.width * 0.26;
+                y: -parent.height * 0.16;
+                width: parent.width * 0.32;
+                height: self.width;
+                border-radius: min(self.width, self.height) / 2;
+                background: root.body-color;
+            }
+
+            // Lobe 3 (Center Right)
+            Rectangle {
+                x: parent.width * 0.46;
+                y: -parent.height * 0.16;
+                width: parent.width * 0.32;
+                height: self.width;
+                border-radius: min(self.width, self.height) / 2;
+                background: root.body-color;
+            }
+
+            // Lobe 4 (Rightmost)
+            Rectangle {
+                x: parent.width * 0.66;
+                y: -parent.height * 0.08;
+                width: parent.width * 0.28;
+                height: self.width;
+                border-radius: min(self.width, self.height) / 2;
+                background: root.body-color;
+            }
+        }
+
+        // ==========================================
+        // SILHOUETTE CORE PATH (Round / Nub / Cloud / Organic)
+        // ==========================================
+        // 1. Organic Pebble Spline
+        if root.active-char == 3: Path {
+            width: 100%;
+            height: 100%;
+            viewbox-x: 0;
+            viewbox-y: 0;
+            viewbox-width: 100;
+            viewbox-height: 100;
+            fill: root.body-color;
+            commands: "M 90.40 61.77 C 87.42 71.55, 71.78 82.64, 59.97 85.59 C 48.17 88.55, 27.29 86.54, 19.56 79.47 C 11.82 72.40, 10.33 53.96, 13.57 43.19 C 16.80 32.42, 28.25 17.55, 38.96 14.83 C 49.68 12.11, 69.26 19.06, 77.83 26.88 C 86.40 34.71, 93.37 51.98, 90.40 61.77 Z";
+        }
+
+        // 2. Standard Superellipse Squircle (n = 3.2 Bézier curve)
+        if root.active-char != 3: Path {
+            width: 100%;
+            height: 100%;
+            viewbox-x: 0;
+            viewbox-y: 0;
+            viewbox-width: 100;
+            viewbox-height: 100;
+            fill: root.body-color;
+            commands: "M 91.00 52.00 C 91.00 82.12, 83.37 89.00, 50.00 89.00 C 16.63 89.00, 9.00 82.12, 9.00 52.00 C 9.00 21.88, 16.63 15.00, 50.00 15.00 C 83.37 15.00, 91.00 21.88, 91.00 52.00 Z";
+        }
+
+        // Bottom subtle metallic shadow rim
+        Path {
+            width: 100%;
+            height: 100%;
+            viewbox-x: 0;
+            viewbox-y: 0;
+            viewbox-width: 100;
+            viewbox-height: 100;
+            fill: #c4c5ca;
+            opacity: 0.40;
+            commands: "M 14.0 68.0 C 22.0 82.0, 36.0 88.0, 50.0 88.0 C 64.0 88.0, 78.0 82.0, 86.0 68.0 C 76.0 77.0, 63.0 81.0, 50.0 81.0 C 37.0 81.0, 24.0 77.0, 14.0 68.0 Z";
+        }
+
+        // Radial specular highlight dome
+        specular := Rectangle {
+            x: parent.width * 0.58;
+            y: parent.height * 0.18;
+            width: parent.width * 0.28;
+            height: parent.height * 0.18;
+            border-radius: min(self.width, self.height) / 2;
+            background: #ffffff;
+            opacity: 0.55;
+        }
+
+        // Cheek blush (responsive to gaze & mood)
+        blush-left := Rectangle {
+            x: parent.width * 0.14 + (root.smooth-look-x * 2px);
+            y: parent.height * 0.56;
+            width: parent.width * 0.20;
+            height: parent.height * 0.11;
+            border-radius: min(self.width, self.height) / 2;
+            background: root.blush-color;
+            opacity: root.blush-opacity;
+        }
+
+        blush-right := Rectangle {
+            x: parent.width * 0.66 + (root.smooth-look-x * 2px);
+            y: parent.height * 0.56;
+            width: parent.width * 0.20;
+            height: parent.height * 0.11;
+            border-radius: min(self.width, self.height) / 2;
+            background: root.blush-color;
+            opacity: root.blush-opacity;
+        }
+
+        // ==========================================
+        // EYES (Blobatar 3D gaze tracking & expressions)
+        // ==========================================
+        property <length> base-eye-w: parent.width * 0.20;
+        property <length> base-eye-h: parent.height * 0.26;
+
+        // Left Eye
+        eye-left := BlobatarEye {
+            x: parent.width * 0.24 + (root.smooth-look-x * parent.width * 0.14);
+            y: parent.height * 0.36 + (root.smooth-look-y * parent.height * 0.10);
+            width: body.base-eye-w * (1.0 - (root.smooth-look-x < 0.0 ? -root.smooth-look-x : root.smooth-look-x) * 0.18);
+            height: body.base-eye-h;
+            expression: root.active-expression;
+            is-right-eye: false;
+            is-blinking: root.is-blinking;
+        }
+
+        // Right Eye
+        eye-right := BlobatarEye {
+            x: parent.width * 0.56 + (root.smooth-look-x * parent.width * 0.14);
+            y: parent.height * 0.36 + (root.smooth-look-y * parent.height * 0.10);
+            width: body.base-eye-w * (1.0 - (root.smooth-look-x < 0.0 ? -root.smooth-look-x : root.smooth-look-x) * 0.18);
+            height: body.base-eye-h;
+            expression: root.active-expression;
+            is-right-eye: true;
+            is-blinking: root.is-blinking;
+        }
+    }
+
+    // ==========================================
+    // INTERACTIVE TOUCH HIT-TEST
+    // ==========================================
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+        clicked => {
+            IslandContext.mochi-clicked();
+            IslandContext.pet-clicked();
+        }
+    }
+}

@@ -48,6 +48,8 @@ pub enum AppEvent {
     MochiDizzyTimeout(u64),
     MochiHappyTimeout(u64),
     MochiSlapReset(u64),
+    CycleBlobCharacter,
+    SetBlobCharacter(u32),
     AlertTimeout(u64),
 }
 

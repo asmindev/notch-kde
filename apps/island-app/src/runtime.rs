@@ -172,6 +172,11 @@ impl AppRuntime {
             let _ = tx.send(AppEvent::MochiSlapped);
         });
 
+        let tx = event_tx.clone();
+        ctx.on_cycle_blob_character(move || {
+            let _ = tx.send(AppEvent::CycleBlobCharacter);
+        });
+
         let pet3d_cursor = pet3d.clone();
         let cursor_window = self.window.as_weak();
         ctx.on_cursor_moved(move |x, y| {

@@ -236,3 +236,29 @@ fn test_pet_sleepy_on_low_battery() {
     assert!(!state.pet_is_sleepy);
     assert_eq!(state.mochi_mood, island_core::state::MochiMoodState::Idle);
 }
+
+#[test]
+fn test_blobatar_character_selection_and_cycle() {
+    let mut state = AppState::default();
+    assert_eq!(state.blob_character, 1); // Default to Nub (Bear Blob)
+
+    // Cycle through: 1 -> 2 -> 3 -> 4 -> 0 -> 1
+    reduce(&mut state, AppEvent::CycleBlobCharacter);
+    assert_eq!(state.blob_character, 2); // Cloud
+
+    reduce(&mut state, AppEvent::CycleBlobCharacter);
+    assert_eq!(state.blob_character, 3); // Organic Pebble
+
+    reduce(&mut state, AppEvent::CycleBlobCharacter);
+    assert_eq!(state.blob_character, 4); // Adaptive
+
+    reduce(&mut state, AppEvent::CycleBlobCharacter);
+    assert_eq!(state.blob_character, 0); // Round
+
+    reduce(&mut state, AppEvent::CycleBlobCharacter);
+    assert_eq!(state.blob_character, 1); // Back to Nub
+
+    // Direct set
+    reduce(&mut state, AppEvent::SetBlobCharacter(3));
+    assert_eq!(state.blob_character, 3);
+}
