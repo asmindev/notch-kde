@@ -300,7 +300,7 @@ impl AppRuntime {
                     .and_then(|path| std::fs::metadata(path).ok())
                     .and_then(|meta| meta.modified().ok());
                 let changed = mtime != last_mtime;
-                let periodic = last_periodic.elapsed() >= std::time::Duration::from_secs(10);
+                let periodic = last_periodic.elapsed() >= std::time::Duration::from_secs(60);
                 if !changed && !periodic {
                     continue;
                 }

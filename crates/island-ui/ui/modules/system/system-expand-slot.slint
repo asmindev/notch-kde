@@ -19,6 +19,15 @@ export component SystemExpandSlot inherits VerticalLayout {
         alignment: space-between;
         height: root.slot-h * 0.58;
 
+        // Left Column: PetView (Consistent with Compact, Wide, and Media slots)
+        VerticalLayout {
+            alignment: center;
+            PetView {
+                pet-size: parent.height;
+            }
+        }
+
+        // Right Column: Clock & Date
         VerticalLayout {
             alignment: center;
             spacing: 2px;
@@ -29,6 +38,7 @@ export component SystemExpandSlot inherits VerticalLayout {
                 font-family: ThemeTypography.font-family;
                 font-size: max(14px, min(24px, root.slot-h * 0.35));
                 font-weight: ThemeTypography.weight-bold;
+                horizontal-alignment: right;
             }
 
             Text {
@@ -36,13 +46,7 @@ export component SystemExpandSlot inherits VerticalLayout {
                 color: ThemeColors.muted;
                 font-family: ThemeTypography.font-family;
                 font-size: max(9px, min(13px, root.slot-h * 0.2));
-            }
-        }
-
-        VerticalLayout {
-            alignment: center;
-            PetView {
-                pet-size: parent.height;
+                horizontal-alignment: right;
             }
         }
     }

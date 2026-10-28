@@ -53,14 +53,14 @@ export component MainWindow inherits Window {
 
             // View 0: Compact (Default Desktop State)
             CompactView {
+                x: 0px;
+                y: 0px;
                 width: 100%;
-                height: 100%;
+                height: ThemeMetrics.compact-height;
                 opacity: IslandContext.active-mode == 0 ? 1.0 : 0.0;
-                y: IslandContext.active-mode == 0 ? 0px : -4px;
                 visible: self.opacity > 0.01;
 
                 animate opacity { duration: ThemeMetrics.crossfade-duration; easing: ease-out; }
-                animate y { duration: ThemeMetrics.crossfade-duration; easing: ease-out; }
             }
 
             // View 1: Wide (Hover State)

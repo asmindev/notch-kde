@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 const RULE_GROUP: &str = "island-app-rule";
 
@@ -25,7 +25,7 @@ impl PlatformWindow {
         }
 
         if is_rule_current(&existing_content, RULE_GROUP, &rules, &pos, screen_index) {
-            info!(
+            debug!(
                 "KWin window rule for island-app already up-to-date (screen: {}, pos: {})",
                 screen_index, pos
             );
@@ -220,7 +220,7 @@ fn is_rule_current(
     pos: &str,
     screen_index: u32,
 ) -> bool {
-    if general_rule_groups(content) != rules || has_legacy_order(content) {
+    if general_rule_groups(content) != rules {
         return false;
     }
 
@@ -259,6 +259,9 @@ fn is_rule_current(
 
 fn general_rule_groups(content: &str) -> Vec<String> {
     let mut in_general = false;
+    let mut rules = None;
+    let mut order = None;
+    let mut lower_order = None;
 
     for line in content.lines() {
         let line = line.trim();
@@ -276,38 +279,24 @@ fn general_rule_groups(content: &str) -> Vec<String> {
             continue;
         };
 
-        if key.trim() != "rules" {
-            continue;
-        }
+        let groups = || {
+            value
+                .split(',')
+                .map(str::trim)
+                .filter(|group| !group.is_empty())
+                .map(str::to_string)
+                .collect::<Vec<_>>()
+        };
 
-        return value
-            .split(',')
-            .map(str::trim)
-            .filter(|group| !group.is_empty())
-            .map(str::to_string)
-            .collect();
-    }
-
-    Vec::new()
-}
-
-fn has_legacy_order(content: &str) -> bool {
-    let mut in_general = false;
-
-    for line in content.lines() {
-        let line = line.trim();
-
-        if line.starts_with('[') && line.ends_with(']') {
-            in_general = line == "[General]";
-            continue;
-        }
-
-        if in_general && (line.starts_with("Order=") || line.starts_with("order=")) {
-            return true;
+        match key.trim() {
+            "rules" => rules = Some(groups()),
+            "Order" => order = Some(groups()),
+            "order" => lower_order = Some(groups()),
+            _ => {}
         }
     }
 
-    false
+    rules.or(order).or(lower_order).unwrap_or_default()
 }
 
 fn section_body(content: &str, target_group: &str) -> Option<String> {
@@ -400,22 +389,42 @@ enabled=false
     }
 
     #[test]
-    fn legacy_general_key_is_not_current() {
-        let current = render_config(
+    fn kwin_order_key_is_accepted_as_current() {
+        let rendered = render_config(
             LEGACY,
             RULE_GROUP,
-            "position=10,20\nscreen=1\ndesktops=\ndesktopsrule=2\n",
+            "Description=KDE Dynamic Island Placement\n\
+above=true\n\
+aboverule=2\n\
+acceptfocus=false\n\
+acceptfocusrule=2\n\
+decorationpolicy=none\n\
+decorationpolicyrule=2\n\
+position=10,20\n\
+positionrule=2\n\
+screen=1\n\
+screenrule=2\n\
+desktops=\n\
+desktopsrule=2\n\
+skippager=true\n\
+skippagerrule=2\n\
+skipswitcher=true\n\
+skipswitcherrule=2\n\
+skiptaskbar=true\n\
+skiptaskbarrule=2\n\
+wmclass=island-app\n\
+wmclassmatch=1\n",
             &collect_rule_groups(LEGACY),
         );
-        let legacy = current.replace(
+        let order = rendered.replace(
             "rules=island-app-rule,steam,notch-spike-rule",
             "Order=island-app-rule,steam,notch-spike-rule",
         );
 
-        assert!(!is_rule_current(
-            &legacy,
+        assert!(is_rule_current(
+            &order,
             RULE_GROUP,
-            &collect_rule_groups(&legacy),
+            &collect_rule_groups(&order),
             "10,20",
             1
         ));
