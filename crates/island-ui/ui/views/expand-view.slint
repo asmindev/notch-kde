@@ -10,10 +10,16 @@ import { SystemExpandSlot } from "../modules/system/system-expand-slot.slint";
 import { MediaExpandSlot } from "../modules/media/media-expand-slot.slint";
 
 export component ExpandView inherits VerticalLayout {
+    property <bool> show-source: IslandContext.show-source-selector && IslandContext.active-module == 1;
+    property <bool> show-system: IslandContext.active-module == 0
+        || (IslandContext.active-module == 1 && !IslandContext.is-playing && !root.show-source);
+    property <bool> show-media: IslandContext.active-module == 1
+        && (IslandContext.is-playing || root.show-source);
+
     out property <bool> is-hovered: collapse-btn.has-hover 
         || bottom-bar.is-hovered
-        || (IslandContext.active-module == 1 && media-slot.is-hovered) 
-        || (IslandContext.active-module == 0 && system-slot.is-hovered);
+        || (root.show-media && media-slot.is-hovered)
+        || (root.show-system && system-slot.is-hovered);
 
     width: 100%;
     height: 100%;
@@ -47,17 +53,17 @@ export component ExpandView inherits VerticalLayout {
                 Image {
                     width: root.hdr-h * 0.6;
                     height: root.hdr-h * 0.6;
-                    source: IslandContext.active-module == 1 ? Icons.music : Icons.zap;
+                    source: root.show-media ? Icons.music : Icons.zap;
                     image-fit: contain;
                     y: (parent.height - self.height) / 2;
                 }
 
-                if IslandContext.show-source-selector && IslandContext.active-module == 1: SourceSelectorBar {
+                if root.show-source: SourceSelectorBar {
                     bar-height: root.hdr-h;
                 }
 
-                if !IslandContext.show-source-selector || IslandContext.active-module != 1: Text {
-                    text: IslandContext.active-module == 1 ? "Now Playing" : "System Overview";
+                if !root.show-source: Text {
+                    text: root.show-media ? "Now Playing" : "System Overview";
                     color: ThemeColors.muted;
                     font-family: ThemeTypography.font-family;
                     font-size: ThemeTypography.size-xs;
@@ -86,14 +92,14 @@ export component ExpandView inherits VerticalLayout {
 
             // Slot 0: System Module Expand Slot
             system-slot := SystemExpandSlot {
-                visible: IslandContext.active-module == 0;
-                opacity: IslandContext.active-module == 0 ? 1.0 : 0.0;
+                visible: root.show-system;
+                opacity: root.show-system ? 1.0 : 0.0;
             }
 
             // Slot 1: Media Module Expand Slot
             media-slot := MediaExpandSlot {
-                visible: IslandContext.active-module == 1;
-                opacity: IslandContext.active-module == 1 ? 1.0 : 0.0;
+                visible: root.show-media;
+                opacity: root.show-media ? 1.0 : 0.0;
             }
         }
     }

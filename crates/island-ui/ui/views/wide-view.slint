@@ -10,10 +10,19 @@ import { BottomBar } from "../components/bottom-bar.slint";
 import { SourceSelectorBar } from "../components/source-selector.slint";
 
 export component WideView inherits VerticalLayout {
+    property <bool> show-system: !IslandContext.is-welcome
+        && !IslandContext.show-source-selector
+        && (IslandContext.active-module == 0
+            || (IslandContext.active-module == 1 && !IslandContext.is-playing));
+    property <bool> show-media: !IslandContext.is-welcome
+        && !IslandContext.show-source-selector
+        && IslandContext.active-module == 1
+        && IslandContext.is-playing;
+
     out property <bool> is-hovered: (!IslandContext.is-welcome && bottom-bar.is-hovered)
         || IslandContext.show-source-selector
-        || (IslandContext.active-module == 1 && media-slot.is-hovered) 
-        || (IslandContext.active-module == 0 && system-slot.is-hovered);
+        || (root.show-media && media-slot.is-hovered)
+        || (root.show-system && system-slot.is-hovered);
 
     width: 100%;
     height: 100%;
@@ -57,14 +66,14 @@ export component WideView inherits VerticalLayout {
 
         // Slot 0: System Module Wide Slot
         system-slot := SystemWideSlot {
-            visible: !IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.active-module == 0;
-            opacity: (!IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.active-module == 0) ? 1.0 : 0.0;
+            visible: root.show-system;
+            opacity: root.show-system ? 1.0 : 0.0;
         }
 
         // Slot 1: Media Module Wide Slot (Dynamic Studio)
         media-slot := MediaWideSlot {
-            visible: !IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.active-module == 1;
-            opacity: (!IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.active-module == 1) ? 1.0 : 0.0;
+            visible: root.show-media;
+            opacity: root.show-media ? 1.0 : 0.0;
         }
 
         // Slot 2: Alert Module Wide Slot
