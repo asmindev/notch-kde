@@ -2,16 +2,20 @@ import { ThemeColors } from "../../theme/colors.slint";
 import { ThemeTypography } from "../../theme/typography.slint";
 import { Icons } from "../../theme/icons.slint";
 import { ThemeMetrics } from "../../theme/metrics.slint";
+import { IslandContext } from "../../context.slint";
+import { PetView } from "../../components/pet-view.slint";
 
 export component AlertWideSlot inherits Rectangle {
-    in property <string> alert-title: "Notification";
-    in property <string> alert-message: "System Alert";
+    property <bool> is-charging-alert: IslandContext.alert-kind == 1;
+    in property <string> alert-title: root.is-charging-alert ? "Charger connected" : "Notification";
+    in property <string> alert-message: root.is-charging-alert ? "Battery \{IslandContext.battery-percentage}% • Charging" : "System Alert";
     in property <image> alert-icon: Icons.zap;
 
     width: 100%;
     height: 100%;
 
     property <length> icon-dim: max(18px, min(28px, ThemeMetrics.wide-height * 0.55));
+    property <length> pet-dim: max(30px, min(44px, ThemeMetrics.wide-height * 0.78));
     property <length> margin-x: max(12px, min(24px, ThemeMetrics.wide-width * 0.04));
 
     HorizontalLayout {
@@ -22,7 +26,12 @@ export component AlertWideSlot inherits Rectangle {
 
         VerticalLayout {
             alignment: center;
-            Image {
+            if root.is-charging-alert: PetView {
+                width: root.pet-dim;
+                height: root.pet-dim;
+                pet-size: root.pet-dim;
+            }
+            if !root.is-charging-alert: Image {
                 width: root.icon-dim;
                 height: root.icon-dim;
                 source: root.alert-icon;
@@ -36,7 +45,7 @@ export component AlertWideSlot inherits Rectangle {
 
             Text {
                 text: root.alert-title;
-                color: ThemeColors.foreground;
+                color: root.is-charging-alert ? ThemeColors.success : ThemeColors.foreground;
                 font-family: ThemeTypography.font-family;
                 font-size: max(11px, min(15px, ThemeMetrics.wide-height * 0.32));
                 font-weight: ThemeTypography.weight-bold;

@@ -8,6 +8,13 @@ export component ChargingIndicator inherits HorizontalLayout {
     in property <bool> compact: false;
 
     private property <float> progress: min(0.9999, max(0.0, root.percentage / 100.0));
+    private property <bool> pulse: true;
+
+    pulse-timer := Timer {
+        interval: 900ms;
+        running: root.is-charging;
+        triggered => { root.pulse = !root.pulse; }
+    }
 
     alignment: center;
     spacing: 6px;
@@ -20,6 +27,17 @@ export component ChargingIndicator inherits HorizontalLayout {
         border-color: #3f3f46;
         background: #1c1c20;
 
+        Rectangle {
+            x: -1px;
+            y: -1px;
+            width: parent.width + 2px;
+            height: parent.height + 2px;
+            border-radius: self.width / 2;
+            background: #22c55e;
+            opacity: root.pulse ? 0.20 : 0.06;
+            animate opacity { duration: 750ms; easing: ease-in-out; }
+        }
+
         Path {
             width: 20px;
             height: 20px;
@@ -28,6 +46,8 @@ export component ChargingIndicator inherits HorizontalLayout {
             fill: transparent;
             stroke: ThemeColors.success;
             stroke-width: 1.5px;
+            opacity: root.pulse ? 1.0 : 0.55;
+            animate opacity { duration: 750ms; easing: ease-in-out; }
 
             MoveTo {
                 x: 50;

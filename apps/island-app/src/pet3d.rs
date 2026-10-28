@@ -98,13 +98,17 @@ fn resolve_state(input: &Pet3dInput) -> StateId {
             2 => StateId::Backflip,
             _ => StateId::RotateX,
         }
+    } else if input.alert_kind == AlertKind::LowBattery {
+        StateId::Alert
+    } else if input.alert_kind == AlertKind::Charging {
+        StateId::Charge
+    } else if input.is_charging {
+        StateId::Charging
     } else if input.mochi_mood == MochiMoodState::Annoyed {
         StateId::Alert
     } else if input.is_singing {
         StateId::Orbit
-    } else if input.alert_kind == AlertKind::LowBattery {
-        StateId::Alert
-    } else if input.is_charging || input.alert_kind != AlertKind::None {
+    } else if input.alert_kind != AlertKind::None {
         StateId::Notify
     } else {
         StateId::Idle
@@ -121,7 +125,10 @@ fn resolve_expression(input: &Pet3dInput, target_state: StateId) -> ExpressionId
         ExpressionId::Surpris
     } else if target_state == StateId::Bounce {
         ExpressionId::Heureux
-    } else if matches!(target_state, StateId::Notify | StateId::Ping) {
+    } else if matches!(
+        target_state,
+        StateId::Notify | StateId::Ping | StateId::Charge | StateId::Charging
+    ) {
         ExpressionId::Excite
     } else if input.is_sleepy {
         ExpressionId::Somnolent
@@ -131,8 +138,6 @@ fn resolve_expression(input: &Pet3dInput, target_state: StateId) -> ExpressionId
         ExpressionId::Heureux
     } else if input.is_singing {
         ExpressionId::Hilare
-    } else if input.is_charging {
-        ExpressionId::Excite
     } else if target_state == StateId::Swirl {
         ExpressionId::Heureux
     } else {
@@ -572,14 +577,28 @@ mod tests {
     fn custom_expression_overrides_charging_mood() {
         let mut input = input_with_expression(ExpressionId::Robot.index() as u32, true);
         input.is_charging = true;
-        assert_eq!(resolve_expression(&input, StateId::Idle), ExpressionId::Robot);
+        assert_eq!(resolve_expression(&input, StateId::Charging), ExpressionId::Robot);
     }
 
     #[test]
     fn charging_still_uses_excite_without_custom_choice() {
         let mut input = input_with_expression(ExpressionId::Robot.index() as u32, false);
         input.is_charging = true;
-        assert_eq!(resolve_expression(&input, StateId::Idle), ExpressionId::Excite);
+        assert_eq!(resolve_expression(&input, StateId::Charging), ExpressionId::Excite);
+    }
+
+    #[test]
+    fn charger_feedback_takes_priority_over_music() {
+        let mut input = idle_input();
+        input.is_singing = true;
+        input.is_charging = true;
+        assert_eq!(resolve_state(&input), StateId::Charging);
+
+        input.alert_kind = AlertKind::Charging;
+        assert_eq!(resolve_state(&input), StateId::Charge);
+
+        input.notification_active = true;
+        assert_eq!(resolve_state(&input), StateId::Ping);
     }
 
     #[test]
@@ -673,9 +692,12 @@ mod tests {
         assert_eq!(resolve_state(&input), StateId::Alert);
 
         input.alert_kind = AlertKind::Charging;
-        assert_eq!(resolve_state(&input), StateId::Notify);
+        assert_eq!(resolve_state(&input), StateId::Charge);
 
         input.alert_kind = AlertKind::None;
+        input.is_charging = true;
+        assert_eq!(resolve_state(&input), StateId::Charging);
+        input.is_charging = false;
         input.notification_active = true;
         assert_eq!(resolve_state(&input), StateId::Ping);
         input.is_charging = true;

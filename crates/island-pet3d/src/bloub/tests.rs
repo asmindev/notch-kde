@@ -86,6 +86,7 @@ fn transient_states_end_without_artifacts() {
         StateId::Wink,
         StateId::Notify,
         StateId::Ping,
+        StateId::Charge,
         StateId::Alert,
         StateId::Burst,
         StateId::Bounce,
@@ -96,6 +97,19 @@ fn transient_states_end_without_artifacts() {
         engine.set_state(state, 0.0);
         let frame = engine.sample(state.duration() + 0.5);
         assert_frame_finite(&frame);
+    }
+}
+
+#[test]
+fn charging_states_use_energy_decor_without_notification_badge() {
+    let mut engine = BloubEngine::new();
+    for state in [StateId::Charge, StateId::Charging] {
+        engine.set_state(state, 0.0);
+        let frame = engine.sample(0.5);
+        assert_frame_finite(&frame);
+        assert!(frame.decor.notif.is_none());
+        assert!(!frame.decor.arcs.is_empty());
+        assert!(!frame.decor.dots.is_empty());
     }
 }
 

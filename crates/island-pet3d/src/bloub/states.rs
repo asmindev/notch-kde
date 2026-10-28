@@ -16,6 +16,8 @@ pub enum StateId {
     Sleep,
     Notify,
     Ping,
+    Charge,
+    Charging,
     Play,
     Alert,
     Burst,
@@ -29,7 +31,7 @@ pub enum StateId {
 }
 
 impl StateId {
-    pub const ALL: [Self; 17] = [
+    pub const ALL: [Self; 19] = [
         Self::Idle,
         Self::Swirl,
         Self::Wink,
@@ -37,6 +39,8 @@ impl StateId {
         Self::Sleep,
         Self::Notify,
         Self::Ping,
+        Self::Charge,
+        Self::Charging,
         Self::Play,
         Self::Alert,
         Self::Burst,
@@ -66,6 +70,8 @@ impl StateId {
             Self::Sleep => "sleep",
             Self::Notify => "notify",
             Self::Ping => "ping",
+            Self::Charge => "charge",
+            Self::Charging => "charging",
             Self::Play => "play",
             Self::Alert => "alert",
             Self::Burst => "burst",
@@ -95,7 +101,7 @@ impl StateId {
             Self::Orbit | Self::Burst | Self::Backflip => ExpressionId::Surpris,
             Self::RotateX => ExpressionId::Excite,
             Self::Sleep | Self::Egg => ExpressionId::Somnolent,
-            Self::Notify | Self::Ping => ExpressionId::Excite,
+            Self::Notify | Self::Ping | Self::Charge | Self::Charging => ExpressionId::Excite,
             Self::Play => ExpressionId::Hilare,
             Self::Alert => ExpressionId::Curieux,
             Self::Shake => ExpressionId::Effraye,
@@ -109,6 +115,7 @@ impl StateId {
             Self::Swirl => 1.3,
             Self::Wink => 1.5,
             Self::Notify | Self::Ping => 2.4,
+            Self::Charge => 2.8,
             Self::Alert => 2.0,
             Self::Burst => 1.2,
             Self::Bounce => 1.0,
@@ -321,6 +328,39 @@ pub fn pose(state: StateId, t: f32) -> Pose {
             p.gaze = REST_GAZE.offset(0.70, -0.30);
             add_notif(&mut p);
             add_ring(&mut p, 0.0, 0.55 * (1.0 - u), 0.018, 0.56, true);
+            p
+        }
+        StateId::Charge => {
+            let u = clamp01(t / 2.6);
+            p.off_y = -((t * 5.2).sin().abs()) * 0.12 * (1.0 - u);
+            p.off_x = (t * 8.5).sin() * 0.018 * (1.0 - u);
+            p.gaze = REST_GAZE.offset(0.18, -0.42);
+            add_ring(&mut p, t * 1.5, 0.75 * (1.0 - u), 0.075, 0.33, true);
+            p.dots.extend(decor::particles(t, 10, 0x7a31_c0de, 0.14, true));
+            for i in 0..3 {
+                let phase = i as f32 * 2.1;
+                p.dots.push(colored_dot(
+                    0.52 + i as f32 * 0.16,
+                    -0.88 + (t * 1.4 + phase).sin() * 0.05,
+                    0.055,
+                    decor::wheel(0.14),
+                    0.7,
+                ));
+            }
+            p
+        }
+        StateId::Charging => {
+            let pulse = (t * 1.6).sin() * 0.5 + 0.5;
+            p.off_y = (t * 1.25).sin() * 0.04;
+            p.gaze = REST_GAZE.offset(0.10, -0.16);
+            add_ring(&mut p, t * 0.55, 0.42 + 0.28 * pulse, 0.075, 0.33, true);
+            p.dots.push(colored_dot(
+                0.52,
+                -0.78 + (t * 1.3).sin() * 0.04,
+                0.050,
+                decor::wheel(0.14),
+                0.8,
+            ));
             p
         }
         StateId::Play => {
