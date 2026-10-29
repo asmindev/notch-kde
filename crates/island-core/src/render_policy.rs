@@ -11,7 +11,7 @@ pub struct RenderPolicy {
 }
 
 pub fn render_policy(state: &AppState) -> RenderPolicy {
-    if !state.is_visible {
+    if !state.view.is_visible {
         return RenderPolicy {
             main_visible: false,
             pet_3d: false,
@@ -29,7 +29,7 @@ pub fn render_policy(state: &AppState) -> RenderPolicy {
 }
 
 fn active_slot_uses_pet(state: &AppState) -> bool {
-    match state.mode {
+    match state.view.mode {
         IslandView::Compact => compact_slot_uses_pet(state),
         IslandView::Wide => wide_slot_uses_pet(state),
         IslandView::Expand => expand_slot_uses_pet(state),
@@ -37,44 +37,44 @@ fn active_slot_uses_pet(state: &AppState) -> bool {
 }
 
 fn compact_slot_uses_pet(state: &AppState) -> bool {
-    if state.active_module == ModuleId::SYSTEM || state.active_module == ModuleId::MEDIA {
+    if state.view.active_module == ModuleId::SYSTEM || state.view.active_module == ModuleId::MEDIA {
         true
-    } else if state.active_module == ModuleId::ALERT {
-        state.alert_kind == AlertKind::Charging
+    } else if state.view.active_module == ModuleId::ALERT {
+        state.domain.alert_kind == AlertKind::Charging
     } else {
         false
     }
 }
 
 fn wide_slot_uses_pet(state: &AppState) -> bool {
-    if state.is_welcome {
+    if state.presentation.is_welcome {
         return true;
     }
-    if state.show_source_selector {
+    if state.module.show_source_selector {
         return false;
     }
 
-    if state.active_module == ModuleId::SYSTEM {
+    if state.view.active_module == ModuleId::SYSTEM {
         true
-    } else if state.active_module == ModuleId::MEDIA {
-        if state.media.is_playing {
-            state.music_visual_mode == MusicVisualMode::PetPrimary
+    } else if state.view.active_module == ModuleId::MEDIA {
+        if state.domain.media.is_playing {
+            state.settings.music_visual_mode == MusicVisualMode::PetPrimary
         } else {
             true
         }
-    } else if state.active_module == ModuleId::ALERT {
-        state.alert_kind == AlertKind::Charging
+    } else if state.view.active_module == ModuleId::ALERT {
+        state.domain.alert_kind == AlertKind::Charging
     } else {
         false
     }
 }
 
 fn expand_slot_uses_pet(state: &AppState) -> bool {
-    if state.active_module == ModuleId::SYSTEM {
+    if state.view.active_module == ModuleId::SYSTEM {
         true
-    } else if state.active_module == ModuleId::MEDIA {
-        if state.media.is_playing || state.show_source_selector {
-            state.music_visual_mode == MusicVisualMode::PetPrimary
+    } else if state.view.active_module == ModuleId::MEDIA {
+        if state.domain.media.is_playing || state.module.show_source_selector {
+            state.settings.music_visual_mode == MusicVisualMode::PetPrimary
         } else {
             true
         }
@@ -84,12 +84,12 @@ fn expand_slot_uses_pet(state: &AppState) -> bool {
 }
 
 fn active_slot_uses_spectrum(state: &AppState) -> bool {
-    if !state.media.is_playing {
+    if !state.domain.media.is_playing {
         return false;
     }
 
-    match state.mode {
-        IslandView::Compact | IslandView::Expand => state.active_module == ModuleId::MEDIA,
+    match state.view.mode {
+        IslandView::Compact | IslandView::Expand => state.view.active_module == ModuleId::MEDIA,
         IslandView::Wide => false,
     }
 }
@@ -100,13 +100,12 @@ mod tests {
     use crate::models::ActiveModule;
 
     fn visible_state(mode: IslandView, module: impl Into<ModuleId>) -> AppState {
-        AppState {
-            is_visible: true,
-            is_welcome: false,
-            mode,
-            active_module: module.into(),
-            ..AppState::default()
-        }
+        let mut state = AppState::default();
+        state.view.is_visible = true;
+        state.view.mode = mode;
+        state.view.active_module = module.into();
+        state.presentation.is_welcome = false;
+        state
     }
 
     fn policy(pet_3d: bool, spectrum: bool) -> RenderPolicy {
@@ -121,8 +120,8 @@ mod tests {
     #[test]
     fn hidden_stops_all_render_activity() {
         let mut state = visible_state(IslandView::Compact, ActiveModule::Media);
-        state.media.is_playing = true;
-        state.is_visible = false;
+        state.domain.media.is_playing = true;
+        state.view.is_visible = false;
 
         assert_eq!(
             render_policy(&state),
@@ -138,39 +137,39 @@ mod tests {
     #[test]
     fn compact_media_uses_pet_and_spectrum_when_playing() {
         let mut state = visible_state(IslandView::Compact, ActiveModule::Media);
-        state.media.is_playing = true;
+        state.domain.media.is_playing = true;
 
         assert_eq!(render_policy(&state), policy(true, true));
 
-        state.media.is_playing = false;
+        state.domain.media.is_playing = false;
         assert_eq!(render_policy(&state), policy(true, false));
     }
 
     #[test]
     fn wide_media_uses_pet_only_in_pet_primary_mode() {
         let mut state = visible_state(IslandView::Wide, ActiveModule::Media);
-        state.media.is_playing = true;
+        state.domain.media.is_playing = true;
         assert_eq!(render_policy(&state), policy(false, false));
 
-        state.music_visual_mode = MusicVisualMode::PetPrimary;
+        state.settings.music_visual_mode = MusicVisualMode::PetPrimary;
         assert_eq!(render_policy(&state), policy(true, false));
     }
 
     #[test]
     fn expand_media_uses_spectrum_and_pet_only_in_pet_primary_mode() {
         let mut state = visible_state(IslandView::Expand, ActiveModule::Media);
-        state.media.is_playing = true;
+        state.domain.media.is_playing = true;
         assert_eq!(render_policy(&state), policy(false, true));
 
-        state.music_visual_mode = MusicVisualMode::PetPrimary;
+        state.settings.music_visual_mode = MusicVisualMode::PetPrimary;
         assert_eq!(render_policy(&state), policy(true, true));
 
-        state.music_visual_mode = MusicVisualMode::ArtworkPrimary;
-        state.media.is_playing = false;
-        state.show_source_selector = true;
+        state.settings.music_visual_mode = MusicVisualMode::ArtworkPrimary;
+        state.domain.media.is_playing = false;
+        state.module.show_source_selector = true;
         assert_eq!(render_policy(&state), policy(false, false));
 
-        state.music_visual_mode = MusicVisualMode::PetPrimary;
+        state.settings.music_visual_mode = MusicVisualMode::PetPrimary;
         assert_eq!(render_policy(&state), policy(true, false));
     }
 
@@ -185,17 +184,17 @@ mod tests {
     #[test]
     fn alert_and_prayer_slots_only_use_pet_when_rendered() {
         let mut compact_alert = visible_state(IslandView::Compact, ActiveModule::Alert);
-        compact_alert.alert_kind = AlertKind::Charging;
+        compact_alert.domain.alert_kind = AlertKind::Charging;
         assert_eq!(render_policy(&compact_alert), policy(true, false));
 
-        compact_alert.alert_kind = AlertKind::LowBattery;
+        compact_alert.domain.alert_kind = AlertKind::LowBattery;
         assert_eq!(render_policy(&compact_alert), policy(false, false));
 
         let mut wide_alert = visible_state(IslandView::Wide, ActiveModule::Alert);
-        wide_alert.alert_kind = AlertKind::Charging;
+        wide_alert.domain.alert_kind = AlertKind::Charging;
         assert_eq!(render_policy(&wide_alert), policy(true, false));
 
-        wide_alert.alert_kind = AlertKind::Prayer;
+        wide_alert.domain.alert_kind = AlertKind::Prayer;
         assert_eq!(render_policy(&wide_alert), policy(false, false));
 
         for mode in [IslandView::Wide, IslandView::Expand] {
@@ -210,26 +209,26 @@ mod tests {
     #[test]
     fn welcome_and_source_selector_override_wide_slots() {
         let mut state = visible_state(IslandView::Wide, ActiveModule::Prayer);
-        state.is_welcome = true;
+        state.presentation.is_welcome = true;
         assert_eq!(render_policy(&state), policy(true, false));
 
-        state.is_welcome = false;
-        state.active_module = ActiveModule::Media.into();
-        state.media.is_playing = true;
-        state.show_source_selector = true;
+        state.presentation.is_welcome = false;
+        state.view.active_module = ActiveModule::Media.into();
+        state.domain.media.is_playing = true;
+        state.module.show_source_selector = true;
         assert_eq!(render_policy(&state), policy(false, false));
     }
 
     #[test]
     fn visible_tiers_produce_distinct_activity() {
         let mut compact = visible_state(IslandView::Compact, ActiveModule::Media);
-        compact.media.is_playing = true;
+        compact.domain.media.is_playing = true;
 
         let mut wide = visible_state(IslandView::Wide, ActiveModule::Media);
-        wide.media.is_playing = true;
+        wide.domain.media.is_playing = true;
 
         let mut expand = visible_state(IslandView::Expand, ActiveModule::Media);
-        expand.media.is_playing = true;
+        expand.domain.media.is_playing = true;
 
         assert_eq!(render_policy(&compact), policy(true, true));
         assert_eq!(render_policy(&wide), policy(false, false));

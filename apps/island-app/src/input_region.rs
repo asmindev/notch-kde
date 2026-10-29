@@ -1,5 +1,5 @@
-use island_core::models::{AlertKind, IslandView};
 use island_core::AppState;
+use island_core::models::{AlertKind, IslandView};
 use island_platform::overlap::Rect;
 use island_ui::MainWindow;
 use raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
@@ -8,7 +8,7 @@ use std::ffi::c_void;
 use std::sync::mpsc;
 use tracing::{debug, info, warn};
 use wayland_client::backend::{Backend, ObjectId};
-use wayland_client::globals::{registry_queue_init, GlobalListContents};
+use wayland_client::globals::{GlobalListContents, registry_queue_init};
 use wayland_client::protocol::{
     wl_compositor::WlCompositor, wl_region::WlRegion, wl_registry, wl_surface::WlSurface,
 };
@@ -27,12 +27,12 @@ const COMPACT_EAR: i32 = 5;
 const WIDE_EAR: i32 = 10;
 
 pub fn rect_for_state(state: &AppState) -> Rect {
-    let (notch_w, touch_h, ear) = if !state.is_visible {
+    let (notch_w, touch_h, ear) = if !state.view.is_visible {
         (COMPACT_WIDTH, HIDDEN_TOUCH_HEIGHT, COMPACT_EAR)
     } else {
-        match state.mode {
+        match state.view.mode {
             IslandView::Compact => {
-                let width = if state.alert_kind != AlertKind::None {
+                let width = if state.domain.alert_kind != AlertKind::None {
                     COMPACT_ALERT_WIDTH
                 } else {
                     COMPACT_WIDTH
@@ -197,9 +197,7 @@ struct WaylandInputRegion {
 
 impl WaylandInputRegion {
     fn new(display: usize, surface: usize) -> Result<Self, String> {
-        let backend = unsafe {
-            Backend::from_foreign_display(display as *mut c_void as *mut _)
-        };
+        let backend = unsafe { Backend::from_foreign_display(display as *mut c_void as *mut _) };
         let connection = Connection::from_backend(backend);
         let (globals, event_queue) = registry_queue_init::<InputRegionState>(&connection)
             .map_err(|err| format!("registry init failed: {err}"))?;
@@ -207,10 +205,9 @@ impl WaylandInputRegion {
         let compositor = globals
             .bind::<WlCompositor, _, _>(&queue_handle, 1..=6, ())
             .map_err(|err| format!("wl_compositor unavailable: {err}"))?;
-        let object_id = unsafe {
-            ObjectId::from_ptr(WlSurface::interface(), surface as *mut c_void as *mut _)
-        }
-        .map_err(|_| "invalid wl_surface pointer".to_string())?;
+        let object_id =
+            unsafe { ObjectId::from_ptr(WlSurface::interface(), surface as *mut c_void as *mut _) }
+                .map_err(|_| "invalid wl_surface pointer".to_string())?;
         let surface = WlSurface::from_id(&connection, object_id)
             .map_err(|_| "wl_surface is no longer alive".to_string())?;
 
@@ -245,9 +242,9 @@ mod tests {
 
     fn state(mode: IslandView, visible: bool, alert: AlertKind) -> AppState {
         let mut state = AppState::default();
-        state.mode = mode;
-        state.is_visible = visible;
-        state.alert_kind = alert;
+        state.view.mode = mode;
+        state.view.is_visible = visible;
+        state.domain.alert_kind = alert;
         state
     }
 
@@ -255,7 +252,12 @@ mod tests {
     fn compact_region_matches_visible_touch_area() {
         assert_eq!(
             rect_for_state(&state(IslandView::Compact, true, AlertKind::None)),
-            Rect { x: 157, y: 0, w: 166, h: 42 }
+            Rect {
+                x: 157,
+                y: 0,
+                w: 166,
+                h: 42
+            }
         );
     }
 
@@ -263,7 +265,12 @@ mod tests {
     fn compact_alert_region_expands() {
         assert_eq!(
             rect_for_state(&state(IslandView::Compact, true, AlertKind::Charging)),
-            Rect { x: 121, y: 0, w: 238, h: 42 }
+            Rect {
+                x: 121,
+                y: 0,
+                w: 238,
+                h: 42
+            }
         );
     }
 
@@ -271,7 +278,12 @@ mod tests {
     fn wide_region_matches_visible_touch_area() {
         assert_eq!(
             rect_for_state(&state(IslandView::Wide, true, AlertKind::None)),
-            Rect { x: 35, y: 0, w: 410, h: 98 }
+            Rect {
+                x: 35,
+                y: 0,
+                w: 410,
+                h: 98
+            }
         );
     }
 
@@ -279,7 +291,12 @@ mod tests {
     fn expand_region_matches_visible_touch_area() {
         assert_eq!(
             rect_for_state(&state(IslandView::Expand, true, AlertKind::None)),
-            Rect { x: 10, y: 0, w: 460, h: 196 }
+            Rect {
+                x: 10,
+                y: 0,
+                w: 460,
+                h: 196
+            }
         );
     }
 
@@ -287,7 +304,12 @@ mod tests {
     fn hidden_region_keeps_reveal_hit_target() {
         assert_eq!(
             rect_for_state(&state(IslandView::Wide, false, AlertKind::None)),
-            Rect { x: 157, y: 0, w: 166, h: 28 }
+            Rect {
+                x: 157,
+                y: 0,
+                w: 166,
+                h: 28
+            }
         );
     }
 }

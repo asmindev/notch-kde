@@ -1,3 +1,7 @@
+use crate::input_region;
+use crate::pet3d;
+use crate::render_stats::RenderStats;
+use crate::settings_store::SettingsStore;
 use island_core::{
     AppEvent, AppState, Effect, PersistedSettings, SettingsTab, reduce, render_policy,
 };
@@ -8,10 +12,6 @@ use island_services::{
     NotificationService, PrayerService, ScreenSaverService,
 };
 use island_ui::{IslandContext, MainWindow, ModuleUiRegistry, SettingsWindow, ViewModel};
-use crate::input_region;
-use crate::pet3d;
-use crate::render_stats::RenderStats;
-use crate::settings_store::SettingsStore;
 use slint::ComponentHandle;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -54,11 +54,11 @@ impl AppRuntime {
         // 1. Initial State
         let mut app_state = AppState::default();
         SettingsStore::load().apply_to_state(&mut app_state);
-        app_state.time = ClockService::get_current_time();
-        app_state.battery = BatteryService::read_battery();
-        app_state.is_muted = AudioService::check_muted_sync();
+        app_state.domain.time = ClockService::get_current_time();
+        app_state.domain.battery = BatteryService::read_battery();
+        app_state.domain.is_muted = AudioService::check_muted_sync();
 
-        for issue in ModuleUiRegistry::default().validate(app_state.engine.registry()) {
+        for issue in ModuleUiRegistry::default().validate(app_state.view.engine.registry()) {
             warn!("{issue}; falling back to system");
         }
 
@@ -69,7 +69,7 @@ impl AppRuntime {
             None => "User".to_string(),
             Some(f) => f.to_uppercase().collect::<String>() + chars.as_str(),
         };
-        app_state.welcome_title = format!("Welcome back, {}!", formatted_user);
+        app_state.presentation.welcome_title = format!("Welcome back, {}!", formatted_user);
 
         let now = chrono::Local::now();
         let day_name = now.format("%A").to_string();
@@ -84,9 +84,9 @@ impl AppRuntime {
         } else {
             "Good night! Rest and recharge 🌙".to_string()
         };
-        app_state.welcome_subtitle = greeting_sub;
+        app_state.presentation.welcome_subtitle = greeting_sub;
 
-        let (prayer_tx, prayer_rx) = tokio::sync::watch::channel(app_state.prayer);
+        let (prayer_tx, prayer_rx) = tokio::sync::watch::channel(app_state.settings.prayer);
         let settings_window = SettingsWindow::new()?;
 
         // Sync initial state to UI
@@ -126,7 +126,8 @@ impl AppRuntime {
                 hover_gen_cb.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
                 let _ = tx.send(AppEvent::UserHoverChanged(true));
             } else {
-                let current_gen = hover_gen_cb.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+                let current_gen =
+                    hover_gen_cb.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
                 let tx_clone = tx.clone();
                 let gen_check = hover_gen_cb.clone();
                 std::thread::spawn(move || {
@@ -595,8 +596,8 @@ impl AppRuntime {
         let settings_pet3d_events = settings_pet3d.clone();
         let mut last_synced_state = app_state.clone();
         let mut last_spectrum_active = initial_policy.spectrum;
-        let mut last_settings_open = app_state.settings_open;
-        let mut last_prayer = app_state.prayer;
+        let mut last_settings_open = app_state.presentation.settings_open;
+        let mut last_prayer = app_state.settings.prayer;
         let event_tx_effects = event_tx.clone();
         let input_region_events = input_region.clone();
         let mut last_input_rect = initial_input_rect;
@@ -607,7 +608,7 @@ impl AppRuntime {
                     let _ = reduce(&mut app_state, event);
                     last_synced_state = app_state.clone();
                     if policy.spectrum {
-                        let bars = app_state.spectrum.bars;
+                        let bars = app_state.domain.spectrum.bars;
                         let state_clone = app_state.clone();
                         let w = window_weak_clone.clone();
                         let pet3d = pet3d_events.clone();
@@ -627,9 +628,9 @@ impl AppRuntime {
 
                 let effects = reduce(&mut app_state, event);
 
-                if app_state.prayer != last_prayer {
-                    last_prayer = app_state.prayer;
-                    let _ = prayer_tx.send(app_state.prayer);
+                if app_state.settings.prayer != last_prayer {
+                    last_prayer = app_state.settings.prayer;
+                    let _ = prayer_tx.send(app_state.settings.prayer);
                 }
 
                 let input_rect = input_region::rect_for_state(&app_state);
@@ -647,21 +648,31 @@ impl AppRuntime {
                 for effect in effects {
                     match effect {
                         Effect::PlayPause => {
-                            tokio_rt.spawn(async { MediaService::play_pause().await; });
+                            tokio_rt.spawn(async {
+                                MediaService::play_pause().await;
+                            });
                         }
                         Effect::NextTrack => {
-                            tokio_rt.spawn(async { MediaService::next().await; });
+                            tokio_rt.spawn(async {
+                                MediaService::next().await;
+                            });
                         }
                         Effect::PreviousTrack => {
-                            tokio_rt.spawn(async { MediaService::previous().await; });
+                            tokio_rt.spawn(async {
+                                MediaService::previous().await;
+                            });
                         }
                         Effect::ToggleMute => {
                             debug!("Toggling system mute");
-                            tokio_rt.spawn(async { AudioService::toggle_mute().await; });
+                            tokio_rt.spawn(async {
+                                AudioService::toggle_mute().await;
+                            });
                         }
                         Effect::ToggleDnd => {
                             debug!("Toggling notification Do-Not-Disturb");
-                            tokio_rt.spawn(async { DndService::toggle_dnd().await; });
+                            tokio_rt.spawn(async {
+                                DndService::toggle_dnd().await;
+                            });
                         }
                         Effect::PersistSettings => {
                             SettingsStore::save(&PersistedSettings::from_state(&app_state));
@@ -672,83 +683,131 @@ impl AppRuntime {
                                 MediaService::select_source(&player_id).await;
                             });
                         }
-                        Effect::ScheduleTimer { id, duration_ms, generation } => {
+                        Effect::ScheduleTimer {
+                            id,
+                            duration_ms,
+                            generation,
+                        } => {
                             if id == "overlap_reveal" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
-                                    let _ = tx_timer.send(AppEvent::OverlapRevealTimeout(generation));
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
+                                    let _ =
+                                        tx_timer.send(AppEvent::OverlapRevealTimeout(generation));
                                 });
                             } else if id == "overlap_dismiss_compact" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
-                                    let _ = tx_timer.send(AppEvent::OverlapDismissCompactTimeout(generation));
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
+                                    let _ = tx_timer
+                                        .send(AppEvent::OverlapDismissCompactTimeout(generation));
                                 });
                             } else if id == "overlap_dismiss_hide" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
-                                    let _ = tx_timer.send(AppEvent::OverlapDismissHideTimeout(generation));
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
+                                    let _ = tx_timer
+                                        .send(AppEvent::OverlapDismissHideTimeout(generation));
                                 });
                             } else if id == "collapse_compact" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
-                                    let _ = tx_timer.send(AppEvent::CollapseCompactTimeout(generation));
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
+                                    let _ =
+                                        tx_timer.send(AppEvent::CollapseCompactTimeout(generation));
                                 });
                             } else if id == "alert_timeout" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
                                     let _ = tx_timer.send(AppEvent::AlertTimeout(generation));
                                 });
                             } else if id == "mochi_annoyed_timeout" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
-                                    let _ = tx_timer.send(AppEvent::MochiAnnoyedTimeout(generation));
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
+                                    let _ =
+                                        tx_timer.send(AppEvent::MochiAnnoyedTimeout(generation));
                                 });
                             } else if id == "mochi_dizzy_timeout" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
                                     let _ = tx_timer.send(AppEvent::MochiDizzyTimeout(generation));
                                 });
                             } else if id == "mochi_happy_timeout" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
                                     let _ = tx_timer.send(AppEvent::MochiHappyTimeout(generation));
                                 });
                             } else if id == "mochi_slap_reset" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
                                     let _ = tx_timer.send(AppEvent::MochiSlapReset(generation));
                                 });
                             } else if id == "pet_happy_timeout" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
                                     let _ = tx_timer.send(AppEvent::PetHappyTimeout(generation));
                                 });
                             } else if id == "pet_dizzy_timeout" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
                                     let _ = tx_timer.send(AppEvent::PetDizzyTimeout(generation));
                                 });
                             } else if id == "pet_poke_reset" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
                                     let _ = tx_timer.send(AppEvent::PetPokeReset(generation));
                                 });
                             } else if id == "welcome_timeout" {
                                 let tx_timer = event_tx_effects.clone();
                                 tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(duration_ms)).await;
+                                    tokio::time::sleep(tokio::time::Duration::from_millis(
+                                        duration_ms,
+                                    ))
+                                    .await;
                                     let _ = tx_timer.send(AppEvent::WelcomeTimeout);
                                 });
                             }
@@ -793,14 +852,14 @@ impl AppRuntime {
                     });
                 }
 
-                if app_state.settings_open != last_settings_open {
-                    last_settings_open = app_state.settings_open;
+                if app_state.presentation.settings_open != last_settings_open {
+                    last_settings_open = app_state.presentation.settings_open;
                     let settings_w = settings_weak_events.clone();
                     let state_clone = app_state.clone();
                     let settings_pet3d = settings_pet3d_events.clone();
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(settings) = settings_w.upgrade() {
-                            if state_clone.settings_open {
+                            if state_clone.presentation.settings_open {
                                 ViewModel::sync_settings_to_ui(&settings, &state_clone);
                                 settings_pet3d.update_from_state(&state_clone);
                                 settings_pet3d.tick();
@@ -817,14 +876,8 @@ impl AppRuntime {
 
         // 8. Show Window and Run Slint GUI event loop
         self.window.show()?;
-        input_region::schedule_init(
-            self.window.as_weak(),
-            input_region,
-            initial_input_rect,
-            20,
-        );
-        let _pet3d_timer =
-            pet3d::start_timer(pet3d.clone(), self.window.as_weak(), render_stats);
+        input_region::schedule_init(self.window.as_weak(), input_region, initial_input_rect, 20);
+        let _pet3d_timer = pet3d::start_timer(pet3d.clone(), self.window.as_weak(), render_stats);
         let _settings_pet3d_timer =
             pet3d::start_settings_timer(settings_pet3d.clone(), settings_window.as_weak());
         self.window.run()

@@ -150,31 +150,31 @@ impl PersistedSettings {
         Self {
             version: SETTINGS_VERSION,
             avatar: AvatarSettings {
-                character: state.blob_character,
-                palette: state.blob_palette,
-                expression: state.blob_expression,
-                expression_custom: state.blob_expression_custom,
-                random: state.avatar_random,
+                character: state.settings.blob_character,
+                palette: state.settings.blob_palette,
+                expression: state.settings.blob_expression,
+                expression_custom: state.settings.blob_expression_custom,
+                random: state.settings.avatar_random,
             }
             .normalized(),
-            behavior: state.behavior,
-            shadow: state.shadow.normalized(),
-            media_visual_mode: state.music_visual_mode,
-            prayer: state.prayer.normalized(),
+            behavior: state.settings.behavior,
+            shadow: state.settings.shadow.normalized(),
+            media_visual_mode: state.settings.music_visual_mode,
+            prayer: state.settings.prayer.normalized(),
         }
     }
 
     pub fn apply_to_state(&self, state: &mut AppState) {
         let avatar = self.avatar.normalized();
-        state.blob_character = avatar.character;
-        state.blob_palette = avatar.palette;
-        state.blob_expression = avatar.expression;
-        state.blob_expression_custom = avatar.expression_custom;
-        state.avatar_random = avatar.random;
-        state.behavior = self.behavior;
-        state.shadow = self.shadow.normalized();
-        state.music_visual_mode = self.media_visual_mode;
-        state.prayer = self.prayer.normalized();
+        state.settings.blob_character = avatar.character;
+        state.settings.blob_palette = avatar.palette;
+        state.settings.blob_expression = avatar.expression;
+        state.settings.blob_expression_custom = avatar.expression_custom;
+        state.settings.avatar_random = avatar.random;
+        state.settings.behavior = self.behavior;
+        state.settings.shadow = self.shadow.normalized();
+        state.settings.music_visual_mode = self.media_visual_mode;
+        state.settings.prayer = self.prayer.normalized();
     }
 }
 
@@ -217,52 +217,55 @@ mod tests {
 
         settings.apply_to_state(&mut state);
 
-        assert_eq!(state.blob_character, 99 % SHAPE_COUNT);
-        assert_eq!(state.blob_palette, 99 % PALETTE_COUNT);
-        assert_eq!(state.blob_expression, 99 % EXPRESSION_COUNT);
-        assert!(state.blob_expression_custom);
-        assert!(state.avatar_random);
+        assert_eq!(state.settings.blob_character, 99 % SHAPE_COUNT);
+        assert_eq!(state.settings.blob_palette, 99 % PALETTE_COUNT);
+        assert_eq!(state.settings.blob_expression, 99 % EXPRESSION_COUNT);
+        assert!(state.settings.blob_expression_custom);
+        assert!(state.settings.avatar_random);
     }
 
     #[test]
     fn round_trips_state_settings() {
         let mut state = AppState::default();
-        state.blob_character = 5;
-        state.blob_palette = 7;
-        state.blob_expression = 11;
-        state.blob_expression_custom = true;
-        state.avatar_random = true;
-        state.behavior.cursor_gaze = false;
-        state.behavior.music_reactions = false;
-        state.shadow.enabled = false;
-        state.shadow.intensity = 80;
-        state.shadow.radius = 34;
-        state.shadow.offset_x = -8;
-        state.shadow.offset_y = 12;
-        state.music_visual_mode = MusicVisualMode::PetPrimary;
-        state.prayer.enabled = false;
-        state.prayer.city = 8;
-        state.prayer.reminder_minutes = 15;
+        state.settings.blob_character = 5;
+        state.settings.blob_palette = 7;
+        state.settings.blob_expression = 11;
+        state.settings.blob_expression_custom = true;
+        state.settings.avatar_random = true;
+        state.settings.behavior.cursor_gaze = false;
+        state.settings.behavior.music_reactions = false;
+        state.settings.shadow.enabled = false;
+        state.settings.shadow.intensity = 80;
+        state.settings.shadow.radius = 34;
+        state.settings.shadow.offset_x = -8;
+        state.settings.shadow.offset_y = 12;
+        state.settings.music_visual_mode = MusicVisualMode::PetPrimary;
+        state.settings.prayer.enabled = false;
+        state.settings.prayer.city = 8;
+        state.settings.prayer.reminder_minutes = 15;
 
         let snapshot = PersistedSettings::from_state(&state);
         let mut restored = AppState::default();
         snapshot.apply_to_state(&mut restored);
 
-        assert_eq!(restored.blob_character, 5);
-        assert_eq!(restored.blob_palette, 7);
-        assert_eq!(restored.blob_expression, 11);
-        assert!(restored.blob_expression_custom);
-        assert!(restored.avatar_random);
-        assert!(!restored.behavior.cursor_gaze);
-        assert!(!restored.behavior.music_reactions);
-        assert!(!restored.shadow.enabled);
-        assert_eq!(restored.shadow.intensity, 80);
-        assert_eq!(restored.shadow.radius, 34);
-        assert_eq!(restored.shadow.offset_x, -8);
-        assert_eq!(restored.shadow.offset_y, 12);
-        assert_eq!(restored.music_visual_mode, MusicVisualMode::PetPrimary);
-        assert!(!restored.prayer.enabled);
-        assert_eq!(restored.prayer.city, 8);
-        assert_eq!(restored.prayer.reminder_minutes, 15);
+        assert_eq!(restored.settings.blob_character, 5);
+        assert_eq!(restored.settings.blob_palette, 7);
+        assert_eq!(restored.settings.blob_expression, 11);
+        assert!(restored.settings.blob_expression_custom);
+        assert!(restored.settings.avatar_random);
+        assert!(!restored.settings.behavior.cursor_gaze);
+        assert!(!restored.settings.behavior.music_reactions);
+        assert!(!restored.settings.shadow.enabled);
+        assert_eq!(restored.settings.shadow.intensity, 80);
+        assert_eq!(restored.settings.shadow.radius, 34);
+        assert_eq!(restored.settings.shadow.offset_x, -8);
+        assert_eq!(restored.settings.shadow.offset_y, 12);
+        assert_eq!(
+            restored.settings.music_visual_mode,
+            MusicVisualMode::PetPrimary
+        );
+        assert!(!restored.settings.prayer.enabled);
+        assert_eq!(restored.settings.prayer.city, 8);
+        assert_eq!(restored.settings.prayer.reminder_minutes, 15);
     }
 }

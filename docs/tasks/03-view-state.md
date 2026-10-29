@@ -25,7 +25,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T3.1 — Pisahkan `AppState` menjadi sub-state
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T2.4`
 - **Trace:** `STATE-1`
@@ -38,6 +38,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Setiap field memiliki pemilik yang jelas.
   - Tidak ada perubahan perilaku.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `AppState` sekarang terdiri dari `view`, `domain`, `module`, `runtime`, `settings`, dan `presentation`. `ViewState` masih memuat salinan navigasi sementara yang disinkronkan dari `ViewEngine`; duplikasi ini dihapus di `T3.2`. Semua call site production/test dimigrasikan ke sub-state yang sesuai. `cargo test --workspace` tetap lulus 157 test.
 
 ## T3.2 — Jadikan `ViewEngine` canonical untuk navigasi
 

@@ -3,13 +3,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use crate::render_stats::RenderStats;
 use island_core::models::{AlertKind, IslandView};
 use island_core::state::{AppState, MochiMoodState};
 use island_pet3d::{
     BloubEngine, BloubFrame, BloubPalette, BloubRenderer, ExpressionId, ShapeId, StateId,
 };
 use island_ui::{IslandContext, MainWindow, SettingsWindow};
-use crate::render_stats::RenderStats;
 use slint::{ComponentHandle, GraphicsAPI, RenderingState};
 use tracing::{debug, info, warn};
 
@@ -229,58 +229,61 @@ impl Pet3dInner {
         let mut input = self.input.lock().unwrap();
         let preview = self.preview;
         input.is_singing = !preview
-            && app_state.media.is_playing
-            && app_state.behavior.music_reactions;
+            && app_state.domain.media.is_playing
+            && app_state.settings.behavior.music_reactions;
         input.bass = if preview {
             0.0
         } else {
-            ((app_state.spectrum.bars[0] + app_state.spectrum.bars[1]) * 0.5).clamp(0.0, 1.0)
+            ((app_state.domain.spectrum.bars[0] + app_state.domain.spectrum.bars[1]) * 0.5)
+                .clamp(0.0, 1.0)
         };
-        input.pet_is_happy = app_state.pet_is_happy;
-        input.pet_happy_generation = app_state.pet_happy_generation;
-        input.pet_dizzy_generation = app_state.pet_dizzy_generation;
-        input.is_welcome = !preview && app_state.is_welcome;
-        input.welcome_generation = app_state.welcome_generation;
-        input.is_dizzy = app_state.pet_is_dizzy;
-        input.is_sleepy =
-            !preview && app_state.pet_is_sleepy && app_state.behavior.sleepy_on_low_battery;
-        input.is_charging = !preview && app_state.battery.is_charging;
+        input.pet_is_happy = app_state.presentation.pet_is_happy;
+        input.pet_happy_generation = app_state.presentation.pet_happy_generation;
+        input.pet_dizzy_generation = app_state.presentation.pet_dizzy_generation;
+        input.is_welcome = !preview && app_state.presentation.is_welcome;
+        input.welcome_generation = app_state.presentation.welcome_generation;
+        input.is_dizzy = app_state.presentation.pet_is_dizzy;
+        input.is_sleepy = !preview
+            && app_state.presentation.pet_is_sleepy
+            && app_state.settings.behavior.sleepy_on_low_battery;
+        input.is_charging = !preview && app_state.domain.battery.is_charging;
         input.alert_kind = if preview {
             AlertKind::None
         } else {
-            app_state.alert_kind
+            app_state.domain.alert_kind
         };
         input.notification_generation = if preview {
             0
         } else {
-            app_state.notification_generation
+            app_state.presentation.notification_generation
         };
-        input.is_compact = !preview && matches!(app_state.mode, IslandView::Compact);
+        input.is_compact = !preview && matches!(app_state.view.mode, IslandView::Compact);
         input.mochi_mood = if preview {
             MochiMoodState::Idle
         } else {
-            app_state.mochi_mood
+            app_state.presentation.mochi_mood
         };
-        input.blob_character = app_state.blob_character;
-        input.blob_palette = app_state.blob_palette;
-        input.blob_expression = app_state.blob_expression;
-        input.blob_expression_custom = app_state.blob_expression_custom;
-        input.cursor_gaze_enabled = !preview && app_state.behavior.cursor_gaze;
-        input.idle_acting_enabled = app_state.behavior.idle_acting;
-        input.notification_reactions_enabled = !preview && app_state.behavior.notification_reactions;
+        input.blob_character = app_state.settings.blob_character;
+        input.blob_palette = app_state.settings.blob_palette;
+        input.blob_expression = app_state.settings.blob_expression;
+        input.blob_expression_custom = app_state.settings.blob_expression_custom;
+        input.cursor_gaze_enabled = !preview && app_state.settings.behavior.cursor_gaze;
+        input.idle_acting_enabled = app_state.settings.behavior.idle_acting;
+        input.notification_reactions_enabled =
+            !preview && app_state.settings.behavior.notification_reactions;
         input.welcome_age = if preview { -1.0 } else { 0.0 };
 
         let mut timing = self.timing.lock().unwrap();
         if preview {
             timing.welcome_start = None;
-        } else if app_state.welcome_generation != timing.last_welcome_generation {
-            timing.welcome_start = if app_state.is_welcome {
+        } else if app_state.presentation.welcome_generation != timing.last_welcome_generation {
+            timing.welcome_start = if app_state.presentation.is_welcome {
                 Some(Instant::now())
             } else {
                 None
             };
         }
-        if !preview && !app_state.is_welcome {
+        if !preview && !app_state.presentation.is_welcome {
             timing.welcome_start = None;
         }
     }
@@ -361,9 +364,17 @@ impl Pet3dInner {
         if (happy_restart
             && matches!(
                 target_state,
-                StateId::Wink | StateId::Bounce | StateId::Backflip | StateId::RotateX | StateId::Alert
+                StateId::Wink
+                    | StateId::Bounce
+                    | StateId::Backflip
+                    | StateId::RotateX
+                    | StateId::Alert
             ))
-            || (dizzy_restart && matches!(target_state, StateId::Orbit | StateId::Shake | StateId::RotateX))
+            || (dizzy_restart
+                && matches!(
+                    target_state,
+                    StateId::Orbit | StateId::Shake | StateId::RotateX
+                ))
             || (welcome_restart && target_state == StateId::Swirl)
             || (notification_restart && target_state == StateId::Ping)
         {
@@ -384,7 +395,9 @@ impl Pet3dInner {
         engine.set_energy(input.bass);
         engine.set_compact(input.is_compact);
         engine.set_idle_acting(
-            target_state == StateId::Idle && !input.blob_expression_custom && input.idle_acting_enabled,
+            target_state == StateId::Idle
+                && !input.blob_expression_custom
+                && input.idle_acting_enabled,
         );
         let frame = engine.sample(t);
         drop(engine);
@@ -397,12 +410,8 @@ impl Pet3dInner {
         TickResult { dirty: true }
     }
 
-    fn notify<F>(
-        &self,
-        state: RenderingState,
-        graphics_api: &GraphicsAPI<'_>,
-        set_ready: &F,
-    ) where
+    fn notify<F>(&self, state: RenderingState, graphics_api: &GraphicsAPI<'_>, set_ready: &F)
+    where
         F: Fn(Option<slint::Image>),
     {
         match state {
@@ -482,11 +491,8 @@ impl Pet3dInner {
     }
 }
 
-fn install_notifier<F>(
-    window: &slint::Window,
-    inner: &Arc<Pet3dInner>,
-    set_ready: F,
-) where
+fn install_notifier<F>(window: &slint::Window, inner: &Arc<Pet3dInner>, set_ready: F)
+where
     F: Fn(Option<slint::Image>) + 'static,
 {
     let inner_cb = inner.clone();
@@ -599,14 +605,20 @@ mod tests {
     fn custom_expression_overrides_charging_mood() {
         let mut input = input_with_expression(ExpressionId::Robot.index() as u32, true);
         input.is_charging = true;
-        assert_eq!(resolve_expression(&input, StateId::Charging), ExpressionId::Robot);
+        assert_eq!(
+            resolve_expression(&input, StateId::Charging),
+            ExpressionId::Robot
+        );
     }
 
     #[test]
     fn charging_still_uses_excite_without_custom_choice() {
         let mut input = input_with_expression(ExpressionId::Robot.index() as u32, false);
         input.is_charging = true;
-        assert_eq!(resolve_expression(&input, StateId::Charging), ExpressionId::Excite);
+        assert_eq!(
+            resolve_expression(&input, StateId::Charging),
+            ExpressionId::Excite
+        );
     }
 
     #[test]
@@ -675,7 +687,7 @@ mod tests {
     fn preview_ignores_cursor_gaze() {
         let inner = Pet3dInner::new_preview();
         let mut state = AppState::default();
-        state.behavior.cursor_gaze = true;
+        state.settings.behavior.cursor_gaze = true;
         inner.update_from_state(&state);
 
         inner.set_gaze(0.75, -0.35);
@@ -686,12 +698,12 @@ mod tests {
     fn preview_ignores_welcome_media_and_alerts() {
         let inner = Pet3dInner::new_preview();
         let mut state = AppState::default();
-        state.media.is_playing = true;
-        state.is_welcome = true;
-        state.battery.is_charging = true;
-        state.alert_kind = AlertKind::Charging;
-        state.blob_character = 4;
-        state.blob_palette = 9;
+        state.domain.media.is_playing = true;
+        state.presentation.is_welcome = true;
+        state.domain.battery.is_charging = true;
+        state.domain.alert_kind = AlertKind::Charging;
+        state.settings.blob_character = 4;
+        state.settings.blob_palette = 9;
 
         inner.update_from_state(&state);
         inner.tick();
@@ -719,12 +731,12 @@ mod tests {
     #[test]
     fn disabled_behavior_gates_pet_inputs() {
         let mut state = AppState::default();
-        state.media.is_playing = true;
-        state.pet_is_sleepy = true;
-        state.notification_generation = 1;
-        state.behavior.music_reactions = false;
-        state.behavior.sleepy_on_low_battery = false;
-        state.behavior.notification_reactions = false;
+        state.domain.media.is_playing = true;
+        state.presentation.pet_is_sleepy = true;
+        state.presentation.notification_generation = 1;
+        state.settings.behavior.music_reactions = false;
+        state.settings.behavior.sleepy_on_low_battery = false;
+        state.settings.behavior.notification_reactions = false;
 
         let inner = Pet3dInner::new();
         inner.update_from_state(&state);

@@ -3,7 +3,7 @@ use crate::{ContentRouter, IslandContext, MainWindow, SettingsWindow};
 use chrono::{Datelike, NaiveDate, Utc};
 use island_core::models::IslandView;
 use island_core::prayer::{
-    moment_for, sky_for, times_for, Prayer, PrayerPhase, PrayerTimes, SkyState, CITIES,
+    CITIES, Prayer, PrayerPhase, PrayerTimes, SkyState, moment_for, sky_for, times_for,
 };
 use island_core::render_policy::RenderPolicy;
 use island_core::state::AppState;
@@ -19,63 +19,67 @@ impl ViewModel {
         ctx.set_render_pet(policy.pet_3d);
         ctx.set_render_spectrum(policy.spectrum);
         ctx.set_render_animations(policy.animations);
-        ctx.set_active_mode(ContentRouter::mode_to_index(state.mode));
+        ctx.set_active_mode(ContentRouter::mode_to_index(state.view.mode));
         let module_ui = ModuleUiRegistry::default();
         ctx.set_compact_module(
             module_ui
-                .slot_for(state.active_module, IslandView::Compact)
+                .slot_for(state.view.active_module, IslandView::Compact)
                 .index(),
         );
         ctx.set_wide_module(
             module_ui
-                .slot_for(state.active_module, IslandView::Wide)
+                .slot_for(state.view.active_module, IslandView::Wide)
                 .index(),
         );
         ctx.set_expand_module(
             module_ui
-                .slot_for(state.active_module, IslandView::Expand)
+                .slot_for(state.view.active_module, IslandView::Expand)
                 .index(),
         );
-        ctx.set_alert_kind(state.alert_kind as i32);
-        ctx.set_is_visible_state(state.is_visible);
+        ctx.set_alert_kind(state.domain.alert_kind as i32);
+        ctx.set_is_visible_state(state.view.is_visible);
 
-        ctx.set_time_str(state.time.time_str.clone().into());
-        ctx.set_date_str(state.time.date_str.clone().into());
+        ctx.set_time_str(state.domain.time.time_str.clone().into());
+        ctx.set_date_str(state.domain.time.date_str.clone().into());
 
-        ctx.set_battery_percentage(state.battery.percentage as i32);
-        ctx.set_is_charging(state.battery.is_charging);
+        ctx.set_battery_percentage(state.domain.battery.percentage as i32);
+        ctx.set_is_charging(state.domain.battery.is_charging);
 
-        ctx.set_song_title(state.media.title.clone().into());
-        ctx.set_song_artist(state.media.artist.clone().into());
-        ctx.set_is_playing(state.media.is_playing);
-        ctx.set_has_audio(state.media.is_playing || state.spectrum.bars.iter().any(|&b| b > 0.05));
-        ctx.set_music_visual_mode(state.music_visual_mode as i32);
-        ctx.set_mochi_mood(state.mochi_mood as i32);
-        ctx.set_blob_character(state.blob_character as i32);
-        ctx.set_blob_palette(state.blob_palette as i32);
-        ctx.set_blob_expression(state.blob_expression as i32);
-        ctx.set_avatar_random(state.avatar_random);
-        ctx.set_settings_open(state.settings_open);
-        ctx.set_settings_tab(state.settings_tab as i32);
-        ctx.set_cursor_gaze_enabled(state.behavior.cursor_gaze);
-        ctx.set_idle_acting_enabled(state.behavior.idle_acting);
-        ctx.set_click_stunts_enabled(state.behavior.click_stunts);
-        ctx.set_notification_reactions_enabled(state.behavior.notification_reactions);
-        ctx.set_music_reactions_enabled(state.behavior.music_reactions);
-        ctx.set_sleepy_on_low_battery(state.behavior.sleepy_on_low_battery);
+        ctx.set_song_title(state.domain.media.title.clone().into());
+        ctx.set_song_artist(state.domain.media.artist.clone().into());
+        ctx.set_is_playing(state.domain.media.is_playing);
+        ctx.set_has_audio(
+            state.domain.media.is_playing || state.domain.spectrum.bars.iter().any(|&b| b > 0.05),
+        );
+        ctx.set_music_visual_mode(state.settings.music_visual_mode as i32);
+        ctx.set_mochi_mood(state.presentation.mochi_mood as i32);
+        ctx.set_blob_character(state.settings.blob_character as i32);
+        ctx.set_blob_palette(state.settings.blob_palette as i32);
+        ctx.set_blob_expression(state.settings.blob_expression as i32);
+        ctx.set_avatar_random(state.settings.avatar_random);
+        ctx.set_settings_open(state.presentation.settings_open);
+        ctx.set_settings_tab(state.presentation.settings_tab as i32);
+        ctx.set_cursor_gaze_enabled(state.settings.behavior.cursor_gaze);
+        ctx.set_idle_acting_enabled(state.settings.behavior.idle_acting);
+        ctx.set_click_stunts_enabled(state.settings.behavior.click_stunts);
+        ctx.set_notification_reactions_enabled(state.settings.behavior.notification_reactions);
+        ctx.set_music_reactions_enabled(state.settings.behavior.music_reactions);
+        ctx.set_sleepy_on_low_battery(state.settings.behavior.sleepy_on_low_battery);
         sync_shadow_context(&ctx, state);
         sync_prayer_context(&ctx, state);
-        ctx.set_pet_is_happy(state.pet_is_happy);
-        ctx.set_pet_is_dizzy(state.pet_is_dizzy);
-        ctx.set_pet_is_sleepy(state.pet_is_sleepy && state.behavior.sleepy_on_low_battery);
-        ctx.set_is_welcome(state.is_welcome);
-        ctx.set_welcome_title(state.welcome_title.clone().into());
-        ctx.set_welcome_subtitle(state.welcome_subtitle.clone().into());
+        ctx.set_pet_is_happy(state.presentation.pet_is_happy);
+        ctx.set_pet_is_dizzy(state.presentation.pet_is_dizzy);
+        ctx.set_pet_is_sleepy(
+            state.presentation.pet_is_sleepy && state.settings.behavior.sleepy_on_low_battery,
+        );
+        ctx.set_is_welcome(state.presentation.is_welcome);
+        ctx.set_welcome_title(state.presentation.welcome_title.clone().into());
+        ctx.set_welcome_subtitle(state.presentation.welcome_subtitle.clone().into());
         ctx.set_app_version(env!("CARGO_PKG_VERSION").into());
 
         // Resolve Album Art image
-        if !state.media.art_url.is_empty() {
-            let path = std::path::Path::new(&state.media.art_url);
+        if !state.domain.media.art_url.is_empty() {
+            let path = std::path::Path::new(&state.domain.media.art_url);
             if path.exists() {
                 if let Ok(img) = slint::Image::load_from_path(path) {
                     ctx.set_art_image(img);
@@ -90,12 +94,13 @@ impl ViewModel {
             ctx.set_has_art(false);
         }
 
-        ctx.set_is_muted(state.is_muted);
-        ctx.set_is_dnd(state.is_dnd);
+        ctx.set_is_muted(state.domain.is_muted);
+        ctx.set_is_dnd(state.domain.is_dnd);
 
         // Media sources selection
-        ctx.set_show_source_selector(state.show_source_selector);
+        ctx.set_show_source_selector(state.module.show_source_selector);
         let items: Vec<crate::PlayerSourceItem> = state
+            .domain
             .media_sources
             .iter()
             .map(|s| crate::PlayerSourceItem {
@@ -108,7 +113,7 @@ impl ViewModel {
         ctx.set_player_sources(slint::ModelRc::new(slint::VecModel::from(items)));
 
         if policy.spectrum {
-            Self::sync_spectrum_to_ui(window, &state.spectrum.bars);
+            Self::sync_spectrum_to_ui(window, &state.domain.spectrum.bars);
         }
     }
 
@@ -131,31 +136,33 @@ impl ViewModel {
     pub fn sync_settings_to_ui(settings: &SettingsWindow, state: &AppState) {
         let ctx = settings.global::<IslandContext>();
 
-        ctx.set_settings_open(state.settings_open);
-        ctx.set_settings_tab(state.settings_tab as i32);
-        ctx.set_blob_character(state.blob_character as i32);
-        ctx.set_blob_palette(state.blob_palette as i32);
-        ctx.set_blob_expression(state.blob_expression as i32);
-        ctx.set_avatar_random(state.avatar_random);
-        ctx.set_cursor_gaze_enabled(state.behavior.cursor_gaze);
-        ctx.set_idle_acting_enabled(state.behavior.idle_acting);
-        ctx.set_click_stunts_enabled(state.behavior.click_stunts);
-        ctx.set_notification_reactions_enabled(state.behavior.notification_reactions);
-        ctx.set_music_reactions_enabled(state.behavior.music_reactions);
-        ctx.set_sleepy_on_low_battery(state.behavior.sleepy_on_low_battery);
+        ctx.set_settings_open(state.presentation.settings_open);
+        ctx.set_settings_tab(state.presentation.settings_tab as i32);
+        ctx.set_blob_character(state.settings.blob_character as i32);
+        ctx.set_blob_palette(state.settings.blob_palette as i32);
+        ctx.set_blob_expression(state.settings.blob_expression as i32);
+        ctx.set_avatar_random(state.settings.avatar_random);
+        ctx.set_cursor_gaze_enabled(state.settings.behavior.cursor_gaze);
+        ctx.set_idle_acting_enabled(state.settings.behavior.idle_acting);
+        ctx.set_click_stunts_enabled(state.settings.behavior.click_stunts);
+        ctx.set_notification_reactions_enabled(state.settings.behavior.notification_reactions);
+        ctx.set_music_reactions_enabled(state.settings.behavior.music_reactions);
+        ctx.set_sleepy_on_low_battery(state.settings.behavior.sleepy_on_low_battery);
         sync_shadow_context(&ctx, state);
         sync_prayer_context(&ctx, state);
-        ctx.set_music_visual_mode(state.music_visual_mode as i32);
-        ctx.set_pet_is_happy(state.pet_is_happy);
-        ctx.set_pet_is_dizzy(state.pet_is_dizzy);
-        ctx.set_pet_is_sleepy(state.pet_is_sleepy && state.behavior.sleepy_on_low_battery);
+        ctx.set_music_visual_mode(state.settings.music_visual_mode as i32);
+        ctx.set_pet_is_happy(state.presentation.pet_is_happy);
+        ctx.set_pet_is_dizzy(state.presentation.pet_is_dizzy);
+        ctx.set_pet_is_sleepy(
+            state.presentation.pet_is_sleepy && state.settings.behavior.sleepy_on_low_battery,
+        );
         ctx.set_is_playing(false);
         ctx.set_app_version(env!("CARGO_PKG_VERSION").into());
     }
 }
 
 fn sync_shadow_context(ctx: &IslandContext, state: &AppState) {
-    let shadow = state.shadow.normalized();
+    let shadow = state.settings.shadow.normalized();
     let intensity = shadow.intensity as f32 / 100.0;
     let alpha = if shadow.enabled { intensity * 0.8 } else { 0.0 };
     ctx.set_shadow_enabled(shadow.enabled);
@@ -167,12 +174,12 @@ fn sync_shadow_context(ctx: &IslandContext, state: &AppState) {
 }
 
 fn sync_prayer_context(ctx: &IslandContext, state: &AppState) {
-    ctx.set_prayer_enabled(state.prayer.enabled);
-    ctx.set_prayer_panel_open(state.prayer_panel_open);
-    ctx.set_prayer_city_index(state.prayer.city as i32);
-    ctx.set_prayer_reminder_minutes(state.prayer.reminder_minutes as i32);
+    ctx.set_prayer_enabled(state.settings.prayer.enabled);
+    ctx.set_prayer_panel_open(state.module.prayer_panel_open);
+    ctx.set_prayer_city_index(state.settings.prayer.city as i32);
+    ctx.set_prayer_reminder_minutes(state.settings.prayer.reminder_minutes as i32);
 
-    if let Some(alert) = &state.prayer_alert {
+    if let Some(alert) = &state.domain.prayer_alert {
         ctx.set_prayer_title(alert.title.clone().into());
         ctx.set_prayer_time(alert.time_label.clone().into());
         ctx.set_prayer_city_label(alert.city_label.clone().into());
@@ -192,7 +199,7 @@ fn sync_prayer_context(ctx: &IslandContext, state: &AppState) {
 }
 
 fn sync_prayer_schedule(ctx: &IslandContext, state: &AppState) {
-    let city = state.prayer.city();
+    let city = state.settings.prayer.city();
     let now = Utc::now().with_timezone(&city.offset());
     let date = now.date_naive();
     ctx.set_prayer_now_time(now.format("%H:%M").to_string().into());
@@ -220,13 +227,7 @@ fn sync_prayer_schedule(ctx: &IslandContext, state: &AppState) {
         .collect();
     ctx.set_prayer_schedule(slint::ModelRc::new(slint::VecModel::from(schedule)));
     ctx.set_prayer_schedule_subtitle(
-        format!(
-            "{} · {} · {}",
-            city.name,
-            city.region,
-            format_date_id(date)
-        )
-        .into(),
+        format!("{} · {} · {}", city.name, city.region, format_date_id(date)).into(),
     );
 
     let Some(moment) = moment_for(city, now) else {
@@ -267,7 +268,11 @@ fn reset_prayer_orbit(ctx: &IslandContext) {
 }
 
 /// Compute the real sky for the active city and push the derived colors.
-fn push_sky(ctx: &IslandContext, city: &island_core::prayer::City, now: chrono::DateTime<chrono::FixedOffset>) {
+fn push_sky(
+    ctx: &IslandContext,
+    city: &island_core::prayer::City,
+    now: chrono::DateTime<chrono::FixedOffset>,
+) {
     // Fall back to a neutral deep night if the city/date is out of range.
     let sky = sky_for(city, now).unwrap_or(SkyState {
         top: [0.02, 0.03, 0.08],
@@ -284,15 +289,15 @@ fn push_sky(ctx: &IslandContext, city: &island_core::prayer::City, now: chrono::
 
 /// Convert an `SkyState`'s sRGB triples into three Slint colors.
 fn sky_from(sky: SkyState) -> (slint::Color, slint::Color, slint::Color) {
-    (
-        rgb(sky.top),
-        rgb(sky.horizon),
-        rgb(sky.glow),
-    )
+    (rgb(sky.top), rgb(sky.horizon), rgb(sky.glow))
 }
 
 fn rgb(c: [f32; 3]) -> slint::Color {
-    slint::Color::from_rgb_f32(c[0].clamp(0.0, 1.0), c[1].clamp(0.0, 1.0), c[2].clamp(0.0, 1.0))
+    slint::Color::from_rgb_f32(
+        c[0].clamp(0.0, 1.0),
+        c[1].clamp(0.0, 1.0),
+        c[2].clamp(0.0, 1.0),
+    )
 }
 
 fn line_markers(times: &PrayerTimes, next: Prayer) -> Vec<crate::PrayerOrbitMarker> {
@@ -348,7 +353,7 @@ fn format_date_id(date: NaiveDate) -> String {
 mod tests {
     use super::{format_date_id, line_markers};
     use chrono::{NaiveDate, TimeZone};
-    use island_core::prayer::{moment_for, times_for, CITIES};
+    use island_core::prayer::{CITIES, moment_for, times_for};
 
     #[test]
     fn formats_indonesian_date() {
@@ -374,8 +379,14 @@ mod tests {
             assert!((marker.x - expected).abs() < f32::EPSILON);
         }
 
-        let subuh = markers.iter().find(|marker| marker.name == "Subuh").expect("Subuh marker");
-        let isya = markers.iter().find(|marker| marker.name == "Isya").expect("Isya marker");
+        let subuh = markers
+            .iter()
+            .find(|marker| marker.name == "Subuh")
+            .expect("Subuh marker");
+        let isya = markers
+            .iter()
+            .find(|marker| marker.name == "Isya")
+            .expect("Isya marker");
         assert!(subuh.is_next);
         assert!(!isya.is_next);
     }
