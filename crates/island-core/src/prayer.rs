@@ -224,9 +224,7 @@ impl PrayerTimes {
         let seconds_from_noon = (at - self.solar_noon).num_seconds() as f64;
         let hour_angle = (seconds_from_noon / 240.0).to_radians();
         let sin_altitude = self.sun_latitude_rad.sin() * self.sun_declination_rad.sin()
-            + self.sun_latitude_rad.cos()
-                * self.sun_declination_rad.cos()
-                * hour_angle.cos();
+            + self.sun_latitude_rad.cos() * self.sun_declination_rad.cos() * hour_angle.cos();
         sin_altitude.clamp(-1.0, 1.0).asin().to_degrees()
     }
 
@@ -255,14 +253,62 @@ pub struct SkyState {
 
 const SKY_KEYFRAMES: [(f64, [f32; 3], [f32; 3], [f32; 3], f32); 8] = [
     // (altitude°, top, horizon, glow, star_opacity)
-    (-18.0, [0.02, 0.03, 0.08], [0.03, 0.05, 0.12], [0.06, 0.08, 0.14], 0.95),
-    (-12.0, [0.03, 0.04, 0.11], [0.05, 0.07, 0.16], [0.10, 0.10, 0.20], 0.70),
-    (-6.0, [0.06, 0.06, 0.16], [0.14, 0.10, 0.20], [0.55, 0.30, 0.35], 0.35),
-    (0.0, [0.10, 0.10, 0.24], [0.55, 0.28, 0.22], [0.95, 0.50, 0.25], 0.12),
-    (4.0, [0.12, 0.16, 0.32], [0.70, 0.45, 0.30], [0.96, 0.62, 0.28], 0.04),
-    (12.0, [0.10, 0.20, 0.40], [0.35, 0.45, 0.55], [0.94, 0.71, 0.16], 0.00),
-    (35.0, [0.05, 0.12, 0.28], [0.18, 0.35, 0.52], [0.94, 0.71, 0.16], 0.00),
-    (60.0, [0.04, 0.10, 0.26], [0.15, 0.32, 0.50], [0.96, 0.77, 0.32], 0.00),
+    (
+        -18.0,
+        [0.02, 0.03, 0.08],
+        [0.03, 0.05, 0.12],
+        [0.06, 0.08, 0.14],
+        0.95,
+    ),
+    (
+        -12.0,
+        [0.03, 0.04, 0.11],
+        [0.05, 0.07, 0.16],
+        [0.10, 0.10, 0.20],
+        0.70,
+    ),
+    (
+        -6.0,
+        [0.06, 0.06, 0.16],
+        [0.14, 0.10, 0.20],
+        [0.55, 0.30, 0.35],
+        0.35,
+    ),
+    (
+        0.0,
+        [0.10, 0.10, 0.24],
+        [0.55, 0.28, 0.22],
+        [0.95, 0.50, 0.25],
+        0.12,
+    ),
+    (
+        4.0,
+        [0.12, 0.16, 0.32],
+        [0.70, 0.45, 0.30],
+        [0.96, 0.62, 0.28],
+        0.04,
+    ),
+    (
+        12.0,
+        [0.10, 0.20, 0.40],
+        [0.35, 0.45, 0.55],
+        [0.94, 0.71, 0.16],
+        0.00,
+    ),
+    (
+        35.0,
+        [0.05, 0.12, 0.28],
+        [0.18, 0.35, 0.52],
+        [0.94, 0.71, 0.16],
+        0.00,
+    ),
+    (
+        60.0,
+        [0.04, 0.10, 0.26],
+        [0.15, 0.32, 0.50],
+        [0.96, 0.77, 0.32],
+        0.00,
+    ),
 ];
 
 fn lerp(a: f32, b: f32, t: f32) -> f32 {
@@ -270,7 +316,11 @@ fn lerp(a: f32, b: f32, t: f32) -> f32 {
 }
 
 fn lerp3(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
-    [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
+    [
+        lerp(a[0], b[0], t),
+        lerp(a[1], b[1], t),
+        lerp(a[2], b[2], t),
+    ]
 }
 
 /// Map a signed solar altitude to a full sky palette by interpolating the
@@ -336,8 +386,7 @@ pub fn times_for(city: &City, date: NaiveDate) -> Option<PrayerTimes> {
             - 0.032077 * gamma.sin()
             - 0.014615 * (2.0 * gamma).cos()
             - 0.040849 * (2.0 * gamma).sin());
-    let declination = 0.006918 - 0.399912 * gamma.cos()
-        + 0.070257 * gamma.sin()
+    let declination = 0.006918 - 0.399912 * gamma.cos() + 0.070257 * gamma.sin()
         - 0.006758 * (2.0 * gamma).cos()
         + 0.000907 * (2.0 * gamma).sin()
         - 0.002697 * (3.0 * gamma).cos()
@@ -433,13 +482,7 @@ pub fn moment_for(city: &City, now: DateTime<FixedOffset>) -> Option<PrayerMomen
             };
             let progress = fraction_between(now, arc_start, arc_end);
             let orb_height = (std::f32::consts::PI * progress).sin();
-            (
-                PrayerPhase::Night,
-                arc_start,
-                arc_end,
-                progress,
-                orb_height,
-            )
+            (PrayerPhase::Night, arc_start, arc_end, progress, orb_height)
         };
 
     let (next_prayer, next_at) = today
@@ -486,7 +529,11 @@ pub fn alerts_for_date(settings: &PrayerSettings, date: NaiveDate) -> Vec<Prayer
                 prayer,
                 kind: PrayerAlertKind::Reminder,
                 at: at.with_timezone(&Utc),
-                title: format!("{} {} menit lagi", prayer.name_id(), settings.reminder_minutes),
+                title: format!(
+                    "{} {} menit lagi",
+                    prayer.name_id(),
+                    settings.reminder_minutes
+                ),
                 time_label: time_label.clone(),
                 city_label: city.name.to_string(),
             });
@@ -590,9 +637,11 @@ mod tests {
         let alerts = alerts_for_date(&settings, date(2026, 10, 28));
 
         assert_eq!(alerts.len(), PRAYER_COUNT);
-        assert!(alerts
-            .iter()
-            .all(|alert| alert.kind == PrayerAlertKind::Adhan));
+        assert!(
+            alerts
+                .iter()
+                .all(|alert| alert.kind == PrayerAlertKind::Adhan)
+        );
     }
 
     #[test]
@@ -623,7 +672,10 @@ mod tests {
     #[test]
     fn moment_tracks_day_segment_progress() {
         let city = &CITIES[0];
-        let now = city.offset().with_ymd_and_hms(2026, 10, 28, 8, 0, 0).unwrap();
+        let now = city
+            .offset()
+            .with_ymd_and_hms(2026, 10, 28, 8, 0, 0)
+            .unwrap();
         let moment = moment_for(city, now).expect("valid moment");
 
         assert_eq!(moment.phase, PrayerPhase::Day);
@@ -637,28 +689,31 @@ mod tests {
     #[test]
     fn moment_switches_to_night_after_sunset() {
         let city = &CITIES[0];
-        let now = city.offset().with_ymd_and_hms(2026, 10, 28, 21, 0, 0).unwrap();
+        let now = city
+            .offset()
+            .with_ymd_and_hms(2026, 10, 28, 21, 0, 0)
+            .unwrap();
         let moment = moment_for(city, now).expect("valid moment");
 
         assert_eq!(moment.phase, PrayerPhase::Night);
         assert_eq!(moment.next_prayer, Prayer::Fajr);
         assert_eq!(moment.next_at.date_naive(), date(2026, 10, 29));
         assert!(moment.orbit_progress > 0.0 && moment.orbit_progress < 1.0);
-        assert_eq!(
-            moment.arc_start.format("%H:%M").to_string(),
-            "17:46"
-        );
-        assert_eq!(
-            moment.arc_end.date_naive(),
-            date(2026, 10, 29)
-        );
+        assert_eq!(moment.arc_start.format("%H:%M").to_string(), "17:46");
+        assert_eq!(moment.arc_end.date_naive(), date(2026, 10, 29));
     }
 
     #[test]
     fn night_progress_runs_from_sunset_to_sunrise() {
         let city = &CITIES[0];
-        let evening = city.offset().with_ymd_and_hms(2026, 10, 28, 19, 0, 0).unwrap();
-        let early = city.offset().with_ymd_and_hms(2026, 10, 29, 4, 0, 0).unwrap();
+        let evening = city
+            .offset()
+            .with_ymd_and_hms(2026, 10, 28, 19, 0, 0)
+            .unwrap();
+        let early = city
+            .offset()
+            .with_ymd_and_hms(2026, 10, 29, 4, 0, 0)
+            .unwrap();
 
         let evening = moment_for(city, evening).expect("valid evening moment");
         let early = moment_for(city, early).expect("valid early moment");
@@ -671,7 +726,10 @@ mod tests {
     #[test]
     fn moment_before_fajr_targets_today_fajr() {
         let city = &CITIES[0];
-        let now = city.offset().with_ymd_and_hms(2026, 10, 28, 3, 0, 0).unwrap();
+        let now = city
+            .offset()
+            .with_ymd_and_hms(2026, 10, 28, 3, 0, 0)
+            .unwrap();
         let moment = moment_for(city, now).expect("valid moment");
 
         assert_eq!(moment.phase, PrayerPhase::Night);
@@ -734,8 +792,14 @@ mod tests {
     #[test]
     fn sky_for_tracks_time_of_day() {
         let city = &CITIES[0];
-        let noon = city.offset().with_ymd_and_hms(2026, 10, 28, 12, 30, 0).unwrap();
-        let midnight = city.offset().with_ymd_and_hms(2026, 10, 28, 0, 30, 0).unwrap();
+        let noon = city
+            .offset()
+            .with_ymd_and_hms(2026, 10, 28, 12, 30, 0)
+            .unwrap();
+        let midnight = city
+            .offset()
+            .with_ymd_and_hms(2026, 10, 28, 0, 30, 0)
+            .unwrap();
 
         let day_sky = sky_for(city, noon).expect("valid day sky");
         let night_sky = sky_for(city, midnight).expect("valid night sky");
@@ -765,8 +829,14 @@ mod tests {
 
     #[test]
     fn kendari_and_baubau_are_wita_presets() {
-        let kendari = CITIES.iter().find(|city| city.name == "Kendari").expect("Kendari");
-        let baubau = CITIES.iter().find(|city| city.name == "Baubau").expect("Baubau");
+        let kendari = CITIES
+            .iter()
+            .find(|city| city.name == "Kendari")
+            .expect("Kendari");
+        let baubau = CITIES
+            .iter()
+            .find(|city| city.name == "Baubau")
+            .expect("Baubau");
 
         assert_eq!(kendari.region, "WITA");
         assert_eq!(baubau.region, "WITA");

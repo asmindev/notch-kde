@@ -168,7 +168,7 @@ fn test_critical_battery_takes_priority_over_media() {
     assert_eq!(state.view.active_module(), ActiveModule::Alert);
     assert_eq!(state.domain.alert_generation, 1);
     assert!(effects.contains(&island_core::Effect::ScheduleTimer {
-        id: "alert_timeout",
+        id: island_core::TimerId::Alert,
         duration_ms: 2800,
         generation: 1,
     }));

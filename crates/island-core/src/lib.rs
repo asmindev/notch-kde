@@ -13,8 +13,10 @@ pub mod transition_policy;
 pub mod view_engine;
 
 pub use content_resolver::{ContentReason, ContentResolver, ResolvedContent, resolve};
-pub use events::{AppEvent, Effect};
-pub use models::{ActiveModule, AudioSpectrum, BatteryState, IslandMode, IslandView, MediaTrack, TimeInfo};
+pub use events::{AppEvent, Effect, TimerId};
+pub use models::{
+    ActiveModule, AudioSpectrum, BatteryState, IslandMode, IslandView, MediaTrack, TimeInfo,
+};
 pub use module::{
     IslandModule, ModuleContext, ModuleDescriptor, ModuleId, ModuleTiers, Priority, SlotContext,
     UnknownModuleId,

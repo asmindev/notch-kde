@@ -29,7 +29,7 @@ fn hover_reveals_compact_then_wide_after_timeout() {
     assert_eq!(
         effects,
         vec![Effect::ScheduleTimer {
-            id: "overlap_reveal",
+            id: island_core::TimerId::OverlapReveal,
             duration_ms: 300,
             generation,
         }]
@@ -49,7 +49,7 @@ fn hover_reveals_compact_then_wide_after_timeout() {
     assert_eq!(
         effects,
         vec![Effect::ScheduleTimer {
-            id: "overlap_dismiss_hide",
+            id: island_core::TimerId::OverlapDismissHide,
             duration_ms: 250,
             generation: hide_generation,
         }]
@@ -124,7 +124,7 @@ fn clicking_expand_notch_dismisses_in_stages() {
     assert_eq!(
         effects,
         vec![Effect::ScheduleTimer {
-            id: "overlap_dismiss_compact",
+            id: island_core::TimerId::OverlapDismissCompact,
             duration_ms: 250,
             generation,
         }]
@@ -145,7 +145,7 @@ fn clicking_expand_notch_dismisses_in_stages() {
     assert_eq!(
         effects,
         vec![Effect::ScheduleTimer {
-            id: "overlap_dismiss_hide",
+            id: island_core::TimerId::OverlapDismissHide,
             duration_ms: 250,
             generation,
         }]
@@ -170,7 +170,7 @@ fn clicking_outside_expand_dismisses_in_stages() {
     assert_eq!(
         effects,
         vec![Effect::ScheduleTimer {
-            id: "overlap_dismiss_compact",
+            id: island_core::TimerId::OverlapDismissCompact,
             duration_ms: 250,
             generation,
         }]

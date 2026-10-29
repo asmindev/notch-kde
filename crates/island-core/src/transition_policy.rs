@@ -22,7 +22,10 @@ impl TransitionPolicy {
         dismiss_active: bool,
         view: IslandView,
     ) -> bool {
-        if std::env::var("ISLAND_DODGE").map(|v| v == "0").unwrap_or(false) {
+        if std::env::var("ISLAND_DODGE")
+            .map(|v| v == "0")
+            .unwrap_or(false)
+        {
             return true;
         }
 

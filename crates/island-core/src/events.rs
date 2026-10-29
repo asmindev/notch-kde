@@ -4,11 +4,27 @@ use crate::models::{
 use crate::prayer::PrayerAlert;
 use crate::settings::SettingsTab;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TimerId {
+    Alert,
+    CollapseCompact,
+    MochiAnnoyed,
+    MochiDizzy,
+    MochiSlapReset,
+    OverlapDismissCompact,
+    OverlapDismissHide,
+    OverlapReveal,
+    PetDizzy,
+    PetHappy,
+    PetPokeReset,
+    Welcome,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppEvent {
     // Time & periodic
     Tick(TimeInfo),
-    
+
     // Services
     BatteryUpdated(BatteryState),
     MediaUpdated(MediaTrack),
@@ -18,7 +34,7 @@ pub enum AppEvent {
     AudioMuteUpdated(bool),
     NotificationReceived,
     PrayerAlert(PrayerAlert),
-    
+
     // Platform & windowing
     WindowOverlapChanged(bool),
     UserHoverChanged(bool),
@@ -26,14 +42,14 @@ pub enum AppEvent {
     OverlapDismissCompactTimeout(u64),
     OverlapDismissHideTimeout(u64),
     CollapseCompactTimeout(u64),
-    
+
     // Mode & module transitions
     ViewSwitchRequested(IslandView),
     ModuleSwitchRequested(ActiveModule),
     WelcomeTimeout,
     ScreenUnlocked,
     TriggerWelcome,
-    
+
     // User interactions
     PlayPauseClicked,
     NextTrackClicked,
@@ -96,5 +112,9 @@ pub enum Effect {
     ToggleDnd,
     PersistSettings,
     SelectMediaSource(String),
-    ScheduleTimer { id: &'static str, duration_ms: u64, generation: u64 },
+    ScheduleTimer {
+        id: TimerId,
+        duration_ms: u64,
+        generation: u64,
+    },
 }

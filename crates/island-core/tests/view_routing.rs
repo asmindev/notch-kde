@@ -36,7 +36,7 @@ fn test_view_routing_click_expand_and_collapse() {
     assert_eq!(
         effects,
         vec![island_core::Effect::ScheduleTimer {
-            id: "collapse_compact",
+            id: island_core::TimerId::CollapseCompact,
             duration_ms: 250,
             generation,
         }]
@@ -97,7 +97,7 @@ fn test_expand_click_collapses_directly_to_compact() {
     assert_eq!(
         effects,
         vec![island_core::Effect::ScheduleTimer {
-            id: "collapse_compact",
+            id: island_core::TimerId::CollapseCompact,
             duration_ms: 250,
             generation,
         }]

@@ -21,7 +21,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T4.1 — Definisikan `TimerId`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T3.2`
 - **Trace:** `TIMER-1`
@@ -34,6 +34,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Tidak ada string timer di reducer.
   - Compiler menangkap timer yang tidak valid.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `TimerId` mencakup seluruh timer reducer; `Effect::ScheduleTimer.id` dan seluruh call site test memakai enum. `rg 'id: "' crates/island-core/src/reducer.rs` tidak menemukan string timer.
 
 ## T4.2 — Implementasikan `TimerScheduler`
 

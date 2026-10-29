@@ -1,11 +1,10 @@
+use crate::content_resolver::ResolvedContent;
 use crate::models::IslandView;
 use crate::module::ModuleId;
 pub use crate::module::{IslandModule, ModuleTiers, Priority, SlotContext};
-use crate::content_resolver::ResolvedContent;
 use crate::module_registry::{DuplicateModuleId, ModuleRegistry};
 use crate::transition_policy::TransitionPolicy;
 use std::sync::Arc;
-
 
 /// ViewEngine manages the 3-tier view state machine and dodge sequencing
 /// through clean composition of modules and priority resolution.
@@ -109,10 +108,7 @@ impl ViewEngine {
     }
 
     pub fn finish_overlap_reveal(&mut self) {
-        if self.overlap_reveal_hold
-            && self.is_hovered
-            && self.current_view == IslandView::Compact
-        {
+        if self.overlap_reveal_hold && self.is_hovered && self.current_view == IslandView::Compact {
             self.overlap_reveal_hold = false;
             self.hover_suppressed = false;
             self.set_view(IslandView::Wide);

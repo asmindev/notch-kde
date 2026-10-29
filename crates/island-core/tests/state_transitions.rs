@@ -38,12 +38,12 @@ fn test_screen_unlocked_triggers_welcome() {
         effects,
         vec![
             island_core::events::Effect::ScheduleTimer {
-                id: "pet_happy_timeout",
+                id: island_core::TimerId::PetHappy,
                 duration_ms: 1500,
                 generation: 1,
             },
             island_core::events::Effect::ScheduleTimer {
-                id: "welcome_timeout",
+                id: island_core::TimerId::Welcome,
                 duration_ms: 3500,
                 generation: 2,
             },
@@ -176,7 +176,7 @@ fn test_pet_clicked_and_happy_timeout() {
     assert_eq!(state.presentation.pet_happy_generation, 1);
     assert!(
         effects.contains(&island_core::events::Effect::ScheduleTimer {
-            id: "pet_happy_timeout",
+            id: island_core::TimerId::PetHappy,
             duration_ms: 1500,
             generation: 1,
         })
@@ -188,7 +188,7 @@ fn test_pet_clicked_and_happy_timeout() {
     assert_eq!(state.presentation.pet_happy_generation, 2);
     assert!(
         effects2.contains(&island_core::events::Effect::ScheduleTimer {
-            id: "pet_happy_timeout",
+            id: island_core::TimerId::PetHappy,
             duration_ms: 1500,
             generation: 2,
         })
@@ -235,7 +235,7 @@ fn test_pet_rapid_poking_triggers_dizzy() {
     assert!(!state.presentation.pet_is_happy);
     assert!(
         effects.contains(&island_core::events::Effect::ScheduleTimer {
-            id: "mochi_dizzy_timeout",
+            id: island_core::TimerId::MochiDizzy,
             duration_ms: 2200,
             generation: state.presentation.mochi_generation,
         })
@@ -519,7 +519,7 @@ fn test_prayer_alert_sets_and_clears_alert() {
     assert_eq!(
         effects,
         vec![island_core::Effect::ScheduleTimer {
-            id: "alert_timeout",
+            id: island_core::TimerId::Alert,
             duration_ms: 9000,
             generation: 1,
         }]

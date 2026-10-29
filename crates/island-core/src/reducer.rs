@@ -1,4 +1,4 @@
-use crate::events::{AppEvent, Effect};
+use crate::events::{AppEvent, Effect, TimerId};
 use crate::models::IslandView;
 use crate::prayer::{PrayerAlertKind, PrayerSettings};
 use crate::settings::{AvatarSettings, PetBehaviorSettings, ShadowSettings};
@@ -11,7 +11,7 @@ fn begin_overlap_dismissal(state: &mut AppState, effects: &mut Vec<Effect>) {
     state.view.engine.begin_overlap_dismiss();
     state.update_active_module();
     effects.push(Effect::ScheduleTimer {
-        id: "overlap_dismiss_compact",
+        id: TimerId::OverlapDismissCompact,
         duration_ms: 250,
         generation,
     });
@@ -24,7 +24,7 @@ fn begin_standard_collapse(state: &mut AppState, effects: &mut Vec<Effect>) {
     state.view.engine.begin_overlap_dismiss();
     state.update_active_module();
     effects.push(Effect::ScheduleTimer {
-        id: "collapse_compact",
+        id: TimerId::CollapseCompact,
         duration_ms: 250,
         generation,
     });
@@ -63,7 +63,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
                 state.domain.alert_kind = crate::models::AlertKind::Charging;
                 state.domain.prayer_alert = None;
                 effects.push(Effect::ScheduleTimer {
-                    id: "alert_timeout",
+                    id: TimerId::Alert,
                     duration_ms: 2800,
                     generation: gen_id,
                 });
@@ -88,7 +88,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.domain.prayer_alert = Some(alert);
             state.update_active_module();
             effects.push(Effect::ScheduleTimer {
-                id: "alert_timeout",
+                id: TimerId::Alert,
                 duration_ms,
                 generation: gen_id,
             });
@@ -183,12 +183,12 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
                 state.presentation.pet_is_happy = false;
                 state.presentation.pet_dizzy_generation = gen_id;
                 effects.push(Effect::ScheduleTimer {
-                    id: "mochi_dizzy_timeout",
+                    id: TimerId::MochiDizzy,
                     duration_ms: 2200,
                     generation: gen_id,
                 });
                 effects.push(Effect::ScheduleTimer {
-                    id: "pet_dizzy_timeout",
+                    id: TimerId::PetDizzy,
                     duration_ms: 2200,
                     generation: gen_id,
                 });
@@ -198,24 +198,24 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
                 state.presentation.pet_is_happy = true;
                 state.presentation.pet_is_dizzy = false;
                 effects.push(Effect::ScheduleTimer {
-                    id: "mochi_annoyed_timeout",
+                    id: TimerId::MochiAnnoyed,
                     duration_ms: 800,
                     generation: gen_id,
                 });
                 effects.push(Effect::ScheduleTimer {
-                    id: "pet_happy_timeout",
+                    id: TimerId::PetHappy,
                     duration_ms: 1500,
                     generation: gen_id,
                 });
             }
 
             effects.push(Effect::ScheduleTimer {
-                id: "mochi_slap_reset",
+                id: TimerId::MochiSlapReset,
                 duration_ms: 1700,
                 generation: gen_id,
             });
             effects.push(Effect::ScheduleTimer {
-                id: "pet_poke_reset",
+                id: TimerId::PetPokeReset,
                 duration_ms: 1700,
                 generation: gen_id,
             });
@@ -471,7 +471,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
                 state.view.engine.begin_hover_overlap_dismiss();
                 state.update_active_module();
                 effects.push(Effect::ScheduleTimer {
-                    id: "overlap_dismiss_hide",
+                    id: TimerId::OverlapDismissHide,
                     duration_ms: 250,
                     generation,
                 });
@@ -492,7 +492,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
                 } else if was_hidden && state.view.engine.overlap_reveal_hold && !had_reveal_hold {
                     state.runtime.overlap_reveal_generation += 1;
                     effects.push(Effect::ScheduleTimer {
-                        id: "overlap_reveal",
+                        id: TimerId::OverlapReveal,
                         duration_ms: 300,
                         generation: state.runtime.overlap_reveal_generation,
                     });
@@ -515,7 +515,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
                 state.view.engine.advance_overlap_dismiss();
                 state.update_active_module();
                 effects.push(Effect::ScheduleTimer {
-                    id: "overlap_dismiss_hide",
+                    id: TimerId::OverlapDismissHide,
                     duration_ms: 250,
                     generation,
                 });
@@ -591,12 +591,12 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.view.engine.set_view(IslandView::Wide);
             state.update_active_module();
             effects.push(Effect::ScheduleTimer {
-                id: "pet_happy_timeout",
+                id: TimerId::PetHappy,
                 duration_ms: 1500,
                 generation: happy_gen,
             });
             effects.push(Effect::ScheduleTimer {
-                id: "welcome_timeout",
+                id: TimerId::Welcome,
                 duration_ms: 3500,
                 generation: gen_id,
             });
