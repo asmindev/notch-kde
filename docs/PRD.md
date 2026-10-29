@@ -3,7 +3,7 @@
 Status: Draft  
 Tanggal: 2026-10-29  
 Basis: audit source code aktual, bukan asumsi desain  
-Baseline verifikasi: `cargo test --workspace` lulus 65 test
+Baseline verifikasi: `cargo test --workspace` lulus 121 test
 
 ---
 
@@ -43,10 +43,10 @@ PRD ini menetapkan target arsitektur dan kriteria penerimaan untuk perbaikan ink
 2. **Aturan pemilihan konten terduplikasi.** Priority di `island-core`, override langsung di reducer, dan kondisi `show-system`/`show-media`/`show-prayer` di Slint memiliki semantik yang tidak selalu sama. Contoh: media paused bisa dipilih sebagai module Media oleh engine, tetapi WideView merender System.
 3. **`AppState` adalah god object dengan dual ownership.** Field navigasi disalin dari `ViewEngine` melalui `sync_engine()`. Beberapa reducer menulis langsung ke engine. Ini rawan divergensi.
 4. **Runtime dan service lifecycle monolitik.** `AppRuntime::run` menangani wiring puluhan callback, semua channel service, timer, dan sinkronisasi UI. Service tidak memiliki kontrak start/stop yang seragam, tidak ada health state, dan tidak ada shutdown terpusat.
-5. **Timer memakai string ID dan mega-switch.** `Effect::ScheduleTimer` memakai `&'static str`; `CancelTimer` dideklarasikan tetapi tidak dipakai.
+5. **Timer memakai string ID dan mega-switch.** `Effect::ScheduleTimer` memakai `&'static str`; `CancelTimer` yang tidak terpakai sudah dihapus di `T0.2` dan akan dikembalikan melalui `TimerScheduler` di Phase 4.
 6. **Sinkronisasi UI penuh setiap perubahan.** Album art dimuat ulang dari disk dan jadwal prayer dihitung ulang pada setiap update, termasuk saat spectrum CAVA berjalan 30 FPS.
 7. **Konfigurasi tersebar.** Dimensi window di-hardcode di beberapa file, `ISLAND_DODGE` dibaca di `island-core`, dan path config tersebar.
-8. **API mati dan test orphan.** `handle_media_update`, `resolve_view_on_click`, dan root `tests/` yang tidak termasuk workspace dapat menyesatkan.
+8. **API mati dan test orphan.** `handle_media_update`, `resolve_view_on_*`, dan root `tests/` yang tidak termasuk workspace dapat menyesatkan. Root `tests/` sudah dihapus di `T0.1`; API mati sudah dihapus di `T0.2`.
 9. **Render dan timer tidak mengikuti visibility.** Tiga view selalu dibuat, pet 3D berjalan ~30 FPS tanpa cek hidden, dan beberapa timer Slint berjalan tanpa syarat meskipun komponen tidak terlihat.
 
 ---
@@ -191,7 +191,7 @@ Platform -> Overlap/Geometry event -> Runtime -> Reducer
 | Duplikasi aturan konten | Rust + reducer + 3 Slint view | Hanya resolver |
 | Service dengan lifecycle seragam | 2 dari 9 | Semua |
 | Timer string ID | 13+ cabang | 0 |
-| Test workspace | 65 lulus | ≥ 65 dan bertambah untuk resolver/timer/service/config |
+| Test workspace | 121 lulus | ≥ 121 dan bertambah untuk resolver/timer/service/config |
 | Reload album art saat spectrum | Berpotensi setiap update | 0 kali jika `art_url` sama |
 | Tick pet 3D saat hidden | ~30 FPS | 0 |
 | Timer animasi saat hidden | Beberapa timer aktif | 0 timer non-input |
@@ -268,4 +268,4 @@ Platform -> Overlap/Geometry event -> Runtime -> Reducer
 - Services: `crates/island-services/src/*.rs`
 - Platform: `crates/island-platform/src/kde/mod.rs`, `overlap.rs`, `window.rs`
 - Config: `apps/island-app/src/settings_store.rs`, `crates/island-core/src/settings.rs`
-- Test baseline: `crates/island-core/tests/**`, `crates/*/src/**/tests`, root `tests/**` (orphan)
+- Test baseline: `crates/island-core/tests/**`, `crates/*/src/**/tests`; root `tests/**` sudah dihapus di `T0.1`

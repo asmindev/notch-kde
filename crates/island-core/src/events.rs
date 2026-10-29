@@ -97,5 +97,4 @@ pub enum Effect {
     PersistSettings,
     SelectMediaSource(String),
     ScheduleTimer { id: &'static str, duration_ms: u64, generation: u64 },
-    CancelTimer { id: &'static str },
 }

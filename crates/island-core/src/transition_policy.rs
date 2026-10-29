@@ -32,39 +32,4 @@ impl TransitionPolicy {
             || is_hovered
             || view != IslandView::Compact
     }
-
-    /// Resolves target view on user hover interaction
-    pub fn resolve_view_on_hover(current: IslandView, is_hovered: bool) -> IslandView {
-        match current {
-            IslandView::Compact => {
-                if is_hovered {
-                    IslandView::Wide
-                } else {
-                    IslandView::Compact
-                }
-            }
-            IslandView::Wide => {
-                if is_hovered {
-                    IslandView::Wide
-                } else {
-                    IslandView::Compact
-                }
-            }
-            IslandView::Expand => {
-                if is_hovered {
-                    IslandView::Expand
-                } else {
-                    IslandView::Compact
-                }
-            }
-        }
-    }
-
-    /// Resolves target view on click
-    pub fn resolve_view_on_click(current: IslandView) -> IslandView {
-        match current {
-            IslandView::Compact | IslandView::Wide => IslandView::Expand,
-            IslandView::Expand => IslandView::Wide,
-        }
-    }
 }

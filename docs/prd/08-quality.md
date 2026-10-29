@@ -16,13 +16,14 @@ Memastikan baseline test dan error handling dapat dipercaya sebelum refactor bes
 
 - `tests/` di root bukan bagian workspace/package sehingga tidak dijalankan.
 - Test root menduplikasi test core dan sebagian bertentangan.
-- `ViewEngine::handle_media_update` dan `TransitionPolicy::resolve_view_on_*` tidak dipakai.
-- `Effect::CancelTimer` dideklarasikan tetapi tidak dipakai.
-- `island-services` mendeklarasikan `island-platform` tanpa penggunaan.
+- Status `T0.1`: root `tests/` sudah dihapus.
+- Status `T0.2`: `ViewEngine::handle_media_update`, `TransitionPolicy::resolve_view_on_*`, dan `Effect::CancelTimer` sudah dihapus.
+- Status `T0.3`: dependency `island-services -> island-platform` sudah dihapus.
+- Status `T0.4`: characterization test media paused/prayer/source selector/collapse tersedia; baseline `cargo test --workspace` lulus 121 test.
 - `KdeManager::get_primary_screen_geometry()` memakai `.expect(...)`.
 - Error service tidak memiliki health state terpusat.
 
-Referensi: `Cargo.toml`, `tests/`, `crates/island-core/tests/`, `view_engine.rs:391-400`, `transition_policy.rs:37-69`, `events.rs:99`, `crates/island-services/Cargo.toml`, `crates/island-platform/src/kde/mod.rs:27-29`.
+Referensi: `Cargo.toml`, `crates/island-core/tests/`, `crates/island-platform/src/kde/mod.rs:27-29`.
 
 ## 3. Requirement — Baseline
 

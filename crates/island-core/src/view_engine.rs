@@ -388,17 +388,6 @@ impl ViewEngine {
         self.recompute_visibility();
     }
 
-    /// Compatibility method for media updates
-    pub fn handle_media_update(&mut self, track: &MediaTrack) {
-        let has_media = !track.title.is_empty();
-
-        if track.is_playing || (self.current_view == IslandView::Compact && has_media) {
-            self.active_module = ActiveModule::Media;
-        } else {
-            self.active_module = ActiveModule::System;
-        }
-    }
-
     /// Returns tier capabilities for any given module
     pub fn module_tiers(&self, module: ActiveModule) -> ModuleTiers {
         self.modules

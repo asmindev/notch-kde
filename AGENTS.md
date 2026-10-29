@@ -23,7 +23,7 @@ Dokumen PRD adalah target arsitektur. Kode adalah sumber kebenaran perilaku saat
 - **Produk:** Dynamic Island untuk KDE Plasma 6 Wayland.
 - **Stack:** Rust edition 2024, Slint 1.18, Tokio, zbus, Wayland.
 - **Bentuk:** Modular monolith, 6 workspace member.
-- **Baseline test:** `cargo test --workspace` lulus 65 test.
+- **Baseline test:** `cargo test --workspace` lulus 121 test.
 - **Render policy:** Aktivitas render/pet/spectrum/timer ditentukan oleh `RenderPolicy`; hidden tidak boleh melakukan render kontinu.
 
 ### Struktur
@@ -54,7 +54,7 @@ cargo run -p island-app
 Catatan:
 
 - `cargo run -p island-app` membutuhkan session KDE Plasma 6 Wayland untuk perilaku penuh.
-- Root `tests/` saat ini orphan dan tidak dijalankan workspace. Jangan menambah test baru di sana sebelum `T0.1` selesai.
+- Root `tests/` sudah dihapus di `T0.1`. Test baru harus berada di `crates/<crate>/tests/` atau unit test dekat kode.
 - Jangan menambah dependency baru tanpa alasan kuat; cek `Cargo.toml` workspace terlebih dahulu.
 - Verifikasi render hidden/timer/pet membutuhkan runtime KDE; test policy murni tidak boleh bergantung pada session.
 
@@ -192,7 +192,7 @@ cargo test --workspace
 
 | Pitfall | Lokasi | Aturan |
 |---|---|---|
-| Test root orphan | `tests/` | Jangan tambah test di sini; migrasikan via `T0.1` |
+| Test di root repo | `tests/` | Jangan buat folder root; gunakan test crate |
 | State navigasi ganda | `state.rs`, `sync_engine()` | Jangan tambah salinan state baru |
 | Aturan konten di Slint | `views/*.slint` | Pindahkan ke resolver |
 | Timer string | `events.rs`, `runtime.rs` | Gunakan `TimerId` |

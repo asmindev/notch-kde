@@ -84,6 +84,33 @@ fn test_paused_media_falls_back_in_expand() {
 }
 
 #[test]
+fn test_source_selector_keeps_paused_media_active_in_wide() {
+    let mut state = AppState::default();
+    reduce(&mut state, AppEvent::WelcomeTimeout);
+    reduce(&mut state, AppEvent::MediaUpdated(paused_track()));
+    assert_eq!(state.mode, IslandMode::Compact);
+    assert_eq!(state.active_module, ActiveModule::Media);
+
+    reduce(&mut state, AppEvent::UserHoverChanged(true));
+    assert_eq!(state.mode, IslandMode::Wide);
+    assert_eq!(state.active_module, ActiveModule::System);
+
+    reduce(&mut state, AppEvent::ToggleSourceSelector);
+    assert!(state.show_source_selector);
+    assert_eq!(state.active_module, ActiveModule::Media);
+
+    // Characterization: closing the selector does not recompute the module
+    // until the next view/state transition updates it.
+    reduce(&mut state, AppEvent::ToggleSourceSelector);
+    assert!(!state.show_source_selector);
+    assert_eq!(state.active_module, ActiveModule::Media);
+
+    reduce(&mut state, AppEvent::UserHoverChanged(false));
+    assert_eq!(state.mode, IslandMode::Compact);
+    assert_eq!(state.active_module, ActiveModule::Media);
+}
+
+#[test]
 fn test_playing_media_stays_active_in_all_views() {
     let mut state = AppState::default();
     let mut track = paused_track();

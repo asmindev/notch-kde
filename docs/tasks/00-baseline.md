@@ -21,7 +21,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T0.1 — Migrasikan atau hapus test root orphan
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** —
 - **Trace:** `BASE-1`, `TEST-1`
@@ -36,10 +36,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - `cargo test --workspace` menjalankan semua test yang relevan.
   - Tidak ada test dengan ekspektasi collapse yang bertentangan.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** Root `tests/` dihapus karena seluruh isinya sudah tercakup versi terbaru di `crates/island-core/tests/`. Saat task ini, `cargo test --workspace` lulus 120 test; `cargo clippy --workspace --all-targets` selesai dengan warning pre-existing. `cargo fmt --all -- --check` masih gagal karena format pre-existing di file di luar task.
 
 ## T0.2 — Rekonsiliasi API mati dan policy yang bertentangan
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `T0.1`
 - **Trace:** `BASE-2`
@@ -53,10 +54,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Tidak ada API publik yang menyesatkan tentang perilaku collapse.
   - Search tidak menemukan pemakaian method yang dihapus.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** `ViewEngine::handle_media_update`, `TransitionPolicy::resolve_view_on_click`, dan `TransitionPolicy::resolve_view_on_hover` dihapus. `Effect::CancelTimer` dihapus dari enum sampai dibutuhkan; `T4.2` akan menambahkan kembali cancel melalui `TimerScheduler`. Wildcard match effect di runtime ikut dihapus agar tidak ada warning unreachable.
 
 ## T0.3 — Bersihkan dependency workspace
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** —
 - **Trace:** `BASE-3`
@@ -70,10 +72,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Dependency graph lebih kecil.
   - Build dan test tetap lulus.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** `island-platform` dihapus dari `crates/island-services/Cargo.toml`; tidak ada import `island_platform` di crate tersebut. Saat task ini, `cargo test --workspace` lulus 120 test dan clippy selesai dengan warning pre-existing.
 
 ## T0.4 — Tambah characterization test untuk perilaku rawan
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `T0.1`
 - **Trace:** `BASE-4`, `TEST-2`
@@ -88,6 +91,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Test mendokumentasikan perilaku saat ini, termasuk inkonsistensi yang diketahui.
   - Test diberi tag/nama `characterization` bila perlu.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** Media paused Compact/Wide, prayer panel Compact, dan staging collapse sudah tercakup test existing. Ditambahkan `test_source_selector_keeps_paused_media_active_in_wide`, yang juga mendokumentasikan bahwa menutup source selector tidak langsung menghitung ulang module sampai transisi berikutnya. `cargo test --workspace` lulus 121 test.
 
 ---
 

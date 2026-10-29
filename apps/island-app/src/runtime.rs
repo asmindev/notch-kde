@@ -677,7 +677,6 @@ impl AppRuntime {
                                 });
                             }
                         }
-                        _ => {}
                     }
                 }
 
