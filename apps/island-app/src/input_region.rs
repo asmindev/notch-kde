@@ -27,10 +27,10 @@ const COMPACT_EAR: i32 = 5;
 const WIDE_EAR: i32 = 10;
 
 pub fn rect_for_state(state: &AppState) -> Rect {
-    let (notch_w, touch_h, ear) = if !state.view.is_visible {
+    let (notch_w, touch_h, ear) = if !state.view.is_visible() {
         (COMPACT_WIDTH, HIDDEN_TOUCH_HEIGHT, COMPACT_EAR)
     } else {
-        match state.view.mode {
+        match state.view.mode() {
             IslandView::Compact => {
                 let width = if state.domain.alert_kind != AlertKind::None {
                     COMPACT_ALERT_WIDTH
@@ -242,8 +242,8 @@ mod tests {
 
     fn state(mode: IslandView, visible: bool, alert: AlertKind) -> AppState {
         let mut state = AppState::default();
-        state.view.mode = mode;
-        state.view.is_visible = visible;
+        state.view.engine.current_view = mode;
+        state.view.engine.is_visible = visible;
         state.domain.alert_kind = alert;
         state
     }

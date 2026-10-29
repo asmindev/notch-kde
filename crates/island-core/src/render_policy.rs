@@ -11,7 +11,7 @@ pub struct RenderPolicy {
 }
 
 pub fn render_policy(state: &AppState) -> RenderPolicy {
-    if !state.view.is_visible {
+    if !state.view.is_visible() {
         return RenderPolicy {
             main_visible: false,
             pet_3d: false,
@@ -29,7 +29,7 @@ pub fn render_policy(state: &AppState) -> RenderPolicy {
 }
 
 fn active_slot_uses_pet(state: &AppState) -> bool {
-    match state.view.mode {
+    match state.view.mode() {
         IslandView::Compact => compact_slot_uses_pet(state),
         IslandView::Wide => wide_slot_uses_pet(state),
         IslandView::Expand => expand_slot_uses_pet(state),
@@ -37,9 +37,11 @@ fn active_slot_uses_pet(state: &AppState) -> bool {
 }
 
 fn compact_slot_uses_pet(state: &AppState) -> bool {
-    if state.view.active_module == ModuleId::SYSTEM || state.view.active_module == ModuleId::MEDIA {
+    if state.view.active_module() == ModuleId::SYSTEM
+        || state.view.active_module() == ModuleId::MEDIA
+    {
         true
-    } else if state.view.active_module == ModuleId::ALERT {
+    } else if state.view.active_module() == ModuleId::ALERT {
         state.domain.alert_kind == AlertKind::Charging
     } else {
         false
@@ -54,15 +56,15 @@ fn wide_slot_uses_pet(state: &AppState) -> bool {
         return false;
     }
 
-    if state.view.active_module == ModuleId::SYSTEM {
+    if state.view.active_module() == ModuleId::SYSTEM {
         true
-    } else if state.view.active_module == ModuleId::MEDIA {
+    } else if state.view.active_module() == ModuleId::MEDIA {
         if state.domain.media.is_playing {
             state.settings.music_visual_mode == MusicVisualMode::PetPrimary
         } else {
             true
         }
-    } else if state.view.active_module == ModuleId::ALERT {
+    } else if state.view.active_module() == ModuleId::ALERT {
         state.domain.alert_kind == AlertKind::Charging
     } else {
         false
@@ -70,9 +72,9 @@ fn wide_slot_uses_pet(state: &AppState) -> bool {
 }
 
 fn expand_slot_uses_pet(state: &AppState) -> bool {
-    if state.view.active_module == ModuleId::SYSTEM {
+    if state.view.active_module() == ModuleId::SYSTEM {
         true
-    } else if state.view.active_module == ModuleId::MEDIA {
+    } else if state.view.active_module() == ModuleId::MEDIA {
         if state.domain.media.is_playing || state.module.show_source_selector {
             state.settings.music_visual_mode == MusicVisualMode::PetPrimary
         } else {
@@ -88,8 +90,8 @@ fn active_slot_uses_spectrum(state: &AppState) -> bool {
         return false;
     }
 
-    match state.view.mode {
-        IslandView::Compact | IslandView::Expand => state.view.active_module == ModuleId::MEDIA,
+    match state.view.mode() {
+        IslandView::Compact | IslandView::Expand => state.view.active_module() == ModuleId::MEDIA,
         IslandView::Wide => false,
     }
 }
@@ -101,9 +103,9 @@ mod tests {
 
     fn visible_state(mode: IslandView, module: impl Into<ModuleId>) -> AppState {
         let mut state = AppState::default();
-        state.view.is_visible = true;
-        state.view.mode = mode;
-        state.view.active_module = module.into();
+        state.view.engine.is_visible = true;
+        state.view.engine.current_view = mode;
+        state.view.engine.active_module = module.into();
         state.presentation.is_welcome = false;
         state
     }
@@ -121,7 +123,7 @@ mod tests {
     fn hidden_stops_all_render_activity() {
         let mut state = visible_state(IslandView::Compact, ActiveModule::Media);
         state.domain.media.is_playing = true;
-        state.view.is_visible = false;
+        state.view.engine.is_visible = false;
 
         assert_eq!(
             render_policy(&state),
@@ -213,7 +215,7 @@ mod tests {
         assert_eq!(render_policy(&state), policy(true, false));
 
         state.presentation.is_welcome = false;
-        state.view.active_module = ActiveModule::Media.into();
+        state.view.engine.active_module = ActiveModule::Media.into();
         state.domain.media.is_playing = true;
         state.module.show_source_selector = true;
         assert_eq!(render_policy(&state), policy(false, false));

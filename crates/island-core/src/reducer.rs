@@ -476,7 +476,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
                     generation,
                 });
             } else {
-                let was_hidden = !state.view.is_visible;
+                let was_hidden = !state.view.is_visible();
                 let was_dismissing = state.view.engine.overlap_dismiss_active;
                 let had_reveal_hold = state.view.engine.overlap_reveal_hold;
 
@@ -603,7 +603,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         }
 
         AppEvent::IslandClicked => {
-            if !state.view.is_visible && state.view.engine.is_overlapping {
+            if !state.view.is_visible() && state.view.engine.is_overlapping {
                 state.runtime.overlap_reveal_generation += 1;
                 state.runtime.overlap_dismiss_generation += 1;
                 state.view.engine.reveal_overlap_compact();

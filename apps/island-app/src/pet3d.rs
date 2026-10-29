@@ -257,7 +257,7 @@ impl Pet3dInner {
         } else {
             app_state.presentation.notification_generation
         };
-        input.is_compact = !preview && matches!(app_state.view.mode, IslandView::Compact);
+        input.is_compact = !preview && matches!(app_state.view.mode(), IslandView::Compact);
         input.mochi_mood = if preview {
             MochiMoodState::Idle
         } else {

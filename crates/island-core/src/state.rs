@@ -23,35 +23,37 @@ pub enum MochiMoodState {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ViewState {
     pub engine: ViewEngine,
-    pub mode: IslandView,
-    pub previous_mode: IslandView,
-    pub active_module: ModuleId,
-    pub is_visible: bool,
-    pub is_overlapping: bool,
-    pub is_hovered: bool,
 }
 
 impl ViewState {
     pub fn new() -> Self {
-        let engine = ViewEngine::new();
         Self {
-            mode: engine.current_view,
-            previous_mode: engine.previous_view,
-            active_module: engine.active_module,
-            is_visible: engine.is_visible,
-            is_overlapping: engine.is_overlapping,
-            is_hovered: engine.is_hovered,
-            engine,
+            engine: ViewEngine::new(),
         }
     }
 
-    pub fn sync_from_engine(&mut self) {
-        self.mode = self.engine.current_view;
-        self.previous_mode = self.engine.previous_view;
-        self.active_module = self.engine.active_module;
-        self.is_visible = self.engine.is_visible;
-        self.is_overlapping = self.engine.is_overlapping;
-        self.is_hovered = self.engine.is_hovered;
+    pub fn mode(&self) -> IslandView {
+        self.engine.current_view
+    }
+
+    pub fn previous_mode(&self) -> IslandView {
+        self.engine.previous_view
+    }
+
+    pub fn active_module(&self) -> ModuleId {
+        self.engine.active_module()
+    }
+
+    pub fn is_visible(&self) -> bool {
+        self.engine.is_visible
+    }
+
+    pub fn is_overlapping(&self) -> bool {
+        self.engine.is_overlapping
+    }
+
+    pub fn is_hovered(&self) -> bool {
+        self.engine.is_hovered
     }
 }
 
@@ -192,10 +194,6 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn sync_engine(&mut self) {
-        self.view.sync_from_engine();
-    }
-
     pub fn module_context(&self) -> ModuleContext<'_> {
         ModuleContext {
             time: &self.domain.time,
@@ -224,6 +222,5 @@ impl AppState {
             )
         };
         self.view.engine.apply_resolved(resolved);
-        self.sync_engine();
     }
 }

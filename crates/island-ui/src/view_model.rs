@@ -19,25 +19,25 @@ impl ViewModel {
         ctx.set_render_pet(policy.pet_3d);
         ctx.set_render_spectrum(policy.spectrum);
         ctx.set_render_animations(policy.animations);
-        ctx.set_active_mode(ContentRouter::mode_to_index(state.view.mode));
+        ctx.set_active_mode(ContentRouter::mode_to_index(state.view.mode()));
         let module_ui = ModuleUiRegistry::default();
         ctx.set_compact_module(
             module_ui
-                .slot_for(state.view.active_module, IslandView::Compact)
+                .slot_for(state.view.active_module(), IslandView::Compact)
                 .index(),
         );
         ctx.set_wide_module(
             module_ui
-                .slot_for(state.view.active_module, IslandView::Wide)
+                .slot_for(state.view.active_module(), IslandView::Wide)
                 .index(),
         );
         ctx.set_expand_module(
             module_ui
-                .slot_for(state.view.active_module, IslandView::Expand)
+                .slot_for(state.view.active_module(), IslandView::Expand)
                 .index(),
         );
         ctx.set_alert_kind(state.domain.alert_kind as i32);
-        ctx.set_is_visible_state(state.view.is_visible);
+        ctx.set_is_visible_state(state.view.is_visible());
 
         ctx.set_time_str(state.domain.time.time_str.clone().into());
         ctx.set_date_str(state.domain.time.date_str.clone().into());

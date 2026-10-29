@@ -3,21 +3,21 @@ use island_core::{ActiveModule, AppEvent, AppState, IslandMode, MediaTrack, redu
 #[test]
 fn test_initial_state_wide_welcome() {
     let state = AppState::default();
-    assert_eq!(state.view.mode, IslandMode::Wide);
+    assert_eq!(state.view.mode(), IslandMode::Wide);
     assert!(state.presentation.is_welcome);
-    assert!(state.view.is_visible);
-    assert!(!state.view.is_overlapping);
-    assert_eq!(state.view.active_module, ActiveModule::System);
+    assert!(state.view.is_visible());
+    assert!(!state.view.is_overlapping());
+    assert_eq!(state.view.active_module(), ActiveModule::System);
 }
 
 #[test]
 fn test_welcome_timeout_to_compact() {
     let mut state = AppState::default();
     assert!(state.presentation.is_welcome);
-    assert_eq!(state.view.mode, IslandMode::Wide);
+    assert_eq!(state.view.mode(), IslandMode::Wide);
 
     reduce(&mut state, AppEvent::WelcomeTimeout);
-    assert_eq!(state.view.mode, IslandMode::Compact);
+    assert_eq!(state.view.mode(), IslandMode::Compact);
     assert!(!state.presentation.is_welcome);
 }
 
@@ -26,12 +26,12 @@ fn test_screen_unlocked_triggers_welcome() {
     let mut state = AppState::default();
     // First settle to compact
     reduce(&mut state, AppEvent::WelcomeTimeout);
-    assert_eq!(state.view.mode, IslandMode::Compact);
+    assert_eq!(state.view.mode(), IslandMode::Compact);
     assert!(!state.presentation.is_welcome);
 
     // Screen unlocks from lockscreen
     let effects = reduce(&mut state, AppEvent::ScreenUnlocked);
-    assert_eq!(state.view.mode, IslandMode::Wide);
+    assert_eq!(state.view.mode(), IslandMode::Wide);
     assert!(state.presentation.is_welcome);
     assert!(state.presentation.pet_is_happy);
     assert_eq!(
@@ -52,7 +52,7 @@ fn test_screen_unlocked_triggers_welcome() {
 
     // Timeout settles it back to compact
     reduce(&mut state, AppEvent::WelcomeTimeout);
-    assert_eq!(state.view.mode, IslandMode::Compact);
+    assert_eq!(state.view.mode(), IslandMode::Compact);
     assert!(!state.presentation.is_welcome);
 }
 
@@ -66,13 +66,13 @@ fn test_overlap_hides_notch() {
 
     // Overlapping window arrives
     reduce(&mut state, AppEvent::WindowOverlapChanged(true));
-    assert_eq!(state.view.is_overlapping, true);
-    assert_eq!(state.view.is_visible, false);
+    assert_eq!(state.view.is_overlapping(), true);
+    assert_eq!(state.view.is_visible(), false);
 
     // Overlapping window moves away
     reduce(&mut state, AppEvent::WindowOverlapChanged(false));
-    assert_eq!(state.view.is_overlapping, false);
-    assert_eq!(state.view.is_visible, true);
+    assert_eq!(state.view.is_overlapping(), false);
+    assert_eq!(state.view.is_visible(), true);
 }
 
 #[test]
@@ -85,15 +85,15 @@ fn test_hover_overrides_overlap() {
 
     // Window overlaps
     reduce(&mut state, AppEvent::WindowOverlapChanged(true));
-    assert_eq!(state.view.is_visible, false);
+    assert_eq!(state.view.is_visible(), false);
 
     // User moves mouse over notch edge
     reduce(&mut state, AppEvent::UserHoverChanged(true));
-    assert_eq!(state.view.is_visible, true);
+    assert_eq!(state.view.is_visible(), true);
 
     // User leaves mouse
     reduce(&mut state, AppEvent::UserHoverChanged(false));
-    assert_eq!(state.view.is_visible, false);
+    assert_eq!(state.view.is_visible(), false);
 }
 
 #[test]
@@ -115,7 +115,7 @@ fn test_media_playback_activates_media_module() {
     };
 
     reduce(&mut state, AppEvent::MediaUpdated(track));
-    assert_eq!(state.view.active_module, ActiveModule::Media);
+    assert_eq!(state.view.active_module(), ActiveModule::Media);
 }
 
 #[test]
@@ -126,7 +126,7 @@ fn test_toggle_source_selector_and_select() {
     // Toggle on
     reduce(&mut state, AppEvent::ToggleSourceSelector);
     assert!(state.module.show_source_selector);
-    assert_eq!(state.view.active_module, ActiveModule::Media);
+    assert_eq!(state.view.active_module(), ActiveModule::Media);
 
     // Populate sources
     let sources = vec![
@@ -511,7 +511,7 @@ fn test_prayer_alert_sets_and_clears_alert() {
         state.domain.alert_kind,
         island_core::models::AlertKind::Prayer
     );
-    assert_eq!(state.view.active_module, ActiveModule::Alert);
+    assert_eq!(state.view.active_module(), ActiveModule::Alert);
     assert_eq!(
         state.domain.prayer_alert.as_ref().map(|a| a.title.as_str()),
         Some("Waktu Subuh")

@@ -42,7 +42,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T3.2 — Jadikan `ViewEngine` canonical untuk navigasi
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T3.1`
 - **Trace:** `VIEW-1`, `VIEW-2`, `STATE-2`, `STATE-3`
@@ -55,6 +55,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Tidak ada divergensi antara accessor dan engine.
   - Test state_transitions lulus.
 - **Risiko:** Sedang–tinggi.
+- **Catatan verifikasi:** `ViewState` sekarang hanya membungkus `ViewEngine`; field salinan `mode`, `previous_mode`, `active_module`, `is_visible`, `is_overlapping`, dan `is_hovered` dihapus. Akses memakai method `ViewState` yang membaca langsung dari engine. `sync_engine()` dihapus; reducer tetap memakai API engine. Test `state_transitions`, `overlap_sequencing`, `view_routing`, dan `slot_priority` lulus.
 
 ## T3.3 — Tambah snapshot `ViewSnapshot`
 
