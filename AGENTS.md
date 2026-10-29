@@ -23,7 +23,7 @@ Dokumen PRD adalah target arsitektur. Kode adalah sumber kebenaran perilaku saat
 - **Produk:** Dynamic Island untuk KDE Plasma 6 Wayland.
 - **Stack:** Rust edition 2024, Slint 1.18, Tokio, zbus, Wayland.
 - **Bentuk:** Modular monolith, 6 workspace member.
-- **Baseline test:** `cargo test --workspace` lulus 166 test.
+- **Baseline test:** `cargo test --workspace` lulus 171 test.
 - **Render policy:** Aktivitas render/pet/spectrum/timer ditentukan oleh `RenderPolicy`; hidden tidak boleh melakukan render kontinu.
 
 ### Struktur
@@ -101,7 +101,7 @@ island-app -> island-ui -> island-core
 
 ### 4.5 Service
 
-- Service mengikuti kontrak `Service`/`ServiceHandle` setelah Phase 5.
+- Service mengikuti kontrak `Service`/`ServiceHandle` dan dikelola `ServiceSupervisor`.
 - Service hanya mengirim payload domain atau `DomainEvent`; bukan aksi UI.
 - Jangan menambah global mutable baru.
 - Setiap child process wajib memiliki jalur shutdown.

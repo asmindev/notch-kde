@@ -270,7 +270,7 @@ fn test_pet_rapid_poking_triggers_dizzy() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::MochiDizzy,
-            generation: generation,
+            generation,
         },
     );
     assert!(!state.presentation.pet_is_dizzy);

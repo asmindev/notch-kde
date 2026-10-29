@@ -91,7 +91,7 @@ fn test_paused_media_falls_back_in_expand() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::CollapseCompact,
-            generation: generation,
+            generation,
         },
     );
     assert_eq!(state.view.mode(), IslandMode::Compact);
@@ -143,7 +143,7 @@ fn test_playing_media_stays_active_in_all_views() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::CollapseCompact,
-            generation: generation,
+            generation,
         },
     );
     assert_eq!(state.view.mode(), IslandMode::Compact);
@@ -373,7 +373,7 @@ fn test_alert_overrides_prayer_and_returns_to_prayer() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::Alert,
-            generation: generation,
+            generation,
         },
     );
     assert_eq!(state.view.active_module(), ActiveModule::Prayer);

@@ -1,5 +1,5 @@
+use crate::service::{DomainEvent, Service, ServiceContext, ServiceError, ServiceHandle};
 use futures_lite::StreamExt;
-use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, error, info};
 use zbus::MatchRule;
 use zbus::MessageStream;
@@ -31,14 +31,13 @@ impl DndService {
 
     pub async fn toggle_dnd() {
         if let Ok(conn) = zbus::Connection::session().await {
-            // Primary: KDE global shortcut "toggle do not disturb"
             let call_res = conn
                 .call_method(
                     Some("org.kde.kglobalaccel"),
                     "/component/plasmashell",
                     Some("org.kde.kglobalaccel.Component"),
                     "invokeShortcut",
-                    &("toggle do not disturb"),
+                    &("toggle do not disturb",),
                 )
                 .await;
 
@@ -47,12 +46,21 @@ impl DndService {
             }
         }
     }
+}
 
-    pub fn start(sender: UnboundedSender<bool>) {
-        tokio::spawn(async move {
+impl Service for DndService {
+    fn name(&self) -> &'static str {
+        "dnd"
+    }
+
+    fn start(&self, ctx: ServiceContext) -> Result<ServiceHandle, ServiceError> {
+        let shutdown = ctx.shutdown_signal().clone();
+        let task_ctx = ctx.clone();
+        let task_shutdown = shutdown.clone();
+        let join = ctx.spawn(async move {
             info!("DND Service starting via Session D-Bus (zero polling)");
-            let initial = Self::fetch_state().await;
-            let _ = sender.send(initial);
+            let initial = DndService::fetch_state().await;
+            let _ = task_ctx.emit(DomainEvent::Dnd(initial));
 
             let conn = match zbus::Connection::session().await {
                 Ok(c) => c,
@@ -85,13 +93,22 @@ impl DndService {
 
             info!("DND Service subscribed to Notifications Inhibited property");
 
-            while let Some(_msg) = stream.next().await {
-                let state = Self::fetch_state().await;
-                debug!("DND status changed via event: {}", state);
-                if sender.send(state).is_err() {
-                    break;
+            loop {
+                tokio::select! {
+                    _ = task_shutdown.cancelled() => break,
+                    message = stream.next() => {
+                        if message.is_none() {
+                            break;
+                        }
+                        let state = DndService::fetch_state().await;
+                        debug!("DND status changed via event: {}", state);
+                        if !task_ctx.emit(DomainEvent::Dnd(state)) {
+                            break;
+                        }
+                    }
                 }
             }
         });
+        Ok(ServiceHandle::new(self.name(), shutdown, join))
     }
 }

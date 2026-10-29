@@ -3,7 +3,7 @@
 Status: Draft  
 Tanggal: 2026-10-29  
 Basis: audit source code aktual, bukan asumsi desain  
-Baseline verifikasi: `cargo test --workspace` lulus 166 test
+Baseline verifikasi: `cargo test --workspace` lulus 171 test
 
 ---
 
@@ -42,7 +42,7 @@ PRD ini menetapkan target arsitektur dan kriteria penerimaan untuk perbaikan ink
 1. **Module baru hanya metadata.** `IslandModule` hanya menyediakan `id`, `name`, `tiers`, dan `priority`. UI memilih konten lewat angka `active-module` yang di-hardcode. Menambah module menyentuh enum core, implementasi module, registrasi engine, mapping `view_model.rs`, dan kondisi di tiga view Slint.
 2. **Aturan pemilihan konten terduplikasi.** Priority di `island-core`, override langsung di reducer, dan kondisi `show-system`/`show-media`/`show-prayer` di Slint memiliki semantik yang tidak selalu sama. Contoh: media paused bisa dipilih sebagai module Media oleh engine, tetapi WideView merender System.
 3. **`AppState` adalah god object dengan dual ownership.** Field navigasi disalin dari `ViewEngine` melalui `sync_engine()`. Beberapa reducer menulis langsung ke engine. Ini rawan divergensi.
-4. **Runtime dan service lifecycle monolitik.** `AppRuntime::run` menangani wiring puluhan callback, semua channel service, timer, dan sinkronisasi UI. Service tidak memiliki kontrak start/stop yang seragam, tidak ada health state, dan tidak ada shutdown terpusat.
+4. **Runtime dan service lifecycle (selesai Phase 5).** Service memiliki kontrak `Service`/`ServiceHandle`, health state, sinyal shutdown, dan supervisor dengan timeout. Sisa kompleksitas callback UI tetap menjadi batas runtime/UI.
 5. **Timer typed dan executor (selesai Phase 4).** `Effect::ScheduleTimer` memakai `TimerId`; `TimerScheduler` menyimpan handle per ID dan `EffectExecutor` memisahkan eksekusi effect dari event loop.
 6. **Sinkronisasi UI penuh setiap perubahan.** Album art dimuat ulang dari disk dan jadwal prayer dihitung ulang pada setiap update, termasuk saat spectrum CAVA berjalan 30 FPS.
 7. **Konfigurasi tersebar.** Dimensi window di-hardcode di beberapa file, `ISLAND_DODGE` dibaca di `island-core`, dan path config tersebar.
@@ -189,9 +189,9 @@ Platform -> Overlap/Geometry event -> Runtime -> Reducer
 |---|---|---|
 | Jumlah titik perubahan untuk module baru | 5+ area | ≤ 3 area (module core, slot UI, registry UI) |
 | Duplikasi aturan konten | Rust + reducer + 3 Slint view | Hanya resolver |
-| Service dengan lifecycle seragam | 2 dari 9 | Semua |
+| Service dengan lifecycle seragam | 9 dari 9 | Semua |
 | Timer string ID | 13+ cabang | 0 |
-| Test workspace | 166 lulus | ≥ 166 dan bertambah untuk service/config |
+| Test workspace | 171 lulus | ≥ 171 dan bertambah untuk config |
 | Reload album art saat spectrum | Berpotensi setiap update | 0 kali jika `art_url` sama |
 | Tick pet 3D saat hidden | ~30 FPS | 0 |
 | Timer animasi saat hidden | Beberapa timer aktif | 0 timer non-input |

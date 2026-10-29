@@ -48,7 +48,7 @@ fn hover_reveals_compact_then_wide_after_timeout() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::OverlapReveal,
-            generation: generation,
+            generation,
         },
     );
     assert_eq!(state.view.mode(), IslandView::Wide);
@@ -103,7 +103,7 @@ fn leaving_before_reveal_timeout_cancels_reveal() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::OverlapReveal,
-            generation: generation,
+            generation,
         },
     );
     assert!(!state.view.is_visible());
@@ -167,7 +167,7 @@ fn clicking_expand_notch_dismisses_in_stages() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::OverlapDismissCompact,
-            generation: generation,
+            generation,
         },
     );
     assert_eq!(state.view.mode(), IslandView::Compact);
@@ -185,7 +185,7 @@ fn clicking_expand_notch_dismisses_in_stages() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::OverlapDismissHide,
-            generation: generation,
+            generation,
         },
     );
     assert!(!state.view.is_visible());
@@ -231,7 +231,7 @@ fn hover_reentry_cancels_dismissal() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::OverlapDismissCompact,
-            generation: generation,
+            generation,
         },
     );
     assert_eq!(state.view.mode(), IslandView::Wide);
@@ -250,7 +250,7 @@ fn cursor_leaving_during_dismissal_does_not_cancel_it() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::OverlapDismissCompact,
-            generation: generation,
+            generation,
         },
     );
     assert_eq!(state.view.mode(), IslandView::Compact);
@@ -263,7 +263,7 @@ fn cursor_leaving_during_dismissal_does_not_cancel_it() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::OverlapDismissHide,
-            generation: generation,
+            generation,
         },
     );
     assert!(!state.view.is_visible());
@@ -288,7 +288,7 @@ fn overlap_clearing_cancels_dismissal() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::OverlapDismissCompact,
-            generation: generation,
+            generation,
         },
     );
     assert_eq!(state.view.mode(), IslandView::Wide);
@@ -310,7 +310,7 @@ fn overlap_clearing_during_reveal_blooms_immediately_when_hovered() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::OverlapReveal,
-            generation: generation,
+            generation,
         },
     );
     assert_eq!(state.view.mode(), IslandView::Wide);
@@ -334,7 +334,7 @@ fn clicking_during_dismissal_cancels_the_sequence() {
         &mut state,
         AppEvent::TimerFired {
             id: island_core::TimerId::OverlapDismissCompact,
-            generation: generation,
+            generation,
         },
     );
     assert_eq!(state.view.mode(), IslandView::Expand);

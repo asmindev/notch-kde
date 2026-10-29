@@ -1,5 +1,5 @@
+use crate::service::{DomainEvent, Service, ServiceContext, ServiceError, ServiceHandle};
 use futures_lite::StreamExt;
-use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, error, info};
 use zbus::Connection;
 use zbus::MatchRule;
@@ -7,19 +7,28 @@ use zbus::MessageStream;
 
 pub struct ScreenSaverService;
 
-impl ScreenSaverService {
-    pub fn start(sender: UnboundedSender<()>) {
-        tokio::spawn(async move {
+impl Service for ScreenSaverService {
+    fn name(&self) -> &'static str {
+        "screensaver"
+    }
+
+    fn start(&self, ctx: ServiceContext) -> Result<ServiceHandle, ServiceError> {
+        let shutdown = ctx.shutdown_signal().clone();
+        let task_ctx = ctx.clone();
+        let task_shutdown = shutdown.clone();
+        let join = ctx.spawn(async move {
             info!("ScreenSaver/Lockscreen listener starting");
             let conn = match Connection::session().await {
                 Ok(c) => c,
                 Err(e) => {
-                    error!("Failed to connect to D-Bus session bus for screensaver: {}", e);
+                    error!(
+                        "Failed to connect to D-Bus session bus for screensaver: {}",
+                        e
+                    );
                     return;
                 }
             };
 
-            // Rule: org.freedesktop.ScreenSaver ActiveChanged(bool)
             let ss_rule = MatchRule::builder()
                 .msg_type(zbus::message::Type::Signal)
                 .interface("org.freedesktop.ScreenSaver")
@@ -38,19 +47,20 @@ impl ScreenSaverService {
 
             loop {
                 tokio::select! {
-                    Some(msg_res) = async {
+                    _ = task_shutdown.cancelled() => break,
+                    message = async {
                         match &mut ss_stream {
                             Some(s) => s.next().await,
                             None => std::future::pending().await,
                         }
                     } => {
-                        if let Ok(msg) = msg_res {
-                            if let Ok(body) = msg.body().deserialize::<bool>() {
-                                let is_locked = body;
-                                debug!("ScreenSaver ActiveChanged: is_locked = {}", is_locked);
-                                if !is_locked {
-                                    info!("Screen unlocked! Emitting Welcome event");
-                                    let _ = sender.send(());
+                        let Some(Ok(msg)) = message else { break };
+                        if let Ok(is_locked) = msg.body().deserialize::<bool>() {
+                            debug!("ScreenSaver ActiveChanged: is_locked = {}", is_locked);
+                            if !is_locked {
+                                info!("Screen unlocked! Emitting Welcome event");
+                                if !task_ctx.emit(DomainEvent::ScreenUnlocked) {
+                                    break;
                                 }
                             }
                         }
@@ -58,5 +68,6 @@ impl ScreenSaverService {
                 }
             }
         });
+        Ok(ServiceHandle::new(self.name(), shutdown, join))
     }
 }

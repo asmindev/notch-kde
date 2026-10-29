@@ -14,12 +14,12 @@ Membuat service memiliki lifecycle, health, dan shutdown yang seragam. Service t
 
 ## 2. Temuan Saat Ini
 
-- Service di-spawn langsung dari `AppRuntime::run` dengan pola berbeda-beda.
-- Tidak ada handle/stop signal yang seragam.
-- `MediaService` memakai global mutable `ACTIVE_PLAYER` dan `MEDIA_SENDER`.
-- CAVA mengelola child process sendiri tanpa shutdown terpusat.
-- Tidak ada health state; error service hanya masuk log.
-- `runtime.rs` menangani semua channel service secara manual.
+- Service dijalankan melalui `ServiceSupervisor` dengan kontrak `Service::start` setelah Phase 5.
+- Setiap service memiliki `ServiceHandle`, `ShutdownSignal`, dan join task.
+- `MediaService` memakai state instance eksplisit; global mutable dihapus di Phase 5.
+- CAVA mengelola child process dengan watchdog shutdown.
+- `ServiceSupervisor` menyediakan health state dan log terkontekstual.
+- Service mengirim `DomainEvent`; runtime hanya menerjemahkan satu aliran domain ke `AppEvent`.
 
 Referensi: `apps/island-app/src/runtime.rs:255-570`, `crates/island-services/src/lib.rs`, `media.rs:12-13`, `cava.rs:19-114`.
 
@@ -41,7 +41,7 @@ Referensi: `apps/island-app/src/runtime.rs:255-570`, `crates/island-services/src
 ```rust
 pub trait Service: Send + Sync + 'static {
     fn name(&self) -> &'static str;
-    fn start(&self, ctx: ServiceContext) -> ServiceHandle;
+    fn start(&self, ctx: ServiceContext) -> Result<ServiceHandle, ServiceError>;
 }
 
 pub struct ServiceHandle {
@@ -53,7 +53,7 @@ pub struct ServiceHandle {
 
 Aturan:
 
-- `ServiceContext` membawa sender domain, config read-only, dan shutdown token.
+- `ServiceContext` membawa sender `DomainEvent`, runtime handle, dan shutdown token. Config read-only ditambahkan saat ada service yang membutuhkannya.
 - Service tidak menerima `IslandContext`, `AppState`, atau aksi Slint.
 - Start tidak boleh panic; error dikembalikan atau dikirim sebagai health update.
 - Setiap service memiliki nama unik untuk log dan health.

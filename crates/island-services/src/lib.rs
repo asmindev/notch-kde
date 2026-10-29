@@ -7,6 +7,7 @@ pub mod media;
 pub mod notifications;
 pub mod prayer;
 pub mod screensaver;
+pub mod service;
 
 pub use audio::AudioService;
 pub use battery::BatteryService;
@@ -17,3 +18,7 @@ pub use media::MediaService;
 pub use notifications::NotificationService;
 pub use prayer::PrayerService;
 pub use screensaver::ScreenSaverService;
+pub use service::{
+    DomainEvent, Service, ServiceContext, ServiceError, ServiceHandle, ServiceHealth, ServiceState,
+    ServiceSupervisor, ShutdownSignal,
+};

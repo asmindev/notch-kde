@@ -1,8 +1,8 @@
+use crate::service::{DomainEvent, Service, ServiceContext, ServiceError, ServiceHandle};
 use futures_lite::StreamExt;
 use island_core::models::BatteryState;
 use std::fs;
 use std::path::Path;
-use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, error, info};
 use zbus::MatchRule;
 use zbus::MessageStream;
@@ -34,7 +34,11 @@ impl BatteryService {
 
         // 2. Fallback check for common AC nodes if dir iteration was empty
         if !ac_online {
-            for adp in ["/sys/class/power_supply/ADP1/online", "/sys/class/power_supply/AC/online", "/sys/class/power_supply/ACAD/online"] {
+            for adp in [
+                "/sys/class/power_supply/ADP1/online",
+                "/sys/class/power_supply/AC/online",
+                "/sys/class/power_supply/ACAD/online",
+            ] {
                 if let Ok(val) = fs::read_to_string(adp) {
                     if val.trim() == "1" {
                         ac_online = true;
@@ -82,73 +86,100 @@ impl BatteryService {
             is_charging,
         }
     }
+}
 
-    pub fn start(sender: UnboundedSender<BatteryState>) {
-        let sender_clone = sender.clone();
+impl Service for BatteryService {
+    fn name(&self) -> &'static str {
+        "battery"
+    }
 
-        // 1. Instant Kernel Netlink UEvent Socket (< 1ms reaction to AC plug/unplug, matching pill-panel)
-        std::thread::spawn(move || {
-            unsafe {
-                let fd = libc::socket(libc::AF_NETLINK, libc::SOCK_RAW, libc::NETLINK_KOBJECT_UEVENT);
-                if fd >= 0 {
-                    let mut sa: libc::sockaddr_nl = std::mem::zeroed();
-                    sa.nl_family = libc::AF_NETLINK as u16;
-                    sa.nl_groups = 1; // multicast group 1 for kernel uevents
+    fn start(&self, ctx: ServiceContext) -> Result<ServiceHandle, ServiceError> {
+        let shutdown = ctx.shutdown_signal().clone();
 
-                    if libc::bind(
-                        fd,
-                        &sa as *const libc::sockaddr_nl as *const libc::sockaddr,
-                        std::mem::size_of::<libc::sockaddr_nl>() as u32,
-                    ) == 0 {
-                        info!("Kernel Netlink UEvent socket active for instant power events");
-                        let mut buf = [0u8; 2048];
-                        let mut last_state = BatteryService::read_battery();
+        let netlink_ctx = ctx.clone();
+        let netlink_shutdown = shutdown.clone();
+        let netlink = ctx.spawn_blocking(move || unsafe {
+            let fd = libc::socket(
+                libc::AF_NETLINK,
+                libc::SOCK_RAW,
+                libc::NETLINK_KOBJECT_UEVENT,
+            );
+            if fd < 0 {
+                return;
+            }
+            let timeout = libc::timeval {
+                tv_sec: 0,
+                tv_usec: 250_000,
+            };
+            libc::setsockopt(
+                fd,
+                libc::SOL_SOCKET,
+                libc::SO_RCVTIMEO,
+                &timeout as *const libc::timeval as *const libc::c_void,
+                std::mem::size_of::<libc::timeval>() as u32,
+            );
 
-                        loop {
-                            let len = libc::recv(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len() - 1, 0);
-                            if len <= 0 {
+            let mut sa: libc::sockaddr_nl = std::mem::zeroed();
+            sa.nl_family = libc::AF_NETLINK as u16;
+            sa.nl_groups = 1;
+
+            if libc::bind(
+                fd,
+                &sa as *const libc::sockaddr_nl as *const libc::sockaddr,
+                std::mem::size_of::<libc::sockaddr_nl>() as u32,
+            ) == 0
+            {
+                info!("Kernel Netlink UEvent socket active for instant power events");
+                let mut buf = [0u8; 2048];
+                let mut last_state = BatteryService::read_battery();
+
+                while !netlink_shutdown.is_shutdown() {
+                    let len =
+                        libc::recv(fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len() - 1, 0);
+                    if len <= 0 {
+                        continue;
+                    }
+                    let msg = String::from_utf8_lossy(&buf[..len as usize]);
+                    if msg.contains("power_supply")
+                        || msg.contains("ADP")
+                        || msg.contains("BAT")
+                        || msg.contains("AC")
+                    {
+                        let state = BatteryService::read_battery();
+                        if state != last_state {
+                            debug!(
+                                "Instant Netlink power event: {}% (charging: {})",
+                                state.percentage, state.is_charging
+                            );
+                            last_state = state.clone();
+                            if !netlink_ctx.emit(DomainEvent::Battery(state)) {
                                 break;
-                            }
-                            let msg = String::from_utf8_lossy(&buf[..len as usize]);
-                            if msg.contains("power_supply")
-                                || msg.contains("ADP")
-                                || msg.contains("BAT")
-                                || msg.contains("AC")
-                            {
-                                let state = BatteryService::read_battery();
-                                if state != last_state {
-                                    debug!(
-                                        "Instant Netlink power event: {}% (charging: {})",
-                                        state.percentage, state.is_charging
-                                    );
-                                    last_state = state.clone();
-                                    if sender_clone.send(state).is_err() {
-                                        break;
-                                    }
-                                }
                             }
                         }
                     }
-                    libc::close(fd);
                 }
             }
+            libc::close(fd);
         });
 
-        // 2. UPower D-Bus Wildcard Listener (System Bus events)
-        tokio::spawn(async move {
+        let dbus_ctx = ctx.clone();
+        let dbus_shutdown = shutdown.clone();
+        let dbus = ctx.spawn(async move {
             info!("Event-driven Battery service starting via UPower D-Bus system bus");
             let conn = match zbus::Connection::system().await {
                 Ok(c) => c,
                 Err(e) => {
-                    error!("Failed to connect to system D-Bus for battery events: {}", e);
+                    error!(
+                        "Failed to connect to system D-Bus for battery events: {}",
+                        e
+                    );
                     return;
                 }
             };
 
-            let mut last_state = Self::read_battery();
-            let _ = sender.send(last_state.clone());
+            let mut last_state = BatteryService::read_battery();
+            let _ = dbus_ctx.emit(DomainEvent::Battery(last_state.clone()));
 
-            // Match rule for PropertiesChanged signals from UPower
             let prop_rule = MatchRule::builder()
                 .msg_type(zbus::message::Type::Signal)
                 .interface("org.freedesktop.DBus.Properties")
@@ -172,21 +203,35 @@ impl BatteryService {
 
             info!("Battery service subscribed to UPower D-Bus signals (zero polling)");
 
-            while let Some(_msg) = stream.next().await {
-                let state = Self::read_battery();
-                if state != last_state {
-                    debug!(
-                        "Battery updated via UPower event: {}% (charging: {})",
-                        state.percentage, state.is_charging
-                    );
-                    last_state = state.clone();
-                    if sender.send(state).is_err() {
-                        break;
+            loop {
+                tokio::select! {
+                    _ = dbus_shutdown.cancelled() => break,
+                    message = stream.next() => {
+                        if message.is_none() {
+                            break;
+                        }
+                        let state = BatteryService::read_battery();
+                        if state != last_state {
+                            debug!(
+                                "Battery updated via UPower event: {}% (charging: {})",
+                                state.percentage, state.is_charging
+                            );
+                            last_state = state.clone();
+                            if !dbus_ctx.emit(DomainEvent::Battery(state)) {
+                                break;
+                            }
+                        }
                     }
                 }
             }
             info!("Battery event stream ended");
         });
+
+        let handle_shutdown = shutdown.clone();
+        let join = ctx.spawn(async move {
+            let _ = tokio::join!(netlink, dbus);
+        });
+        Ok(ServiceHandle::new(self.name(), handle_shutdown, join))
     }
 }
 

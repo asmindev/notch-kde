@@ -1,5 +1,5 @@
+use crate::service::{DomainEvent, Service, ServiceContext, ServiceError, ServiceHandle};
 use tokio::io::AsyncBufReadExt;
-use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, error, info};
 
 pub struct AudioService;
@@ -24,7 +24,7 @@ impl AudioService {
                     "/component/kmix",
                     Some("org.kde.kglobalaccel.Component"),
                     "invokeShortcut",
-                    &("mute"),
+                    &("mute",),
                 )
                 .await;
 
@@ -41,12 +41,21 @@ impl AudioService {
                 .await;
         }
     }
+}
 
-    pub fn start(sender: UnboundedSender<bool>) {
-        tokio::spawn(async move {
+impl Service for AudioService {
+    fn name(&self) -> &'static str {
+        "audio"
+    }
+
+    fn start(&self, ctx: ServiceContext) -> Result<ServiceHandle, ServiceError> {
+        let shutdown = ctx.shutdown_signal().clone();
+        let task_ctx = ctx.clone();
+        let task_shutdown = shutdown.clone();
+        let join = ctx.spawn(async move {
             info!("Audio Service starting via pactl subscribe event stream (zero polling)");
-            let initial = Self::check_muted_sync();
-            let _ = sender.send(initial);
+            let initial = AudioService::check_muted_sync();
+            let _ = task_ctx.emit(DomainEvent::Muted(initial));
 
             let mut child = match tokio::process::Command::new("pactl")
                 .arg("subscribe")
@@ -65,19 +74,30 @@ impl AudioService {
                 let mut lines = reader.lines();
                 let mut last_muted = initial;
 
-                while let Ok(Some(line)) = lines.next_line().await {
-                    if line.contains("sink") || line.contains("server") || line.contains("card") {
-                        let muted = Self::check_muted_sync();
-                        if muted != last_muted {
-                            debug!("Audio mute changed via event: {}", muted);
-                            last_muted = muted;
-                            if sender.send(muted).is_err() {
-                                break;
+                loop {
+                    tokio::select! {
+                        _ = task_shutdown.cancelled() => break,
+                        line = lines.next_line() => {
+                            let Ok(Some(line)) = line else { break };
+                            if line.contains("sink") || line.contains("server") || line.contains("card") {
+                                let muted = AudioService::check_muted_sync();
+                                if muted != last_muted {
+                                    debug!("Audio mute changed via event: {}", muted);
+                                    last_muted = muted;
+                                    if !task_ctx.emit(DomainEvent::Muted(muted)) {
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
+
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            info!("Audio Service stopped");
         });
+        Ok(ServiceHandle::new(self.name(), shutdown, join))
     }
 }

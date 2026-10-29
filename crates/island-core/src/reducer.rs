@@ -38,6 +38,8 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.domain.time = time_info;
         }
 
+        AppEvent::Shutdown => {}
+
         AppEvent::BatteryUpdated(bat) => {
             let just_plugged_in = !state.domain.battery.is_charging && bat.is_charging;
             state.domain.battery = bat;

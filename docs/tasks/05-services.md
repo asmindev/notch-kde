@@ -27,7 +27,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T5.1 — Definisikan kontrak `Service`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T4.3`
 - **Trace:** `SVC-1`–`SVC-4`
@@ -41,10 +41,12 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Minimal satu service percontohan dapat start/stop.
   - Kontrak tidak menyebut Slint atau `AppState`.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** Pilot `ClockService` berjalan melalui `Service::start`; `ServiceContext` membawa `DomainEvent` sender, shutdown token, dan runtime handle; `ServiceHandle` menyimpan join task. Kontrak tidak menyebut Slint, view, module, atau `AppState`.
+
 
 ## T5.2 — Buat `ServiceSupervisor`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T5.1`
 - **Trace:** `SVC-5`, `SVC-6`
@@ -57,10 +59,12 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Satu service gagal tidak menghentikan aplikasi.
   - Shutdown join semua service.
 - **Risiko:** Sedang–tinggi.
+- **Catatan verifikasi:** `ServiceSupervisor` mencatat `Starting`/`Running`/`Degraded`/`Stopped`, menangkap panic saat start, dan melanjutkan service lain. Saat shutdown, semua service diberi sinyal lebih dulu lalu di-join dengan timeout 3 detik di runtime.
+
 
 ## T5.3 — Migrasikan service satu per satu
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T5.2`
 - **Trace:** `SVC-1`–`SVC-8`
@@ -76,10 +80,12 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Semua service menerima shutdown.
   - Satu service per perubahan.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** Clock, Battery, Media, DND, Audio, Notifications, Prayer, ScreenSaver, dan CAVA dimigrasikan ke kontrak service. CAVA memakai `spawn_blocking` dan watchdog child process; Battery memakai timeout socket agar shutdown responsif. `OverlapDetector` tetap platform-owned karena bergantung pada geometry/KWin, bukan service payload domain.
+
 
 ## T5.4 — Hapus global mutable `MediaService`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T5.3`
 - **Trace:** `SVC-7`
@@ -92,10 +98,12 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Tidak ada static mutable di MediaService.
   - Test media selection dapat berjalan paralel.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `MediaService` sekarang berupa instance `Clone` dengan `Arc<RwLock<MediaState>>`; `ACTIVE_PLAYER` dan `MEDIA_SENDER` statik dihapus. Test memastikan dua instance tidak berbagi active player.
+
 
 ## T5.5 — Tambah health state dan logging
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T5.2`
 - **Trace:** `SVC-5`, `ERR-2`, `ERR-3`, `ERR-4`
@@ -107,10 +115,12 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Kegagalan service dapat ditelusuri tanpa membaca semua log acak.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** `ServiceHealth`/`ServiceState` tersedia; supervisor mencatat nama service, alasan gagal start, service yang berhenti tak terduga, dan timeout shutdown. Runtime memanggil `refresh_health()` dan health tetap bisa diinspeksi lewat `health_snapshot()`.
+
 
 ## T5.6 — Implementasikan shutdown runtime
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T5.2`
 - **Trace:** `SVC-2`, `SVC-8`
@@ -124,10 +134,12 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Tidak ada child process tertinggal.
   - Aplikasi keluar tanpa hang.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** Runtime menerima `AppEvent::Shutdown`, berhenti memproses event, mematikan timer, mengirim shutdown ke supervisor, join service dengan timeout, lalu menyimpan settings final. Main mengirim shutdown setelah window berhenti dan menunggu thread runtime selesai.
+
 
 ## T5.7 — Test service supervisor
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T5.6`
 - **Trace:** `TEST-5`
@@ -139,3 +151,5 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Lifecycle terbukti lewat test.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** Test supervisor mencakup start semua service, kegagalan start satu service menjadi `Degraded`, service berhenti runtime menjadi `Degraded`, dan shutdown semua service menjadi `Stopped`. `cargo test --workspace` lulus 171 test.
+

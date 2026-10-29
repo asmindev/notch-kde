@@ -10,31 +10,36 @@ use tracing::debug;
 pub struct EffectExecutor {
     runtime: Handle,
     timers: TimerScheduler,
+    media: MediaService,
 }
 
 impl EffectExecutor {
-    pub fn new(runtime: Handle, event_tx: UnboundedSender<AppEvent>) -> Self {
+    pub fn new(runtime: Handle, event_tx: UnboundedSender<AppEvent>, media: MediaService) -> Self {
         Self {
             timers: TimerScheduler::new(runtime.clone(), event_tx),
             runtime,
+            media,
         }
     }
 
     pub fn execute(&mut self, effect: Effect, state: &AppState) {
         match effect {
             Effect::PlayPause => {
-                self.runtime.spawn(async {
-                    MediaService::play_pause().await;
+                let media = self.media.clone();
+                self.runtime.spawn(async move {
+                    media.play_pause().await;
                 });
             }
             Effect::NextTrack => {
-                self.runtime.spawn(async {
-                    MediaService::next().await;
+                let media = self.media.clone();
+                self.runtime.spawn(async move {
+                    media.next().await;
                 });
             }
             Effect::PreviousTrack => {
-                self.runtime.spawn(async {
-                    MediaService::previous().await;
+                let media = self.media.clone();
+                self.runtime.spawn(async move {
+                    media.previous().await;
                 });
             }
             Effect::ToggleMute => {
@@ -54,9 +59,9 @@ impl EffectExecutor {
             }
             Effect::SelectMediaSource(player_id) => {
                 debug!("Switching active media source to: {}", player_id);
-                let runtime = self.runtime.clone();
-                runtime.spawn(async move {
-                    MediaService::select_source(&player_id).await;
+                let media = self.media.clone();
+                self.runtime.spawn(async move {
+                    media.select_source(&player_id).await;
                 });
             }
             Effect::ScheduleTimer {
@@ -85,7 +90,7 @@ mod tests {
     #[tokio::test]
     async fn timer_effects_are_forwarded_to_the_scheduler() {
         let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-        let mut executor = EffectExecutor::new(Handle::current(), event_tx);
+        let mut executor = EffectExecutor::new(Handle::current(), event_tx, MediaService::new());
         let state = AppState::default();
         let ids = [
             TimerId::Alert,

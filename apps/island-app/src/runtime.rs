@@ -6,12 +6,14 @@ use crate::pet3d;
 use crate::render_stats::RenderStats;
 use crate::settings_store::SettingsStore;
 use effects::EffectExecutor;
-use island_core::{AppEvent, AppState, Effect, SettingsTab, TimerId, reduce, render_policy};
+use island_core::{
+    AppEvent, AppState, Effect, PersistedSettings, SettingsTab, TimerId, reduce, render_policy,
+};
 use island_platform::overlap::Rect;
 use island_platform::{KdeManager, OverlapDetector, PlatformWindow};
 use island_services::{
-    AudioService, BatteryService, CavaService, ClockService, DndService, MediaService,
-    NotificationService, PrayerService, ScreenSaverService,
+    AudioService, BatteryService, CavaService, ClockService, DndService, DomainEvent, MediaService,
+    NotificationService, PrayerService, ScreenSaverService, ServiceContext, ServiceSupervisor,
 };
 use island_ui::{IslandContext, MainWindow, ModuleUiRegistry, SettingsWindow, ViewModel};
 use slint::ComponentHandle;
@@ -419,100 +421,46 @@ impl AppRuntime {
             }
         });
 
-        let event_tx_services = event_tx.clone();
+        let media_service = MediaService::new();
+        let (domain_tx, mut domain_rx) = mpsc::unbounded_channel();
+        let mut supervisor = ServiceSupervisor::new(std::time::Duration::from_secs(3));
+        let service_shutdown = supervisor.shutdown_signal();
+        let service_ctx =
+            ServiceContext::new(tokio_rt.handle().clone(), domain_tx, service_shutdown);
 
+        supervisor.register(Box::new(ClockService));
+        supervisor.register(Box::new(BatteryService));
+        supervisor.register(Box::new(media_service.clone()));
+        supervisor.register(Box::new(NotificationService::new()));
+        supervisor.register(Box::new(PrayerService::new(prayer_rx)));
+        supervisor.register(Box::new(DndService));
+        supervisor.register(Box::new(AudioService));
+        supervisor.register(Box::new(ScreenSaverService));
+        supervisor.register(Box::new(CavaService::new()));
+        supervisor.start_all(&service_ctx);
+
+        let tx_domain = event_tx.clone();
         tokio_rt.spawn(async move {
-            // Clock Service
-            let (clock_tx, mut clock_rx) = mpsc::unbounded_channel();
-            ClockService::start(clock_tx);
-            let tx1 = event_tx_services.clone();
-            tokio::spawn(async move {
-                while let Some(time_info) = clock_rx.recv().await {
-                    let _ = tx1.send(AppEvent::Tick(time_info));
+            while let Some(event) = domain_rx.recv().await {
+                let app_events = match event {
+                    DomainEvent::Tick(time) => vec![AppEvent::Tick(time)],
+                    DomainEvent::Battery(battery) => vec![AppEvent::BatteryUpdated(battery)],
+                    DomainEvent::Media(update) => vec![
+                        AppEvent::MediaUpdated(update.track),
+                        AppEvent::MediaSourcesUpdated(update.sources),
+                    ],
+                    DomainEvent::Dnd(is_dnd) => vec![AppEvent::DndUpdated(is_dnd)],
+                    DomainEvent::Muted(is_muted) => vec![AppEvent::AudioMuteUpdated(is_muted)],
+                    DomainEvent::Notification => vec![AppEvent::NotificationReceived],
+                    DomainEvent::Prayer(alert) => vec![AppEvent::PrayerAlert(alert)],
+                    DomainEvent::ScreenUnlocked => vec![AppEvent::ScreenUnlocked],
+                    DomainEvent::Spectrum(bars) => vec![AppEvent::SpectrumUpdated(bars)],
+                };
+                for event in app_events {
+                    if tx_domain.send(event).is_err() {
+                        return;
+                    }
                 }
-            });
-
-            // Battery Service
-            let (bat_tx, mut bat_rx) = mpsc::unbounded_channel();
-            BatteryService::start(bat_tx);
-            let tx2 = event_tx_services.clone();
-            tokio::spawn(async move {
-                while let Some(bat_state) = bat_rx.recv().await {
-                    let _ = tx2.send(AppEvent::BatteryUpdated(bat_state));
-                }
-            });
-
-            // Media Service
-            let (media_tx, mut media_rx) = mpsc::unbounded_channel();
-            MediaService::start(media_tx);
-            let tx3 = event_tx_services.clone();
-            tokio::spawn(async move {
-                while let Some(update) = media_rx.recv().await {
-                    let _ = tx3.send(AppEvent::MediaUpdated(update.track));
-                    let _ = tx3.send(AppEvent::MediaSourcesUpdated(update.sources));
-                }
-            });
-
-            // Desktop notifications (session bus monitor)
-            let (notif_tx, mut notif_rx) = mpsc::unbounded_channel();
-            tokio::spawn(NotificationService::listen(notif_tx));
-            let tx_notif = event_tx_services.clone();
-            tokio::spawn(async move {
-                while notif_rx.recv().await.is_some() {
-                    let _ = tx_notif.send(AppEvent::NotificationReceived);
-                }
-            });
-
-            // Prayer Service
-            let (prayer_alert_tx, mut prayer_alert_rx) = mpsc::unbounded_channel();
-            PrayerService::start(prayer_rx, prayer_alert_tx);
-            let tx_prayer = event_tx_services.clone();
-            tokio::spawn(async move {
-                while let Some(alert) = prayer_alert_rx.recv().await {
-                    let _ = tx_prayer.send(AppEvent::PrayerAlert(alert));
-                }
-            });
-
-            // DND Service (session bus)
-            let (dnd_tx, mut dnd_rx) = mpsc::unbounded_channel();
-            DndService::start(dnd_tx);
-            let tx_dnd = event_tx_services.clone();
-            tokio::spawn(async move {
-                while let Some(is_dnd) = dnd_rx.recv().await {
-                    let _ = tx_dnd.send(AppEvent::DndUpdated(is_dnd));
-                }
-            });
-
-            // Audio Mute Service (pactl event stream)
-            let (audio_tx, mut audio_rx) = mpsc::unbounded_channel();
-            AudioService::start(audio_tx);
-            let tx_audio = event_tx_services.clone();
-            tokio::spawn(async move {
-                while let Some(is_muted) = audio_rx.recv().await {
-                    let _ = tx_audio.send(AppEvent::AudioMuteUpdated(is_muted));
-                }
-            });
-
-            // ScreenSaver / Lockscreen Service (Detects unlock after lockscreen)
-            let (unlock_tx, mut unlock_rx) = mpsc::unbounded_channel();
-            ScreenSaverService::start(unlock_tx);
-            let tx_unlock = event_tx_services.clone();
-            tokio::spawn(async move {
-                while let Some(_) = unlock_rx.recv().await {
-                    let _ = tx_unlock.send(AppEvent::ScreenUnlocked);
-                }
-            });
-        });
-
-        // 4. Start CAVA Audio Spectrum Visualizer
-        let cava_service = Arc::new(CavaService::new());
-        let (cava_tx, mut cava_rx) = mpsc::unbounded_channel();
-        cava_service.start(cava_tx);
-
-        let tx5 = event_tx.clone();
-        tokio_rt.spawn(async move {
-            while let Some(bars) = cava_rx.recv().await {
-                let _ = tx5.send(AppEvent::SpectrumUpdated(bars));
             }
         });
 
@@ -597,8 +545,12 @@ impl AppRuntime {
         let timer_runtime = tokio_rt.handle().clone();
         let input_region_events = input_region.clone();
         let mut last_input_rect = initial_input_rect;
-        std::thread::spawn(move || {
-            let mut effect_executor = EffectExecutor::new(timer_runtime, event_tx_effects.clone());
+        let event_thread = std::thread::spawn(move || {
+            let mut effect_executor = EffectExecutor::new(
+                timer_runtime.clone(),
+                event_tx_effects.clone(),
+                media_service,
+            );
             effect_executor.execute(
                 Effect::ScheduleTimer {
                     id: TimerId::Welcome,
@@ -609,6 +561,10 @@ impl AppRuntime {
             );
 
             while let Some(event) = event_rx.blocking_recv() {
+                if matches!(event, AppEvent::Shutdown) {
+                    break;
+                }
+                supervisor.refresh_health();
                 if matches!(&event, AppEvent::SpectrumUpdated(_)) {
                     let policy = render_policy(&app_state);
                     let _ = reduce(&mut app_state, event);
@@ -713,6 +669,8 @@ impl AppRuntime {
                 }
             }
             effect_executor.shutdown();
+            timer_runtime.block_on(supervisor.shutdown());
+            SettingsStore::save(&PersistedSettings::from_state(&app_state));
         });
 
         // 8. Show Window and Run Slint GUI event loop
@@ -721,7 +679,10 @@ impl AppRuntime {
         let _pet3d_timer = pet3d::start_timer(pet3d.clone(), self.window.as_weak(), render_stats);
         let _settings_pet3d_timer =
             pet3d::start_settings_timer(settings_pet3d.clone(), settings_window.as_weak());
-        self.window.run()
+        let result = self.window.run();
+        let _ = event_tx.send(AppEvent::Shutdown);
+        let _ = event_thread.join();
+        result
     }
 }
 

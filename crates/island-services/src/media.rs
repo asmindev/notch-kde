@@ -1,16 +1,25 @@
+use crate::service::{DomainEvent, Service, ServiceContext, ServiceError, ServiceHandle};
 use futures_lite::StreamExt;
 use island_core::models::{MediaSource, MediaTrack, MediaUpdate};
 use std::collections::HashMap;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, error, info};
-use zbus::zvariant::Value;
 use zbus::Connection;
 use zbus::MatchRule;
 use zbus::MessageStream;
+use zbus::zvariant::Value;
 
-static ACTIVE_PLAYER: RwLock<Option<String>> = RwLock::new(None);
-static MEDIA_SENDER: RwLock<Option<UnboundedSender<MediaUpdate>>> = RwLock::new(None);
+#[derive(Default)]
+struct MediaState {
+    active_player: Option<String>,
+    events: Option<UnboundedSender<DomainEvent>>,
+}
+
+#[derive(Clone, Default)]
+pub struct MediaService {
+    state: Arc<RwLock<MediaState>>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlayerCandidate {
@@ -72,54 +81,70 @@ pub fn select_target_player<'a>(
     candidates.first()
 }
 
-pub struct MediaService;
-
 impl MediaService {
-    pub async fn play_pause() {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub async fn play_pause(&self) {
         if let Ok(conn) = Connection::session().await {
-            let _ = Self::call_player_method(&conn, "PlayPause").await;
+            let _ = self.call_player_method(&conn, "PlayPause").await;
         }
     }
 
-    pub async fn next() {
+    pub async fn next(&self) {
         if let Ok(conn) = Connection::session().await {
-            let _ = Self::call_player_method(&conn, "Next").await;
+            let _ = self.call_player_method(&conn, "Next").await;
         }
     }
 
-    pub async fn previous() {
+    pub async fn previous(&self) {
         if let Ok(conn) = Connection::session().await {
-            let _ = Self::call_player_method(&conn, "Previous").await;
+            let _ = self.call_player_method(&conn, "Previous").await;
         }
     }
 
-    pub async fn select_source(player_id: &str) {
-        info!("MediaService: User manually selected player source: {}", player_id);
-        if let Ok(mut lock) = ACTIVE_PLAYER.write() {
-            *lock = Some(player_id.to_string());
-        }
+    pub async fn select_source(&self, player_id: &str) {
+        info!(
+            "MediaService: User manually selected player source: {}",
+            player_id
+        );
+        self.set_active_player(Some(player_id.to_string()));
 
         if let Ok(conn) = Connection::session().await {
-            let update = Self::query_current_track_and_sources(&conn).await;
-            Self::publish_update(update);
+            let update = self.query_current_track_and_sources(&conn).await;
+            self.publish_update(update);
         }
     }
 
-    fn publish_update(update: MediaUpdate) {
-        if let Ok(lock) = MEDIA_SENDER.read() {
-            if let Some(sender) = lock.as_ref() {
-                let _ = sender.send(update);
-            }
+    fn active_player(&self) -> Option<String> {
+        self.state
+            .read()
+            .ok()
+            .and_then(|state| state.active_player.clone())
+    }
+
+    fn set_active_player(&self, player: Option<String>) {
+        if let Ok(mut state) = self.state.write() {
+            state.active_player = player;
         }
     }
 
-    async fn call_player_method(conn: &Connection, method: &str) -> Result<(), zbus::Error> {
+    fn publish_update(&self, update: MediaUpdate) {
+        if let Ok(state) = self.state.read()
+            && let Some(sender) = state.events.as_ref()
+        {
+            let _ = sender.send(DomainEvent::Media(update));
+        }
+    }
+
+    async fn call_player_method(&self, conn: &Connection, method: &str) -> Result<(), zbus::Error> {
         let players = Self::find_players(conn).await?;
         if players.is_empty() {
             return Ok(());
         }
 
-        let current_active = ACTIVE_PLAYER.read().ok().and_then(|p| p.clone());
+        let current_active = self.active_player();
         let target_player = if let Some(ref act) = current_active {
             if players.contains(act) {
                 act.clone()
@@ -130,7 +155,10 @@ impl MediaService {
             players[0].clone()
         };
 
-        info!("MPRIS: Calling method '{}' on target player '{}'", method, target_player);
+        info!(
+            "MPRIS: Calling method '{}' on target player '{}'",
+            method, target_player
+        );
 
         let proxy = zbus::Proxy::new(
             conn,
@@ -144,8 +172,8 @@ impl MediaService {
 
         // Re-query immediately to reflect UI state
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
-        let update = Self::query_current_track_and_sources(conn).await;
-        Self::publish_update(update);
+        let update = self.query_current_track_and_sources(conn).await;
+        self.publish_update(update);
 
         Ok(())
     }
@@ -246,18 +274,35 @@ impl MediaService {
             let hash = hasher.finish();
             let cache_file = cache_dir.join(format!("{:016x}.jpg", hash));
 
-            if cache_file.exists() && std::fs::metadata(&cache_file).map(|m| m.len() > 0).unwrap_or(false) {
+            if cache_file.exists()
+                && std::fs::metadata(&cache_file)
+                    .map(|m| m.len() > 0)
+                    .unwrap_or(false)
+            {
                 return cache_file.to_string_lossy().to_string();
             }
 
             // Download using curl asynchronously with a quick timeout
             let res = tokio::process::Command::new("curl")
-                .args(["-s", "-L", "--max-time", "4", "-o", cache_file.to_str().unwrap_or_default(), raw_url])
+                .args([
+                    "-s",
+                    "-L",
+                    "--max-time",
+                    "4",
+                    "-o",
+                    cache_file.to_str().unwrap_or_default(),
+                    raw_url,
+                ])
                 .status()
                 .await;
 
             if let Ok(st) = res {
-                if st.success() && cache_file.exists() && std::fs::metadata(&cache_file).map(|m| m.len() > 0).unwrap_or(false) {
+                if st.success()
+                    && cache_file.exists()
+                    && std::fs::metadata(&cache_file)
+                        .map(|m| m.len() > 0)
+                        .unwrap_or(false)
+                {
                     debug!("Downloaded album art to {:?}", cache_file);
                     return cache_file.to_string_lossy().to_string();
                 }
@@ -267,7 +312,7 @@ impl MediaService {
         String::new()
     }
 
-    async fn query_current_track_and_sources(conn: &Connection) -> MediaUpdate {
+    async fn query_current_track_and_sources(&self, conn: &Connection) -> MediaUpdate {
         let players = Self::find_players(conn).await.unwrap_or_default();
         if players.is_empty() {
             return MediaUpdate::default();
@@ -291,10 +336,8 @@ impl MediaService {
                     .await
                     .unwrap_or_else(|_| "Stopped".to_string());
 
-                let metadata: HashMap<String, Value> = proxy
-                    .get_property("Metadata")
-                    .await
-                    .unwrap_or_default();
+                let metadata: HashMap<String, Value> =
+                    proxy.get_property("Metadata").await.unwrap_or_default();
 
                 let title = metadata
                     .get("xesam:title")
@@ -306,7 +349,8 @@ impl MediaService {
                     .and_then(Self::extract_artist)
                     .unwrap_or_default();
 
-                let has_metadata = !metadata.is_empty() && (!title.is_empty() || !artist.is_empty());
+                let has_metadata =
+                    !metadata.is_empty() && (!title.is_empty() || !artist.is_empty());
 
                 candidates.push(PlayerCandidate {
                     bus_name: player.clone(),
@@ -321,15 +365,11 @@ impl MediaService {
             }
         }
 
-        let current_active = ACTIVE_PLAYER.read().ok().and_then(|p| p.clone());
+        let current_active = self.active_player();
         let selected = select_target_player(&candidates, current_active.as_deref());
 
         let active_bus_name = selected.map(|c| c.bus_name.clone());
-        if let Some(ref act) = active_bus_name {
-            if let Ok(mut lock) = ACTIVE_PLAYER.write() {
-                *lock = Some(act.clone());
-            }
-        }
+        self.set_active_player(active_bus_name.clone());
 
         // Build list of MediaSource
         let sources: Vec<MediaSource> = candidates
@@ -381,12 +421,24 @@ impl MediaService {
         }
     }
 
-    pub fn start(sender: UnboundedSender<MediaUpdate>) {
-        if let Ok(mut lock) = MEDIA_SENDER.write() {
-            *lock = Some(sender.clone());
+    fn set_event_sender(&self, sender: UnboundedSender<DomainEvent>) {
+        if let Ok(mut state) = self.state.write() {
+            state.events = Some(sender);
         }
+    }
+}
 
-        tokio::spawn(async move {
+impl Service for MediaService {
+    fn name(&self) -> &'static str {
+        "media"
+    }
+
+    fn start(&self, ctx: ServiceContext) -> Result<ServiceHandle, ServiceError> {
+        self.set_event_sender(ctx.event_sender());
+        let shutdown = ctx.shutdown_signal().clone();
+        let task_shutdown = shutdown.clone();
+        let service = self.clone();
+        let join = ctx.spawn(async move {
             info!("MPRIS Media service starting with multi-source D-Bus event listening");
             let conn = match Connection::session().await {
                 Ok(c) => c,
@@ -397,15 +449,12 @@ impl MediaService {
             };
 
             let mut last_update = MediaUpdate::default();
-
-            // Initial query
-            let initial = Self::query_current_track_and_sources(&conn).await;
+            let initial = service.query_current_track_and_sources(&conn).await;
             if initial != last_update {
                 last_update = initial.clone();
-                let _ = sender.send(initial);
+                service.publish_update(initial);
             }
 
-            // Match rules for D-Bus signals
             let prop_rule = MatchRule::builder()
                 .msg_type(zbus::message::Type::Signal)
                 .interface("org.freedesktop.DBus.Properties")
@@ -438,36 +487,54 @@ impl MediaService {
 
             loop {
                 tokio::select! {
-                    Some(_) = async {
+                    _ = task_shutdown.cancelled() => break,
+                    _ = async {
                         match &mut prop_stream {
-                            Some(s) => s.next().await,
+                            Some(stream) => stream.next().await,
                             None => std::future::pending().await,
                         }
-                    } => {},
-                    Some(_) = async {
+                    } => {}
+                    _ = async {
                         match &mut name_stream {
-                            Some(s) => s.next().await,
+                            Some(stream) => stream.next().await,
                             None => std::future::pending().await,
                         }
-                    } => {},
+                    } => {}
                 }
 
-                let update = Self::query_current_track_and_sources(&conn).await;
+                let update = service.query_current_track_and_sources(&conn).await;
                 if update != last_update {
-                    debug!("Media update via D-Bus: {} - {} (sources: {})", update.track.artist, update.track.title, update.sources.len());
+                    debug!(
+                        "Media update via D-Bus: {} - {} (sources: {})",
+                        update.track.artist,
+                        update.track.title,
+                        update.sources.len()
+                    );
                     last_update = update.clone();
-                    if sender.send(update).is_err() {
-                        break;
-                    }
+                    service.publish_update(update);
                 }
             }
         });
+        Ok(ServiceHandle::new(self.name(), shutdown, join))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn instances_do_not_share_active_player() {
+        let first = MediaService::new();
+        let second = MediaService::new();
+        first.set_active_player(Some("org.mpris.MediaPlayer2.first".to_string()));
+
+        assert_eq!(
+            first.active_player().as_deref(),
+            Some("org.mpris.MediaPlayer2.first")
+        );
+        assert_eq!(second.active_player(), None);
+    }
 
     #[test]
     fn test_select_target_player_playing_takes_precedence() {

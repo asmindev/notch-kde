@@ -25,6 +25,7 @@ pub enum AppEvent {
     // Time & periodic
     Tick(TimeInfo),
     TimerFired { id: TimerId, generation: u64 },
+    Shutdown,
 
     // Services
     BatteryUpdated(BatteryState),
