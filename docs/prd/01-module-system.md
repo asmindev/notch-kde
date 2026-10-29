@@ -71,7 +71,7 @@ Aturan kontrak:
 6. Tambahkan test priority + fallback
 ```
 
-Target: langkah 1–3 hanya menyentuh core module; langkah 4–5 hanya menyentuh UI registry/slot. `ViewEngine` dan shell tidak berubah.
+Target: langkah 1–3 hanya menyentuh core module; langkah 4–5 hanya menyentuh UI registry/slot. `ViewEngine` dan shell tidak berubah. Panduan implementasi aktual ada di [`../tasks/01-module-system.md`](../tasks/01-module-system.md#panduan-menambah-module).
 
 ## 6. Acceptance Criteria
 

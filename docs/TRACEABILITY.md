@@ -217,4 +217,4 @@ Tasks: [`TASKS.md`](TASKS.md)
 - [x] Semua task memiliki minimal satu requirement.
 - [x] Setiap domain memiliki file PRD dan file task.
 - [x] Dependency antar-fase tercatat di [`TASKS.md`](TASKS.md#4-dependency-graph).
-- [x] Status implementasi diperbarui (Phase 0 dan track R selesai; Phase 1 belum dimulai).
+- [x] Status implementasi diperbarui (Phase 0, track R, dan Phase 1 selesai; Phase 2 belum dimulai).
