@@ -288,8 +288,17 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         AppEvent::ToggleSourceSelector => {
             state.show_source_selector = !state.show_source_selector;
             if state.show_source_selector {
+                state.prayer_panel_open = false;
                 state.active_module = crate::models::ActiveModule::Media;
             }
+        }
+
+        AppEvent::TogglePrayerPanel => {
+            state.prayer_panel_open = !state.prayer_panel_open;
+            if state.prayer_panel_open {
+                state.show_source_selector = false;
+            }
+            state.update_active_module();
         }
 
         AppEvent::OpenSettings => {

@@ -169,6 +169,11 @@ impl AppRuntime {
         });
 
         let tx = event_tx.clone();
+        ctx.on_toggle_prayer_panel(move || {
+            let _ = tx.send(AppEvent::TogglePrayerPanel);
+        });
+
+        let tx = event_tx.clone();
         ctx.on_select_player_source(move |player_id| {
             let _ = tx.send(AppEvent::SelectMediaSource(player_id.to_string()));
         });

@@ -1,3 +1,5 @@
+use chrono::Utc;
+use island_core::prayer::{Prayer, PrayerAlert, PrayerAlertKind};
 use island_core::{
     reduce, ActiveModule, AppEvent, AppState, BatteryState, IslandMode, MediaTrack,
 };
@@ -237,4 +239,103 @@ fn test_dnd_and_audio_mute_events() {
     let effects = reduce(&mut state, AppEvent::DndToggleClicked);
     assert!(state.is_dnd);
     assert!(effects.contains(&island_core::Effect::ToggleDnd));
+}
+
+fn settle_wide(state: &mut AppState) {
+    reduce(state, AppEvent::WelcomeTimeout);
+    reduce(state, AppEvent::UserHoverChanged(true));
+}
+
+fn playing_track() -> MediaTrack {
+    MediaTrack {
+        title: "Starboy".to_string(),
+        artist: "The Weeknd".to_string(),
+        album: "Starboy".to_string(),
+        art_url: String::new(),
+        is_playing: true,
+        position_ms: 0,
+        duration_ms: 200000,
+    }
+}
+
+fn prayer_alert() -> PrayerAlert {
+    PrayerAlert {
+        prayer: Prayer::Dhuhr,
+        kind: PrayerAlertKind::Adhan,
+        at: Utc::now(),
+        title: "Dzuhur".to_string(),
+        time_label: "12:00".to_string(),
+        city_label: "Jakarta · WIB".to_string(),
+    }
+}
+
+#[test]
+fn test_prayer_panel_takes_priority_over_playing_media_in_wide() {
+    let mut state = AppState::default();
+    settle_wide(&mut state);
+    reduce(&mut state, AppEvent::MediaUpdated(playing_track()));
+    assert_eq!(state.active_module, ActiveModule::Media);
+
+    reduce(&mut state, AppEvent::TogglePrayerPanel);
+    assert!(state.prayer_panel_open);
+    assert_eq!(state.active_module, ActiveModule::Prayer);
+
+    reduce(&mut state, AppEvent::TogglePrayerPanel);
+    assert!(!state.prayer_panel_open);
+    assert_eq!(state.active_module, ActiveModule::Media);
+}
+
+#[test]
+fn test_alert_overrides_prayer_and_returns_to_prayer() {
+    let mut state = AppState::default();
+    settle_wide(&mut state);
+    reduce(&mut state, AppEvent::TogglePrayerPanel);
+    assert_eq!(state.active_module, ActiveModule::Prayer);
+
+    reduce(&mut state, AppEvent::PrayerAlert(prayer_alert()));
+    assert_eq!(state.active_module, ActiveModule::Alert);
+
+    let generation = state.alert_generation;
+    reduce(&mut state, AppEvent::AlertTimeout(generation));
+    assert_eq!(state.active_module, ActiveModule::Prayer);
+}
+
+#[test]
+fn test_prayer_panel_restores_after_compact_and_is_kept_in_expand() {
+    let mut state = AppState::default();
+    settle_wide(&mut state);
+    reduce(&mut state, AppEvent::TogglePrayerPanel);
+    assert_eq!(state.active_module, ActiveModule::Prayer);
+
+    reduce(&mut state, AppEvent::UserHoverChanged(false));
+    assert_eq!(state.mode, IslandMode::Compact);
+    assert_eq!(state.active_module, ActiveModule::System);
+    assert!(state.prayer_panel_open);
+
+    reduce(&mut state, AppEvent::UserHoverChanged(true));
+    assert_eq!(state.active_module, ActiveModule::Prayer);
+
+    reduce(&mut state, AppEvent::IslandClicked);
+    assert_eq!(state.mode, IslandMode::Expand);
+    assert_eq!(state.active_module, ActiveModule::Prayer);
+}
+
+#[test]
+fn test_prayer_panel_and_source_selector_are_mutually_exclusive() {
+    let mut state = AppState::default();
+    settle_wide(&mut state);
+
+    reduce(&mut state, AppEvent::TogglePrayerPanel);
+    assert!(state.prayer_panel_open);
+    assert!(!state.show_source_selector);
+
+    reduce(&mut state, AppEvent::ToggleSourceSelector);
+    assert!(!state.prayer_panel_open);
+    assert!(state.show_source_selector);
+    assert_eq!(state.active_module, ActiveModule::Media);
+
+    reduce(&mut state, AppEvent::TogglePrayerPanel);
+    assert!(state.prayer_panel_open);
+    assert!(!state.show_source_selector);
+    assert_eq!(state.active_module, ActiveModule::Prayer);
 }

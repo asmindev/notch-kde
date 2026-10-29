@@ -10,6 +10,7 @@ import {
     SettingsDivider,
     SettingsNavItem,
     SettingsSegmentButton,
+    SettingsSelect,
     SettingsSliderRow,
     SettingsSwatch,
     SettingsToggleRow,
@@ -247,100 +248,168 @@ component BehaviorSettingsPage inherits Rectangle {
     }
 }
 
-component PrayerCityButton inherits SettingsSegmentButton {
-    in property <int> city-index: 0;
+component PrayerScheduleRow inherits Rectangle {
+    in property <string> name: "";
+    in property <string> time: "";
+    in property <bool> is-next: false;
 
-    label: IslandContext.prayer-cities[self.city-index].name;
-    active: IslandContext.prayer-city-index == self.city-index;
-    clicked => { IslandContext.set-prayer-city(self.city-index); }
-}
+    height: 32px;
+    border-radius: 8px;
+    background: root.is-next ? #5aa2ff18 : transparent;
 
-component PrayerSettingsPage inherits Rectangle {
-    VerticalLayout {
-        spacing: 10px;
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 8px;
+        alignment: space-between;
 
-        SettingsCard {
-            title: "Notifikasi sholat";
-            description: "Tampilkan pengingat waktu sholat di notch.";
+        Text {
+            text: root.name;
+            color: root.is-next ? ThemeColors.foreground : ThemeColors.muted;
+            font-family: ThemeTypography.font-family;
+            font-size: ThemeTypography.size-sm;
+            font-weight: root.is-next ? ThemeTypography.weight-bold : ThemeTypography.weight-medium;
+            vertical-alignment: center;
+        }
 
-            SettingsToggleRow {
-                title: "Aktifkan";
-                subtitle: "Notifikasi masuk saat waktu sholat dan sebelum waktunya.";
-                checked: IslandContext.prayer-enabled;
-                toggled(value) => { IslandContext.set-prayer-enabled(value); }
-            }
-
-            SettingsDivider {}
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: end;
 
             Text {
-                text: "Kota";
-                color: ThemeColors.foreground;
+                text: root.is-next ? "Berikutnya" : "";
+                color: ThemeColors.accent;
+                font-family: ThemeTypography.font-family;
+                font-size: ThemeTypography.size-xs;
+                font-weight: ThemeTypography.weight-bold;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: root.time;
+                color: root.is-next ? ThemeColors.foreground : ThemeColors.muted;
                 font-family: ThemeTypography.font-family;
                 font-size: ThemeTypography.size-sm;
                 font-weight: ThemeTypography.weight-bold;
-            }
-
-            GridLayout {
-                spacing: 5px;
-
-                Row {
-                    for i in 4: PrayerCityButton { city-index: i; }
-                }
-
-                Row {
-                    for i in 4: PrayerCityButton { city-index: i + 4; }
-                }
-
-                Row {
-                    for i in 4: PrayerCityButton { city-index: i + 8; }
-                }
-
-                Row {
-                    for i in 2: PrayerCityButton { city-index: i + 12; }
-                }
+                vertical-alignment: center;
+                horizontal-alignment: right;
             }
         }
+    }
+}
 
-        SettingsCard {
-            title: "Pengingat";
-            description: "Notifikasi tambahan sebelum waktu sholat.";
+component PrayerSettingsPage inherits Rectangle {
+    ScrollView {
+        width: 100%;
+        height: 100%;
+        vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+        horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+        mouse-drag-pan-enabled: true;
 
-            HorizontalLayout {
-                spacing: 5px;
-                alignment: start;
+        VerticalLayout {
+            width: 100%;
+            spacing: 10px;
+            alignment: start;
 
-                SettingsSegmentButton {
-                    label: "Off";
-                    active: IslandContext.prayer-reminder-minutes == 0;
-                    clicked => { IslandContext.set-prayer-reminder-minutes(0); }
+            SettingsCard {
+                title: "Notifikasi sholat";
+                description: "Tampilkan pengingat waktu sholat di notch.";
+
+                SettingsToggleRow {
+                    title: "Aktifkan";
+                    subtitle: "Notifikasi masuk saat waktu sholat dan sebelum waktunya.";
+                    checked: IslandContext.prayer-enabled;
+                    toggled(value) => { IslandContext.set-prayer-enabled(value); }
                 }
 
-                SettingsSegmentButton {
-                    label: "5 mnt";
-                    active: IslandContext.prayer-reminder-minutes == 5;
-                    clicked => { IslandContext.set-prayer-reminder-minutes(5); }
-                }
+                SettingsDivider {}
 
-                SettingsSegmentButton {
-                    label: "10 mnt";
-                    active: IslandContext.prayer-reminder-minutes == 10;
-                    clicked => { IslandContext.set-prayer-reminder-minutes(10); }
-                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: space-between;
 
-                SettingsSegmentButton {
-                    label: "15 mnt";
-                    active: IslandContext.prayer-reminder-minutes == 15;
-                    clicked => { IslandContext.set-prayer-reminder-minutes(15); }
+                    Text {
+                        text: "Kota";
+                        color: ThemeColors.foreground;
+                        font-family: ThemeTypography.font-family;
+                        font-size: ThemeTypography.size-sm;
+                        font-weight: ThemeTypography.weight-bold;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+
+                    SettingsSelect {
+                        width: 250px;
+                        model: IslandContext.prayer-city-labels;
+                        current-index: IslandContext.prayer-city-index;
+                        selected(index) => { IslandContext.set-prayer-city(index); }
+                    }
                 }
             }
-        }
 
-        Text {
-            text: "Metode Kemenag: Subuh 20°, Isya 18°, Asr Syafi'i, ihtiyati +2 menit.";
-            color: ThemeColors.subtle;
-            font-family: ThemeTypography.font-family;
-            font-size: ThemeTypography.size-xs;
-            wrap: word-wrap;
+            SettingsCard {
+                title: "Jadwal sholat";
+                description: IslandContext.prayer-schedule-subtitle;
+
+                if IslandContext.prayer-schedule.length == 0: Text {
+                    text: "Jadwal tidak tersedia untuk tanggal ini.";
+                    color: ThemeColors.subtle;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-sm;
+                }
+
+                VerticalLayout {
+                    spacing: 2px;
+
+                    for item in IslandContext.prayer-schedule : PrayerScheduleRow {
+                        name: item.name;
+                        time: item.time;
+                        is-next: item.is-next;
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Pengingat";
+                description: "Notifikasi tambahan sebelum waktu sholat.";
+
+                HorizontalLayout {
+                    spacing: 5px;
+                    alignment: start;
+
+                    SettingsSegmentButton {
+                        label: "Off";
+                        active: IslandContext.prayer-reminder-minutes == 0;
+                        clicked => { IslandContext.set-prayer-reminder-minutes(0); }
+                    }
+
+                    SettingsSegmentButton {
+                        label: "5 mnt";
+                        active: IslandContext.prayer-reminder-minutes == 5;
+                        clicked => { IslandContext.set-prayer-reminder-minutes(5); }
+                    }
+
+                    SettingsSegmentButton {
+                        label: "10 mnt";
+                        active: IslandContext.prayer-reminder-minutes == 10;
+                        clicked => { IslandContext.set-prayer-reminder-minutes(10); }
+                    }
+
+                    SettingsSegmentButton {
+                        label: "15 mnt";
+                        active: IslandContext.prayer-reminder-minutes == 15;
+                        clicked => { IslandContext.set-prayer-reminder-minutes(15); }
+                    }
+                }
+            }
+
+            Text {
+                text: "Metode Kemenag: Subuh 20°, Isya 18°, Asr Syafi'i, ihtiyati +2 menit.";
+                color: ThemeColors.subtle;
+                font-family: ThemeTypography.font-family;
+                font-size: ThemeTypography.size-xs;
+                wrap: word-wrap;
+            }
         }
     }
 }
@@ -689,7 +758,7 @@ export component SettingsWindow inherits Window {
                         : "Tentang";
                     subtitle: IslandContext.settings-tab == 0 ? "Sesuaikan penampilan Bloub."
                         : IslandContext.settings-tab == 1 ? "Atur cara Bloub bereaksi."
-                        : IslandContext.settings-tab == 2 ? "Notifikasi waktu sholat dan pengingat."
+                        : IslandContext.settings-tab == 2 ? "Jadwal, notifikasi, dan pengingat waktu sholat."
                         : IslandContext.settings-tab == 3 ? "Preferensi tampilan dan reset."
                         : "Informasi aplikasi dan kredit.";
                 }

@@ -1,0 +1,334 @@
+import { ThemeColors } from "../../theme/colors.slint";
+import { ThemeTypography } from "../../theme/typography.slint";
+import { Icons } from "../../theme/icons.slint";
+import { IslandContext } from "../../context.slint";
+
+component PrayerDomeLine inherits Rectangle {
+    in property <float> progress: 0.0;
+    in property <bool> night: false;
+    // True while the cursor is over the dome (used to gate the orb shimmer
+    // and to report hover up to the expand view so the panel stays open).
+    out property <bool> is-hovered: dome-touch.has-hover;
+
+    property <length> line-y: max(34px, self.height - 24px);
+    property <length> orb-x: self.width * (1 - cos(root.progress * 180deg)) / 2;
+    property <length> orb-y: root.line-y * (1 - sin(root.progress * 180deg));
+    // Tint for the orb's soft light column: cool by night, warm by day.
+    property <color> column-color: root.night ? #e5e7eb1a : #f0b4291c;
+
+    // Shared shimmer toggle for the orb halo. A single Timer flips it; each
+    // halo eases its own opacity, so the whole thing costs one timer, not two.
+    property <bool> pulse: true;
+    pulse-timer := Timer {
+        interval: 1000ms;
+        running: root.is-hovered || true;
+        triggered => { root.pulse = !root.pulse; }
+    }
+
+    background: transparent;
+
+    // Soft horizon glow: a faint amber band that fades out toward both edges,
+    // so the sky dissolves into the schedule instead of meeting a hard rule.
+    Rectangle {
+        x: 0;
+        y: root.line-y - 6px;
+        width: 100%;
+        height: 13px;
+        background: @linear-gradient(90deg,
+            #f0b42900 0%,
+            #f0b42912 20%,
+            #f0b42926 50%,
+            #f0b42912 80%,
+            #f0b42900 100%);
+    }
+
+    // The dome line as a dotted scale: small dots tracing the arc the orb
+    // travels (..|..|..|.., a taller radial tick every third position),
+    // bright at the top and dissolving toward both ends.
+    property <[int]> dome-dots: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30];
+    for i in root.dome-dots: Rectangle {
+        property <float> t: i / 30.0;
+        property <bool> is-tick: mod(i, 3) == 2;
+        // Brightest at the top of the arc, dissolving toward the ends.
+        property <float> fade: max(0.0, 1.0 - abs(self.t - 0.5) * 1.9);
+        property <angle> ang: self.t * 180deg;
+
+        // Same ellipse the orb walks: x from cos, y from sin.
+        x: root.width * (1 - cos(self.ang)) / 2 - (self.is-tick ? 0.5px : 1px);
+        y: root.line-y * (1 - sin(self.ang)) - (self.is-tick ? 4px : 1px);
+        width: self.is-tick ? 1px : 2px;
+        height: self.is-tick ? 8px : 2px;
+        border-radius: self.is-tick ? 0px : 1px;
+        background: root.night ? #e5e7eb : #f0b429;
+        opacity: self.fade * (self.is-tick ? 0.6 : 0.4);
+    }
+
+    // The fine line the accents sit on: dense tiny dashes on the same arc,
+    // drawn on top, much quieter, and faded to zero before the arc turns
+    // steep near the ends (that steep curl is what looked oval).
+    property <[int]> dome-line: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95];
+    for i in root.dome-line: Rectangle {
+        property <float> t: i / 95.0;
+        // Squared fade: gone completely well before the steep end curls.
+        property <float> raw-fade: max(0.0, 1.0 - abs(self.t - 0.5) * 1.7);
+        property <float> fade: self.raw-fade * self.raw-fade;
+        property <angle> ang: self.t * 180deg;
+
+        x: root.width * (1 - cos(self.ang)) / 2 - 1px;
+        y: root.line-y * (1 - sin(self.ang)) - 0.5px;
+        width: 2px;
+        height: 1px;
+        background: root.night ? #e5e7eb : #f0b429;
+        opacity: self.fade * 0.28;
+    }
+
+    // Gentle column of light from the orb down to the horizon — the soft
+    // replacement for the old hard arc. Faint, and it drifts with the orb.
+    Rectangle {
+        x: clamp(root.orb-x - 11px, 0px, root.width - 22px);
+        y: clamp(root.orb-y, 0px, root.line-y);
+        width: 22px;
+        height: max(0px, root.line-y - clamp(root.orb-y, 0px, root.line-y));
+        background: @linear-gradient(180deg, root.column-color 0%, #00000000 100%);
+
+        animate x, y, height { duration: 1200ms; easing: ease-in-out; }
+    }
+
+    if !root.night: Rectangle {
+        x: clamp(root.orb-x - 10px, 0px, root.width - 20px);
+        y: clamp(root.orb-y - 10px, 0px, root.line-y - 20px);
+        width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        background: #f0b42920;
+
+        // Longer ease-in-out so the per-minute step glides instead of snapping.
+        animate x, y { duration: 1200ms; easing: ease-in-out; }
+
+        // Cheap pulsing halo (Timer-toggle, matches charging-indicator).
+        Rectangle {
+            x: -3px;
+            y: -3px;
+            width: parent.width + 6px;
+            height: parent.height + 6px;
+            border-radius: self.width / 2;
+            background: #f0b429;
+            opacity: root.pulse ? 0.18 : 0.06;
+            animate opacity { duration: 1000ms; easing: ease-in-out; }
+        }
+
+        Rectangle {
+            x: 2px;
+            y: 2px;
+            width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            background: #f0b42938;
+        }
+
+        Rectangle {
+            x: 5px;
+            y: 5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background: #f0b429;
+        }
+    }
+
+    if root.night: Rectangle {
+        x: clamp(root.orb-x - 8px, 0px, root.width - 16px);
+        y: clamp(root.orb-y - 8px, 0px, root.line-y - 16px);
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        background: #e5e7eb18;
+
+        animate x, y { duration: 1200ms; easing: ease-in-out; }
+
+        // Cool pulsing halo for the moon.
+        Rectangle {
+            x: -2px;
+            y: -2px;
+            width: parent.width + 4px;
+            height: parent.height + 4px;
+            border-radius: self.width / 2;
+            background: #e5e7eb;
+            opacity: root.pulse ? 0.12 : 0.04;
+            animate opacity { duration: 1000ms; easing: ease-in-out; }
+        }
+
+        Image {
+            x: 2px;
+            y: 2px;
+            width: 12px;
+            height: 12px;
+            source: Icons.moon;
+            colorize: #e5e7eb;
+            image-fit: contain;
+        }
+    }
+
+    for marker in IslandContext.prayer-orbit-markers : Rectangle {
+        property <length> marker-x: root.width * marker.x;
+        property <length> label-width: 56px;
+        property <length> label-x: clamp(self.marker-x - self.label-width / 2, 0px, root.width - self.label-width);
+        // A marker is "active" when the cursor hovers the dome within its column.
+        // This is the requested hover → highlight interaction.
+        property <bool> is-hover: dome-touch.has-hover
+            && abs(dome-touch.mouse-x - self.marker-x) < (root.width * 0.1);
+        property <bool> lit: marker.is-next || self.is-hover;
+
+        width: 100%;
+        height: 100%;
+
+        // Hover/next halo — grows a touch when hovered.
+        if self.lit: Rectangle {
+            x: parent.marker-x - (parent.is-hover ? 9px : 7px);
+            y: root.line-y - (parent.is-hover ? 9px : 7px);
+            width: parent.is-hover ? 18px : 14px;
+            height: parent.is-hover ? 18px : 14px;
+            border-radius: self.width / 2;
+            background: #f0b4292b;
+
+            animate x, y, width, height { duration: 160ms; easing: ease-out; }
+        }
+
+        Rectangle {
+            x: parent.marker-x - (parent.lit ? 4px : 2px);
+            y: root.line-y - (parent.lit ? 4px : 2px);
+            width: parent.lit ? 8px : 4px;
+            height: parent.lit ? 8px : 4px;
+            border-radius: self.width / 2;
+            background: parent.lit ? ThemeColors.warning : #a1a1aa;
+
+            animate x, y, width, height { duration: 160ms; easing: ease-out; }
+        }
+
+        Text {
+            x: parent.label-x;
+            y: root.line-y + 4px;
+            width: parent.label-width;
+            text: marker.name;
+            color: parent.lit ? ThemeColors.warning : ThemeColors.foreground;
+            font-family: ThemeTypography.font-family;
+            font-size: 8px;
+            font-weight: parent.lit ? ThemeTypography.weight-bold : ThemeTypography.weight-medium;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+
+        Text {
+            x: parent.label-x;
+            y: root.line-y + 13px;
+            width: parent.label-width;
+            text: marker.time;
+            color: parent.lit ? ThemeColors.warning : ThemeColors.muted;
+            font-family: ThemeTypography.font-family;
+            font-size: 8px;
+            font-weight: parent.lit ? ThemeTypography.weight-bold : ThemeTypography.weight-medium;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+    }
+
+    // Clock + city, dead center of the band between the arc and the baseline.
+    // Placed after the orbs so the orb and its halo act as a backdrop behind
+    // the digits; the faint light column falls behind them as well.
+    Rectangle {
+        width: 100%;
+        height: 32px;
+        y: (root.line-y - self.height) / 2;
+
+        Text {
+            width: 100%;
+            height: 22px;
+            text: IslandContext.prayer-now-time;
+            color: ThemeColors.foreground;
+            font-family: ThemeTypography.font-family;
+            font-size: max(16px, min(20px, root.width * 0.045));
+            font-weight: ThemeTypography.weight-bold;
+            vertical-alignment: center;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            y: 23px;
+            width: 100%;
+            text: IslandContext.prayer-city-labels[IslandContext.prayer-city-index];
+            color: ThemeColors.subtle;
+            font-family: ThemeTypography.font-family;
+            font-size: 8px;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+    }
+
+    // Countdown pill: third element of the central column, floating 8px above
+    // the baseline dot of the center marker (its label sits below the line).
+    HorizontalLayout {
+        width: 100%;
+        height: 18px;
+        y: root.line-y - 26px;
+        alignment: center;
+
+        Rectangle {
+            visible: IslandContext.prayer-countdown != "";
+            height: 18px;
+            border-radius: 9px;
+            background: #f0b4291c;
+
+            HorizontalLayout {
+                padding-left: 8px;
+                padding-right: 8px;
+                alignment: center;
+
+                Text {
+                    text: IslandContext.prayer-countdown;
+                    color: ThemeColors.warning;
+                    font-family: ThemeTypography.font-family;
+                    font-size: 9px;
+                    font-weight: ThemeTypography.weight-bold;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+
+    // One dome-wide hit area drives every marker's hover. A single TouchArea
+    // avoids the for-loop hover-aggregation problem (you can't OR an unknown
+    // number of has-hover flags). Clicks forward to collapse so the panel
+    // dismisses exactly like the rest of the notch body.
+    dome-touch := TouchArea {
+        width: 100%;
+        height: 100%;
+        clicked => { IslandContext.collapse-clicked(); }
+    }
+}
+
+export component PrayerExpandSlot inherits Rectangle {
+    // Report hover upward so the expand view keeps the panel open while the
+    // cursor is over the dome/markers (same contract as Media/System slots).
+    out property <bool> is-hovered: dome-line.is-hovered;
+
+    property <float> progress: clamp(IslandContext.prayer-orbit-progress, 0.0, 1.0);
+
+    width: 100%;
+    height: 100%;
+
+    VerticalLayout {
+        width: 100%;
+        height: 100%;
+        spacing: 2px;
+
+        // The dome now owns the full panel; clock, city and countdown live in
+        // its central column (inside PrayerDomeLine). No bottom strip: the
+        // dome grows taller with the space that used to hold the pill row.
+        dome-line := PrayerDomeLine {
+            width: 100%;
+            vertical-stretch: 1;
+            progress: root.progress;
+            night: IslandContext.prayer-orbit-night;
+        }
+    }
+}

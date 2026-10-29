@@ -41,6 +41,7 @@ pub enum AppEvent {
     MuteToggleClicked,
     DndToggleClicked,
     ToggleSourceSelector,
+    TogglePrayerPanel,
     OpenSettings,
     CloseSettings,
     SetSettingsTab(SettingsTab),

@@ -13,6 +13,7 @@ impl Priority {
     pub const LOW: Self = Self(10);       // System / Idle default
     pub const NORMAL: Self = Self(50);    // Paused media / background status
     pub const HIGH: Self = Self(100);     // Active media playback / running timer
+    pub const PANEL: Self = Self(150);    // User-selected panel such as prayer times
     pub const URGENT: Self = Self(200);   // Important alerts / incoming notifications
     pub const CRITICAL: Self = Self(300); // Critical battery (<10%) / emergency alerts
 }
@@ -27,6 +28,7 @@ pub struct SlotContext<'a> {
     pub is_muted: bool,
     pub is_dnd: bool,
     pub alert_kind: AlertKind,
+    pub prayer_panel_open: bool,
 }
 
 /// Defines which view tiers a module can render into.
@@ -41,6 +43,7 @@ impl ModuleTiers {
     pub const ALL: Self = Self { compact: true, wide: true, expand: true };
     pub const COMPACT_WIDE: Self = Self { compact: true, wide: true, expand: false };
     pub const WIDE_ONLY: Self = Self { compact: false, wide: true, expand: false };
+    pub const WIDE_EXPAND: Self = Self { compact: false, wide: true, expand: true };
 
     pub fn supports(&self, view: IslandView) -> bool {
         match view {
@@ -92,6 +95,24 @@ impl IslandModule for MediaModule {
             Priority::HIGH
         } else if ctx.view == IslandView::Compact && !ctx.media.title.is_empty() {
             Priority::NORMAL
+        } else {
+            Priority::INACTIVE
+        }
+    }
+}
+
+/// Concrete Prayer Module (User-selected schedule panel - Supports Wide/Expand)
+#[derive(Debug, Default)]
+pub struct PrayerModule;
+
+impl IslandModule for PrayerModule {
+    fn id(&self) -> &'static str { "prayer" }
+    fn name(&self) -> &'static str { "Jadwal Sholat" }
+    fn module_type(&self) -> ActiveModule { ActiveModule::Prayer }
+    fn tiers(&self) -> ModuleTiers { ModuleTiers::WIDE_EXPAND }
+    fn priority(&self, ctx: &SlotContext) -> Priority {
+        if ctx.prayer_panel_open {
+            Priority::PANEL
         } else {
             Priority::INACTIVE
         }
@@ -171,6 +192,7 @@ impl ViewEngine {
         engine.register_module(Arc::new(SystemModule));
         engine.register_module(Arc::new(MediaModule));
         engine.register_module(Arc::new(AlertModule));
+        engine.register_module(Arc::new(PrayerModule));
 
         engine
     }

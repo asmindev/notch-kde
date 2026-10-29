@@ -1,3 +1,4 @@
+import { ScrollView } from "std-widgets.slint";
 import { ThemeColors } from "../theme/colors.slint";
 import { ThemeTypography } from "../theme/typography.slint";
 
@@ -210,6 +211,126 @@ export component SettingsSegmentButton inherits Rectangle {
 
     touch := TouchArea {
         clicked => { root.clicked(); }
+    }
+}
+
+export component SettingsSelect inherits Rectangle {
+    in property <[string]> model: [];
+    in property <int> current-index: 0;
+    in property <string> placeholder: "";
+    callback selected(int);
+
+    height: 34px;
+    border-radius: 9px;
+    background: #0f0f12;
+    border-width: 1px;
+    border-color: touch.has-hover ? ThemeColors.border : ThemeColors.divider;
+    property <string> current-label: (root.current-index >= 0 && root.current-index < root.model.length)
+        ? root.model[root.current-index]
+        : root.placeholder;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 8px;
+        alignment: space-between;
+
+        Text {
+            text: root.current-label;
+            color: ThemeColors.foreground;
+            font-family: ThemeTypography.font-family;
+            font-size: ThemeTypography.size-sm;
+            font-weight: ThemeTypography.weight-medium;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+
+        Text {
+            text: "▾";
+            color: ThemeColors.muted;
+            font-size: ThemeTypography.size-base;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+
+        clicked => { popup.show(); }
+    }
+
+    popup := PopupWindow {
+        x: 0;
+        y: root.height + 4px;
+        width: root.width;
+        height: min(268px, root.model.length * 30px + 8px);
+        close-policy: close-on-click-outside;
+
+        Rectangle {
+            background: #17171b;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: ThemeColors.border;
+            clip: true;
+
+            ScrollView {
+                width: 100%;
+                height: 100%;
+                vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+                horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+                mouse-drag-pan-enabled: true;
+
+                VerticalLayout {
+                    padding: 4px;
+                    spacing: 1px;
+                    alignment: start;
+
+                    for city[index] in root.model : Rectangle {
+                        height: 28px;
+                        border-radius: 6px;
+                        background: index == root.current-index
+                            ? #5aa2ff24
+                            : (item-touch.has-hover ? #ffffff0d : transparent);
+
+                        Text {
+                            x: 10px;
+                            width: parent.width - 42px;
+                            text: city;
+                            color: index == root.current-index ? ThemeColors.foreground : ThemeColors.muted;
+                            font-family: ThemeTypography.font-family;
+                            font-size: ThemeTypography.size-sm;
+                            font-weight: index == root.current-index
+                                ? ThemeTypography.weight-bold
+                                : ThemeTypography.weight-medium;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+
+                        Text {
+                            x: parent.width - 26px;
+                            width: 16px;
+                            text: index == root.current-index ? "✓" : "";
+                            color: ThemeColors.accent;
+                            font-size: ThemeTypography.size-sm;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        item-touch := TouchArea {
+                            width: 100%;
+                            height: 100%;
+
+                            clicked => {
+                                root.selected(index);
+                                popup.close();
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -21,7 +21,7 @@ const COMPACT_TOUCH_HEIGHT: i32 = 42;
 const WIDE_WIDTH: i32 = 390;
 const WIDE_TOUCH_HEIGHT: i32 = 98;
 const EXPAND_WIDTH: i32 = 440;
-const EXPAND_TOUCH_HEIGHT: i32 = 180;
+const EXPAND_TOUCH_HEIGHT: i32 = 196;
 const HIDDEN_TOUCH_HEIGHT: i32 = 28;
 const COMPACT_EAR: i32 = 5;
 const WIDE_EAR: i32 = 10;
@@ -279,7 +279,7 @@ mod tests {
     fn expand_region_matches_visible_touch_area() {
         assert_eq!(
             rect_for_state(&state(IslandView::Expand, true, AlertKind::None)),
-            Rect { x: 10, y: 0, w: 460, h: 180 }
+            Rect { x: 10, y: 0, w: 460, h: 196 }
         );
     }
 

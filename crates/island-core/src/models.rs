@@ -17,6 +17,7 @@ pub enum ActiveModule {
     System,
     Media,
     Alert,
+    Prayer,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]

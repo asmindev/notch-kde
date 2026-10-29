@@ -8,6 +8,8 @@ import { BottomBar } from "../components/bottom-bar.slint";
 import { SourceSelectorBar } from "../components/source-selector.slint";
 import { SystemExpandSlot } from "../modules/system/system-expand-slot.slint";
 import { MediaExpandSlot } from "../modules/media/media-expand-slot.slint";
+import { PrayerExpandSlot } from "../modules/prayer/prayer-expand-slot.slint";
+import { PrayerBackdrop } from "../modules/prayer/prayer-backdrop.slint";
 
 export component ExpandView inherits VerticalLayout {
     property <bool> show-source: IslandContext.show-source-selector && IslandContext.active-module == 1;
@@ -15,10 +17,12 @@ export component ExpandView inherits VerticalLayout {
         || (IslandContext.active-module == 1 && !IslandContext.is-playing && !root.show-source);
     property <bool> show-media: IslandContext.active-module == 1
         && (IslandContext.is-playing || root.show-source);
+    property <bool> show-prayer: IslandContext.active-module == 3;
 
-    out property <bool> is-hovered: collapse-btn.has-hover 
+    out property <bool> is-hovered: collapse-btn.has-hover
         || bottom-bar.is-hovered
         || (root.show-media && media-slot.is-hovered)
+        || (root.show-prayer && prayer-slot.is-hovered)
         || (root.show-system && system-slot.is-hovered);
 
     width: 100%;
@@ -30,76 +34,92 @@ export component ExpandView inherits VerticalLayout {
     property <length> content-h: ThemeMetrics.expand-height;
     property <length> hdr-h: max(18px, min(26px, root.content-h * 0.18));
 
-    VerticalLayout {
+    Rectangle {
         width: 100%;
         height: root.content-h;
-        padding-left: max(14px, min(24px, root.width * 0.04));
-        padding-right: max(14px, min(24px, root.width * 0.04));
-        padding-top: max(6px, min(12px, root.content-h * 0.06));
-        padding-bottom: max(6px, min(12px, root.content-h * 0.06));
-        spacing: max(4px, min(10px, root.content-h * 0.05));
 
-        // ==========================================
-        // TEMPLATE HEADER (Shared by all modules)
-        // ==========================================
-        HorizontalLayout {
-            alignment: space-between;
-            height: root.hdr-h;
-
-            HorizontalLayout {
-                alignment: start;
-                spacing: 8px;
-
-                Image {
-                    width: root.hdr-h * 0.6;
-                    height: root.hdr-h * 0.6;
-                    source: root.show-media ? Icons.music : Icons.zap;
-                    image-fit: contain;
-                    y: (parent.height - self.height) / 2;
-                }
-
-                if root.show-source: SourceSelectorBar {
-                    bar-height: root.hdr-h;
-                }
-
-                if !root.show-source: Text {
-                    text: root.show-media ? "Now Playing" : "System Overview";
-                    color: ThemeColors.muted;
-                    font-family: ThemeTypography.font-family;
-                    font-size: ThemeTypography.size-xs;
-                    font-weight: ThemeTypography.weight-medium;
-                    vertical-alignment: center;
-                }
-            }
-
-            VerticalLayout {
-                alignment: center;
-                collapse-btn := IconButton {
-                    icon: Icons.chevron-down;
-                    btn-size: root.hdr-h * 0.9;
-                    icon-size: root.hdr-h * 0.5;
-                    clicked => { IslandContext.collapse-clicked(); }
-                }
-            }
+        if root.show-prayer: PrayerBackdrop {
+            width: 100%;
+            height: 100%;
         }
 
-        // ==========================================
-        // TEMPLATE BODY SLOT (Dynamic Module Content)
-        // ==========================================
-        Rectangle {
+        VerticalLayout {
             width: 100%;
-            vertical-stretch: 1;
+            height: 100%;
+            padding-left: max(14px, min(24px, root.width * 0.04));
+            padding-right: max(14px, min(24px, root.width * 0.04));
+            padding-top: max(6px, min(12px, root.content-h * 0.06));
+            padding-bottom: max(6px, min(12px, root.content-h * 0.06));
+            spacing: max(4px, min(10px, root.content-h * 0.05));
 
-            // Slot 0: System Module Expand Slot
-            system-slot := SystemExpandSlot {
-                visible: root.show-system;
-                opacity: root.show-system ? 1.0 : 0.0;
+            // ==========================================
+            // TEMPLATE HEADER (Shared by all modules)
+            // ==========================================
+            HorizontalLayout {
+                alignment: space-between;
+                height: root.hdr-h;
+
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 8px;
+
+                    Image {
+                        width: root.hdr-h * 0.6;
+                        height: root.hdr-h * 0.6;
+                        source: root.show-prayer ? Icons.moon : (root.show-media ? Icons.music : Icons.zap);
+                        image-fit: contain;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    if root.show-source: SourceSelectorBar {
+                        bar-height: root.hdr-h;
+                    }
+
+                    if !root.show-source: Text {
+                        text: root.show-prayer ? "Jadwal Sholat" : (root.show-media ? "Now Playing" : "System Overview");
+                        color: ThemeColors.muted;
+                        font-family: ThemeTypography.font-family;
+                        font-size: ThemeTypography.size-xs;
+                        font-weight: ThemeTypography.weight-medium;
+                        vertical-alignment: center;
+                    }
+                }
+
+                VerticalLayout {
+                    alignment: center;
+                    collapse-btn := IconButton {
+                        icon: Icons.chevron-down;
+                        btn-size: root.hdr-h * 0.9;
+                        icon-size: root.hdr-h * 0.5;
+                        clicked => { IslandContext.collapse-clicked(); }
+                    }
+                }
             }
 
-            // Slot 1: Media Module Expand Slot
-            media-slot := MediaExpandSlot {
-                visible: root.show-media;
-                opacity: root.show-media ? 1.0 : 0.0;
+            // ==========================================
+            // TEMPLATE BODY SLOT (Dynamic Module Content)
+            // ==========================================
+            Rectangle {
+                width: 100%;
+                vertical-stretch: 1;
+
+                // Slot 0: System Module Expand Slot
+                system-slot := SystemExpandSlot {
+                    visible: root.show-system;
+                    opacity: root.show-system ? 1.0 : 0.0;
+                }
+
+                // Slot 1: Media Module Expand Slot
+                media-slot := MediaExpandSlot {
+                    visible: root.show-media;
+                    opacity: root.show-media ? 1.0 : 0.0;
+                }
+
+                // Slot 3: Prayer Schedule Expand Slot
+                prayer-slot := PrayerExpandSlot {
+                    visible: root.show-prayer;
+                    opacity: root.show-prayer ? 1.0 : 0.0;
+                }
             }
         }
     }

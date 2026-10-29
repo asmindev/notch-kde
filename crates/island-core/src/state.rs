@@ -45,6 +45,7 @@ pub struct AppState {
     // Media sources selection
     pub media_sources: Vec<MediaSource>,
     pub show_source_selector: bool,
+    pub prayer_panel_open: bool,
     pub settings_open: bool,
     pub settings_tab: SettingsTab,
     pub behavior: PetBehaviorSettings,
@@ -103,6 +104,7 @@ impl AppState {
             is_muted: self.is_muted,
             is_dnd: self.is_dnd,
             alert_kind: self.alert_kind,
+            prayer_panel_open: self.prayer_panel_open,
         }
     }
 
@@ -115,6 +117,7 @@ impl AppState {
             is_muted: self.is_muted,
             is_dnd: self.is_dnd,
             alert_kind: self.alert_kind,
+            prayer_panel_open: self.prayer_panel_open,
         };
         self.engine.resolve_active_module(&ctx);
         self.sync_engine();
@@ -145,6 +148,7 @@ impl Default for AppState {
             is_dnd: false,
             media_sources: Vec::new(),
             show_source_selector: false,
+            prayer_panel_open: false,
             settings_open: false,
             settings_tab: SettingsTab::Avatar,
             behavior: PetBehaviorSettings::default(),

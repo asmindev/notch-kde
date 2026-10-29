@@ -7,7 +7,7 @@ import { IconButton } from "icon-button.slint";
 export component BottomBar inherits VerticalLayout {
     in property <length> btn-dim: 22px;
     out property <bool> is-hovered: music-btn.has-hover || mute-btn.has-hover || dnd-btn.has-hover
-        || settings-btn.has-hover;
+        || prayer-btn.has-hover || settings-btn.has-hover;
 
     alignment: center;
     spacing: 3px;
@@ -71,6 +71,14 @@ export component BottomBar inherits VerticalLayout {
             width: 1px;
             height: root.btn-dim * 0.62;
             background: ThemeColors.divider;
+        }
+
+        prayer-btn := IconButton {
+            icon: Icons.moon;
+            btn-size: root.btn-dim;
+            icon-size: root.btn-dim * 0.52;
+            active: IslandContext.prayer-panel-open;
+            clicked => { IslandContext.toggle-prayer-panel(); }
         }
 
         settings-btn := IconButton {

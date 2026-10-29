@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+chrono = { workspace = true }
 island-core = { workspace = true }
 slint = { workspace = true }
 tracing = { workspace = true }

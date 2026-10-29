@@ -203,12 +203,129 @@ pub struct PrayerAlert {
 pub struct PrayerTimes {
     pub date: NaiveDate,
     pub times: [DateTime<FixedOffset>; PRAYER_COUNT],
+    pub sunrise: DateTime<FixedOffset>,
+    pub sunset: DateTime<FixedOffset>,
+    pub solar_noon: DateTime<FixedOffset>,
+    sun_latitude_rad: f64,
+    sun_declination_rad: f64,
+    sun_max_altitude_deg: f64,
 }
 
 impl PrayerTimes {
     pub fn iter(&self) -> impl Iterator<Item = (Prayer, DateTime<FixedOffset>)> + '_ {
         Prayer::ALL.into_iter().zip(self.times.iter().copied())
     }
+
+    /// Signed solar altitude in degrees. Positive above the horizon, negative below.
+    /// This is the raw geometric altitude (not normalized), so it is suitable for
+    /// driving an honest sky: civil/nautical/astronomical twilight all read as
+    /// distinct negative values instead of collapsing to 0.
+    pub fn sun_altitude_deg(&self, at: DateTime<FixedOffset>) -> f64 {
+        let seconds_from_noon = (at - self.solar_noon).num_seconds() as f64;
+        let hour_angle = (seconds_from_noon / 240.0).to_radians();
+        let sin_altitude = self.sun_latitude_rad.sin() * self.sun_declination_rad.sin()
+            + self.sun_latitude_rad.cos()
+                * self.sun_declination_rad.cos()
+                * hour_angle.cos();
+        sin_altitude.clamp(-1.0, 1.0).asin().to_degrees()
+    }
+
+    pub fn sun_height(&self, at: DateTime<FixedOffset>) -> f32 {
+        let altitude = self.sun_altitude_deg(at);
+        if altitude <= 0.0 || self.sun_max_altitude_deg <= 0.1 {
+            return 0.0;
+        }
+        (altitude / self.sun_max_altitude_deg).clamp(0.0, 1.0) as f32
+    }
+}
+
+/// A rendered sky derived from true solar altitude. Colors are sRGB in `0.0..=1.0`.
+/// Kept as plain data so Slint stays dumb and the "honest sky" logic is testable.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SkyState {
+    /// Zenith (top of the dome) color.
+    pub top: [f32; 3],
+    /// Horizon (near the diameter line) color.
+    pub horizon: [f32; 3],
+    /// Ambient glow around the sun/moon.
+    pub glow: [f32; 3],
+    /// Star field opacity, `0.0` (full day) ..= `1.0` (deep night).
+    pub star_opacity: f32,
+}
+
+const SKY_KEYFRAMES: [(f64, [f32; 3], [f32; 3], [f32; 3], f32); 8] = [
+    // (altitude°, top, horizon, glow, star_opacity)
+    (-18.0, [0.02, 0.03, 0.08], [0.03, 0.05, 0.12], [0.06, 0.08, 0.14], 0.95),
+    (-12.0, [0.03, 0.04, 0.11], [0.05, 0.07, 0.16], [0.10, 0.10, 0.20], 0.70),
+    (-6.0, [0.06, 0.06, 0.16], [0.14, 0.10, 0.20], [0.55, 0.30, 0.35], 0.35),
+    (0.0, [0.10, 0.10, 0.24], [0.55, 0.28, 0.22], [0.95, 0.50, 0.25], 0.12),
+    (4.0, [0.12, 0.16, 0.32], [0.70, 0.45, 0.30], [0.96, 0.62, 0.28], 0.04),
+    (12.0, [0.10, 0.20, 0.40], [0.35, 0.45, 0.55], [0.94, 0.71, 0.16], 0.00),
+    (35.0, [0.05, 0.12, 0.28], [0.18, 0.35, 0.52], [0.94, 0.71, 0.16], 0.00),
+    (60.0, [0.04, 0.10, 0.26], [0.15, 0.32, 0.50], [0.96, 0.77, 0.32], 0.00),
+];
+
+fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
+}
+
+fn lerp3(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
+    [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
+}
+
+/// Map a signed solar altitude to a full sky palette by interpolating the
+/// keyframe table. Clamped at both ends (deep night / high noon).
+pub fn sky_from_altitude(altitude_deg: f64) -> SkyState {
+    let first = SKY_KEYFRAMES[0];
+    if altitude_deg <= first.0 {
+        return SkyState {
+            top: first.1,
+            horizon: first.2,
+            glow: first.3,
+            star_opacity: first.4,
+        };
+    }
+    let last = *SKY_KEYFRAMES.last().expect("sky keyframes non-empty");
+    if altitude_deg >= last.0 {
+        return SkyState {
+            top: last.1,
+            horizon: last.2,
+            glow: last.3,
+            star_opacity: last.4,
+        };
+    }
+
+    for pair in SKY_KEYFRAMES.windows(2) {
+        let (lo, hi) = (pair[0], pair[1]);
+        if altitude_deg >= lo.0 && altitude_deg <= hi.0 {
+            let span = (hi.0 - lo.0) as f32;
+            let t = if span <= f32::EPSILON {
+                0.0
+            } else {
+                ((altitude_deg - lo.0) as f32 / span).clamp(0.0, 1.0)
+            };
+            return SkyState {
+                top: lerp3(lo.1, hi.1, t),
+                horizon: lerp3(lo.2, hi.2, t),
+                glow: lerp3(lo.3, hi.3, t),
+                star_opacity: lerp(lo.4, hi.4, t),
+            };
+        }
+    }
+
+    // Unreachable: the clamp branches above cover everything outside the table.
+    SkyState {
+        top: last.1,
+        horizon: last.2,
+        glow: last.3,
+        star_opacity: last.4,
+    }
+}
+
+/// Convenience: full sky for a city at an instant, from true solar altitude.
+pub fn sky_for(city: &City, now: DateTime<FixedOffset>) -> Option<SkyState> {
+    let times = times_for(city, now.date_naive())?;
+    Some(sky_from_altitude(times.sun_altitude_deg(now)))
 }
 
 pub fn times_for(city: &City, date: NaiveDate) -> Option<PrayerTimes> {
@@ -246,10 +363,12 @@ pub fn times_for(city: &City, date: NaiveDate) -> Option<PrayerTimes> {
         .to_degrees();
     let ihtiyati_minutes = 2.0;
 
+    let sunrise = solar_noon_utc_minutes - 4.0 * hour_angle(-0.833)?;
+    let sunset = solar_noon_utc_minutes + 4.0 * hour_angle(-0.833)?;
     let fajr = solar_noon_utc_minutes - 4.0 * hour_angle(-20.0)? + ihtiyati_minutes;
     let dhuhr = solar_noon_utc_minutes + ihtiyati_minutes;
     let asr = solar_noon_utc_minutes + 4.0 * hour_angle(asr_altitude)? + ihtiyati_minutes;
-    let maghrib = solar_noon_utc_minutes + 4.0 * hour_angle(-0.833)? + ihtiyati_minutes;
+    let maghrib = sunset + ihtiyati_minutes;
     let isha = solar_noon_utc_minutes + 4.0 * hour_angle(-18.0)? + ihtiyati_minutes;
 
     let to_local = |minutes: f64| -> DateTime<FixedOffset> {
@@ -265,7 +384,87 @@ pub fn times_for(city: &City, date: NaiveDate) -> Option<PrayerTimes> {
             to_local(maghrib),
             to_local(isha),
         ],
+        sunrise: to_local(sunrise),
+        sunset: to_local(sunset),
+        solar_noon: to_local(solar_noon_utc_minutes),
+        sun_latitude_rad: latitude,
+        sun_declination_rad: declination,
+        sun_max_altitude_deg: 90.0 - (city.latitude - declination.to_degrees()).abs(),
     })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PrayerPhase {
+    Day,
+    Night,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PrayerMoment {
+    pub phase: PrayerPhase,
+    pub next_prayer: Prayer,
+    pub next_at: DateTime<FixedOffset>,
+    pub orbit_progress: f32,
+    pub orb_height: f32,
+    pub arc_start: DateTime<FixedOffset>,
+    pub arc_end: DateTime<FixedOffset>,
+}
+
+pub fn moment_for(city: &City, now: DateTime<FixedOffset>) -> Option<PrayerMoment> {
+    let date = now.date_naive();
+    let today = times_for(city, date)?;
+    let tomorrow = times_for(city, date.succ_opt()?)?;
+
+    let (phase, arc_start, arc_end, orbit_progress, orb_height) =
+        if now >= today.sunrise && now <= today.sunset {
+            (
+                PrayerPhase::Day,
+                today.sunrise,
+                today.sunset,
+                fraction_between(now, today.sunrise, today.sunset),
+                today.sun_height(now),
+            )
+        } else {
+            let (arc_start, arc_end) = if now < today.sunrise {
+                let yesterday = times_for(city, date.pred_opt()?)?;
+                (yesterday.sunset, today.sunrise)
+            } else {
+                (today.sunset, tomorrow.sunrise)
+            };
+            let progress = fraction_between(now, arc_start, arc_end);
+            let orb_height = (std::f32::consts::PI * progress).sin();
+            (
+                PrayerPhase::Night,
+                arc_start,
+                arc_end,
+                progress,
+                orb_height,
+            )
+        };
+
+    let (next_prayer, next_at) = today
+        .iter()
+        .find(|(_, time)| *time > now)
+        .unwrap_or((Prayer::Fajr, tomorrow.times[Prayer::Fajr as usize]));
+
+    Some(PrayerMoment {
+        phase,
+        next_prayer,
+        next_at,
+        orbit_progress: orbit_progress.clamp(0.0, 1.0),
+        orb_height: orb_height.clamp(0.0, 1.0),
+        arc_start,
+        arc_end,
+    })
+}
+
+fn fraction_between(
+    now: DateTime<FixedOffset>,
+    start: DateTime<FixedOffset>,
+    end: DateTime<FixedOffset>,
+) -> f32 {
+    let total = (end - start).num_seconds().max(1) as f32;
+    ((now - start).num_seconds() as f32 / total).clamp(0.0, 1.0)
 }
 
 pub fn alerts_for_date(settings: &PrayerSettings, date: NaiveDate) -> Vec<PrayerAlert> {
@@ -419,6 +618,130 @@ mod tests {
 
         assert_eq!(alert.prayer, Prayer::Fajr);
         assert_eq!(alert.kind, PrayerAlertKind::Adhan);
+    }
+
+    #[test]
+    fn moment_tracks_day_segment_progress() {
+        let city = &CITIES[0];
+        let now = city.offset().with_ymd_and_hms(2026, 10, 28, 8, 0, 0).unwrap();
+        let moment = moment_for(city, now).expect("valid moment");
+
+        assert_eq!(moment.phase, PrayerPhase::Day);
+        assert_eq!(moment.next_prayer, Prayer::Dhuhr);
+        assert_eq!(moment.next_at.format("%H:%M").to_string(), "11:38");
+        assert!(moment.orbit_progress > 0.0 && moment.orbit_progress < 0.25);
+        assert!(moment.orb_height > 0.0);
+        assert!(moment.arc_start < now && moment.arc_end > now);
+    }
+
+    #[test]
+    fn moment_switches_to_night_after_sunset() {
+        let city = &CITIES[0];
+        let now = city.offset().with_ymd_and_hms(2026, 10, 28, 21, 0, 0).unwrap();
+        let moment = moment_for(city, now).expect("valid moment");
+
+        assert_eq!(moment.phase, PrayerPhase::Night);
+        assert_eq!(moment.next_prayer, Prayer::Fajr);
+        assert_eq!(moment.next_at.date_naive(), date(2026, 10, 29));
+        assert!(moment.orbit_progress > 0.0 && moment.orbit_progress < 1.0);
+        assert_eq!(
+            moment.arc_start.format("%H:%M").to_string(),
+            "17:46"
+        );
+        assert_eq!(
+            moment.arc_end.date_naive(),
+            date(2026, 10, 29)
+        );
+    }
+
+    #[test]
+    fn night_progress_runs_from_sunset_to_sunrise() {
+        let city = &CITIES[0];
+        let evening = city.offset().with_ymd_and_hms(2026, 10, 28, 19, 0, 0).unwrap();
+        let early = city.offset().with_ymd_and_hms(2026, 10, 29, 4, 0, 0).unwrap();
+
+        let evening = moment_for(city, evening).expect("valid evening moment");
+        let early = moment_for(city, early).expect("valid early moment");
+
+        assert!(evening.orbit_progress < 0.2);
+        assert!(early.orbit_progress > 0.8);
+        assert!(evening.orb_height < early.orb_height);
+    }
+
+    #[test]
+    fn moment_before_fajr_targets_today_fajr() {
+        let city = &CITIES[0];
+        let now = city.offset().with_ymd_and_hms(2026, 10, 28, 3, 0, 0).unwrap();
+        let moment = moment_for(city, now).expect("valid moment");
+
+        assert_eq!(moment.phase, PrayerPhase::Night);
+        assert_eq!(moment.next_prayer, Prayer::Fajr);
+        assert_eq!(moment.next_at.date_naive(), date(2026, 10, 28));
+        assert_eq!(moment.arc_end.date_naive(), date(2026, 10, 28));
+        assert!(moment.orb_height > 0.0);
+    }
+
+    #[test]
+    fn solar_arc_tracks_sunrise_and_sunset() {
+        let times = times_for(&CITIES[0], date(2026, 10, 28)).expect("Indonesian latitude");
+
+        assert_eq!(times.sunrise.format("%H:%M").to_string(), "05:27");
+        assert_eq!(times.sunset.format("%H:%M").to_string(), "17:46");
+        assert!(times.sun_height(times.sunrise) < 0.02);
+        assert!(times.sun_height(times.solar_noon) > 0.99);
+        assert!(times.sun_height(times.sunset) < 0.02);
+    }
+
+    #[test]
+    fn sky_is_deep_night_with_stars_at_astral_night() {
+        let sky = sky_from_altitude(-30.0);
+        assert!(sky.star_opacity > 0.9);
+        // Deep night zenith is near-black and cool.
+        assert!(sky.top[0] < 0.05 && sky.top[1] < 0.05 && sky.top[2] < 0.12);
+    }
+
+    #[test]
+    fn sky_has_no_stars_at_full_day() {
+        let sky = sky_from_altitude(50.0);
+        assert_eq!(sky.star_opacity, 0.0);
+        // Day zenith is blue-dominant.
+        assert!(sky.top[2] > sky.top[0]);
+    }
+
+    #[test]
+    fn sky_warms_at_the_horizon() {
+        let sunset = sky_from_altitude(-0.5);
+        let noon = sky_from_altitude(60.0);
+        // At the horizon the horizon channel reddens relative to noon.
+        assert!(sunset.horizon[0] > noon.horizon[0]);
+        // Twilight keeps some stars but far fewer than deep night.
+        assert!(sunset.star_opacity > 0.0 && sunset.star_opacity < 0.3);
+    }
+
+    #[test]
+    fn sky_interpolates_monotonically_toward_night() {
+        // Descending altitude = the sun sinking. Star opacity must never decrease.
+        let mut prev = 0.0;
+        for alt in [30.0f64, 5.0, 0.0, -1.0, -6.0, -12.0, -20.0] {
+            let sky = sky_from_altitude(alt);
+            if alt <= 0.0 {
+                assert!(sky.star_opacity >= prev, "star opacity dropped at {alt}");
+            }
+            prev = sky.star_opacity;
+        }
+    }
+
+    #[test]
+    fn sky_for_tracks_time_of_day() {
+        let city = &CITIES[0];
+        let noon = city.offset().with_ymd_and_hms(2026, 10, 28, 12, 30, 0).unwrap();
+        let midnight = city.offset().with_ymd_and_hms(2026, 10, 28, 0, 30, 0).unwrap();
+
+        let day_sky = sky_for(city, noon).expect("valid day sky");
+        let night_sky = sky_for(city, midnight).expect("valid night sky");
+
+        assert_eq!(day_sky.star_opacity, 0.0);
+        assert!(night_sky.star_opacity > 0.8);
     }
 
     #[test]

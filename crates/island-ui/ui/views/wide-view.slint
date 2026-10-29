@@ -5,6 +5,8 @@ import { IslandContext } from "../context.slint";
 import { SystemWideSlot } from "../modules/system/system-wide-slot.slint";
 import { MediaWideSlot } from "../modules/media/media-wide-slot.slint";
 import { AlertWideSlot } from "../modules/alert/alert-wide-slot.slint";
+import { PrayerWideSlot } from "../modules/prayer/prayer-wide-slot.slint";
+import { PrayerBackdrop } from "../modules/prayer/prayer-backdrop.slint";
 import { WelcomeWideSlot } from "../modules/welcome/welcome-wide-slot.slint";
 import { BottomBar } from "../components/bottom-bar.slint";
 import { SourceSelectorBar } from "../components/source-selector.slint";
@@ -18,10 +20,14 @@ export component WideView inherits VerticalLayout {
         && !IslandContext.show-source-selector
         && IslandContext.active-module == 1
         && IslandContext.is-playing;
+    property <bool> show-prayer: !IslandContext.is-welcome
+        && !IslandContext.show-source-selector
+        && IslandContext.active-module == 3;
 
     out property <bool> is-hovered: (!IslandContext.is-welcome && bottom-bar.is-hovered)
         || IslandContext.show-source-selector
         || (root.show-media && media-slot.is-hovered)
+        || (root.show-prayer && prayer-slot.is-hovered)
         || (root.show-system && system-slot.is-hovered);
 
     width: 100%;
@@ -33,6 +39,12 @@ export component WideView inherits VerticalLayout {
     Rectangle {
         width: 100%;
         height: IslandContext.is-welcome ? ThemeMetrics.welcome-height : ThemeMetrics.wide-height;
+
+        if root.show-prayer: PrayerBackdrop {
+            width: 100%;
+            height: 100%;
+            show-crescent: false;
+        }
 
         // Slot -1: Welcome Greeting Slot (Option 1 - Labubu Greeting)
         if IslandContext.is-welcome: WelcomeWideSlot {
@@ -80,6 +92,12 @@ export component WideView inherits VerticalLayout {
         alert-slot := AlertWideSlot {
             visible: !IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.active-module == 2;
             opacity: (!IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.active-module == 2) ? 1.0 : 0.0;
+        }
+
+        // Slot 3: Prayer Schedule Wide Slot
+        prayer-slot := PrayerWideSlot {
+            visible: root.show-prayer;
+            opacity: root.show-prayer ? 1.0 : 0.0;
         }
     }
 

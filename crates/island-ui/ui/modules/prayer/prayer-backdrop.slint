@@ -1,0 +1,148 @@
+import { IslandContext } from "../../context.slint";
+
+// A static star field. Positions are hand-placed (not random) so the sky is
+// deterministic across frames and across machines. Opacity is driven entirely
+// by IslandContext.prayer-star-opacity, so stars only appear at night.
+global StarField {
+    // x%, y%, base opacity (0..1), twinkle phase offset
+    in property <[{x: float, y: float, o: float, p: float}]> stars: [
+        { x: 0.06, y: 0.14, o: 0.90, p: 0.0 },
+        { x: 0.13, y: 0.42, o: 0.55, p: 0.7 },
+        { x: 0.19, y: 0.22, o: 0.75, p: 1.4 },
+        { x: 0.24, y: 0.58, o: 0.40, p: 2.1 },
+        { x: 0.31, y: 0.11, o: 0.85, p: 0.3 },
+        { x: 0.36, y: 0.36, o: 0.50, p: 1.9 },
+        { x: 0.42, y: 0.19, o: 0.70, p: 2.6 },
+        { x: 0.47, y: 0.49, o: 0.45, p: 0.9 },
+        { x: 0.53, y: 0.08, o: 0.95, p: 1.2 },
+        { x: 0.58, y: 0.31, o: 0.60, p: 2.3 },
+        { x: 0.64, y: 0.17, o: 0.80, p: 0.5 },
+        { x: 0.69, y: 0.45, o: 0.42, p: 1.7 },
+        { x: 0.75, y: 0.24, o: 0.72, p: 2.8 },
+        { x: 0.81, y: 0.12, o: 0.88, p: 0.2 },
+        { x: 0.86, y: 0.38, o: 0.52, p: 1.5 },
+        { x: 0.92, y: 0.20, o: 0.78, p: 2.4 },
+        { x: 0.96, y: 0.47, o: 0.44, p: 0.8 },
+        { x: 0.09, y: 0.63, o: 0.38, p: 2.0 },
+        { x: 0.28, y: 0.71, o: 0.34, p: 1.1 },
+        { x: 0.51, y: 0.66, o: 0.36, p: 0.6 },
+        { x: 0.73, y: 0.69, o: 0.33, p: 2.7 },
+        { x: 0.89, y: 0.62, o: 0.35, p: 1.8 },
+    ];
+}
+
+component StarLayer inherits Rectangle {
+    // Shared sweep 0..1. Advanced by a single Timer (cheap) and eased so the
+    // motion is continuous between ticks. Each star offsets this by its own
+    // phase `p`, so they shimmer out of sync instead of breathing in unison.
+    private property <float> phase: 0.0;
+
+    animate phase { duration: 500ms; easing: linear; }
+
+    phase-timer := Timer {
+        interval: 500ms;
+        running: IslandContext.prayer-star-opacity > 0.01;
+        triggered => { root.phase = mod(root.phase + 0.25, 1000.0); }
+    }
+
+    background: transparent;
+
+    for star in StarField.stars: Rectangle {
+        x: root.width * star.x;
+        y: root.height * star.y;
+        width: 2px;
+        height: 2px;
+        border-radius: 1px;
+        background: #eef2ff;
+        opacity: IslandContext.prayer-star-opacity
+            * star.o
+            * (0.72 + 0.28 * sin(mod(root.phase + star.p, 1.0) * 360deg));
+
+        animate opacity { duration: 500ms; easing: linear; }
+    }
+}
+
+export component PrayerBackdrop inherits Rectangle {
+    in property <bool> show-crescent: true;
+
+    width: 100%;
+    height: 100%;
+    clip: true;
+
+    // Honest vertical sky: zenith at the top, horizon near the diameter line.
+    // Colors are computed in Rust from true solar altitude (island_core::prayer).
+    background: @linear-gradient(180deg,
+        IslandContext.prayer-sky-top 0%,
+        IslandContext.prayer-sky-top 42%,
+        IslandContext.prayer-sky-horizon 100%);
+
+    // Ambient glow that tracks the orb's horizontal position, so the whole
+    // backdrop "breathes" with the sun/moon rather than sitting static.
+    Rectangle {
+        property <length> glow-x: root.width * IslandContext.prayer-orbit-progress;
+
+        x: self.glow-x - root.width * 0.32;
+        y: root.height * 0.10;
+        width: root.width * 0.64;
+        height: root.height * 0.92;
+        background: @radial-gradient(circle,
+            IslandContext.prayer-sky-glow 0%,
+            IslandContext.prayer-sky-glow 30%,
+            transparent 72%);
+        // Kept low so a midday sky stays a dark observatory blue rather than a
+        // soft amber blob; sunset warmth is mostly carried by the horizon band.
+        opacity: 0.32;
+
+        animate x { duration: 850ms; easing: ease-out; }
+    }
+
+    // Warm horizon band, pinned to where the dome meets the sky.
+    Rectangle {
+        x: 0;
+        y: root.height * 0.62;
+        width: 100%;
+        height: root.height * 0.38;
+        background: @linear-gradient(180deg,
+            transparent 0%,
+            IslandContext.prayer-sky-glow 130%);
+        opacity: 0.22;
+    }
+
+    // Star field — only visible when prayer-star-opacity > 0 (i.e. at night).
+    if IslandContext.prayer-star-opacity > 0.01: StarLayer {
+        width: 100%;
+        height: 100%;
+    }
+
+    // Faint crescent watermark, low-contrast so the schedule stays readable.
+    if root.show-crescent && IslandContext.prayer-star-opacity < 0.4: Path {
+        x: root.width * 0.72;
+        y: -root.height * 0.24;
+        width: 76px;
+        height: 94px;
+        stroke: #f0b42920;
+        stroke-width: 1px;
+        stroke-line-cap: round;
+
+        MoveTo {
+            x: 60;
+            y: 7;
+        }
+        ArcTo {
+            radius-x: 30;
+            radius-y: 38;
+            x: 60;
+            y: 87;
+            large-arc: false;
+            sweep: true;
+        }
+        ArcTo {
+            radius-x: 23;
+            radius-y: 31;
+            x: 60;
+            y: 7;
+            large-arc: false;
+            sweep: false;
+        }
+    }
+}

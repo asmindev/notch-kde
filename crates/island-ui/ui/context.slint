@@ -5,9 +5,17 @@ export struct PlayerSourceItem {
     is-playing: bool,
 }
 
-export struct PrayerCityItem {
+export struct PrayerTimeItem {
     name: string,
-    region: string,
+    time: string,
+    is-next: bool,
+}
+
+export struct PrayerOrbitMarker {
+    name: string,
+    time: string,
+    x: float,
+    is-next: bool,
 }
 
 export struct AvatarChoice {
@@ -25,7 +33,7 @@ export global IslandContext {
     // Menentukan bentuk island dan modul yang sedang aktif
     // ==========================================
     in-out property <int> active-mode: 0;   // 0=Compact, 1=Wide, 2=Expand
-    in-out property <int> active-module: 0; // 0=System, 1=Media, 2=Alert
+    in-out property <int> active-module: 0; // 0=System, 1=Media, 2=Alert, 3=Prayer
 
     // ==========================================
     // 2. DOMAIN STATE
@@ -80,28 +88,43 @@ export global IslandContext {
     in-out property <int> shadow-offset-y: 6;
     in-out property <color> shadow-color: #00000070;
     in-out property <bool> prayer-enabled: true;
+    in-out property <bool> prayer-panel-open: false;
     in-out property <int> prayer-city-index: 0;
     in-out property <int> prayer-reminder-minutes: 10;
     in-out property <string> prayer-title: "";
     in-out property <string> prayer-time: "";
     in-out property <string> prayer-city-label: "";
 
-    in-out property <[PrayerCityItem]> prayer-cities: [
-        { name: "Jakarta", region: "WIB" },
-        { name: "Bandung", region: "WIB" },
-        { name: "Surabaya", region: "WIB" },
-        { name: "Yogyakarta", region: "WIB" },
-        { name: "Semarang", region: "WIB" },
-        { name: "Medan", region: "WIB" },
-        { name: "Padang", region: "WIB" },
-        { name: "Palembang", region: "WIB" },
-        { name: "Makassar", region: "WITA" },
-        { name: "Denpasar", region: "WITA" },
-        { name: "Balikpapan", region: "WITA" },
-        { name: "Kendari", region: "WITA" },
-        { name: "Baubau", region: "WITA" },
-        { name: "Jayapura", region: "WIT" }
+    in-out property <[string]> prayer-city-labels: [
+        "Jakarta · WIB",
+        "Bandung · WIB",
+        "Surabaya · WIB",
+        "Yogyakarta · WIB",
+        "Semarang · WIB",
+        "Medan · WIB",
+        "Padang · WIB",
+        "Palembang · WIB",
+        "Makassar · WITA",
+        "Denpasar · WITA",
+        "Balikpapan · WITA",
+        "Kendari · WITA",
+        "Baubau · WITA",
+        "Jayapura · WIT",
     ];
+    in-out property <[PrayerTimeItem]> prayer-schedule: [];
+    in-out property <string> prayer-schedule-subtitle: "";
+    in-out property <string> prayer-now-time: "00:00";
+    in-out property <string> prayer-next-name: "";
+    in-out property <string> prayer-next-time: "";
+    in-out property <string> prayer-countdown: "";
+    in-out property <float> prayer-orbit-progress: 0.0;
+    in-out property <bool> prayer-orbit-night: false;
+    in-out property <[PrayerOrbitMarker]> prayer-orbit-markers: [];
+    // Real-sky colors derived from true solar altitude in Rust (see island_core::prayer::SkyState).
+    in-out property <color> prayer-sky-top: #0b0b0e;
+    in-out property <color> prayer-sky-horizon: #18181b;
+    in-out property <color> prayer-sky-glow: #f0b429;
+    in-out property <float> prayer-star-opacity: 0.0;
 
     // Avatar picker choices (shape, palette, expression)
     in-out property <[AvatarChoice]> avatar-shapes: [
@@ -213,6 +236,7 @@ export global IslandContext {
     callback set-shadow-offset-x(int);
     callback set-shadow-offset-y(int);
     callback set-prayer-enabled(bool);
+    callback toggle-prayer-panel();
     callback set-prayer-city(int);
     callback set-prayer-reminder-minutes(int);
     callback set-media-visual-mode(int);
