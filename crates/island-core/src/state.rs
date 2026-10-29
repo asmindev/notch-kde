@@ -2,6 +2,7 @@ use crate::models::{
     ActiveModule, AlertKind, AudioSpectrum, BatteryState, IslandView, MediaSource, MediaTrack,
     MusicVisualMode, TimeInfo,
 };
+use crate::prayer::{PrayerAlert, PrayerSettings};
 use crate::settings::{PetBehaviorSettings, SettingsTab};
 use crate::view_engine::{SlotContext, ViewEngine};
 
@@ -47,10 +48,12 @@ pub struct AppState {
     pub settings_open: bool,
     pub settings_tab: SettingsTab,
     pub behavior: PetBehaviorSettings,
+    pub prayer: PrayerSettings,
 
     // Presentation states
     pub alert_kind: AlertKind,
     pub alert_generation: u64,
+    pub prayer_alert: Option<PrayerAlert>,
     pub notification_generation: u64,
     pub music_visual_mode: MusicVisualMode,
     pub pet_is_happy: bool,
@@ -144,8 +147,10 @@ impl Default for AppState {
             settings_open: false,
             settings_tab: SettingsTab::Avatar,
             behavior: PetBehaviorSettings::default(),
+            prayer: PrayerSettings::default(),
             alert_kind: AlertKind::None,
             alert_generation: 0,
+            prayer_alert: None,
             notification_generation: 0,
             music_visual_mode: MusicVisualMode::ArtworkPrimary,
             pet_is_happy: false,

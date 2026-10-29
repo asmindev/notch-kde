@@ -1,6 +1,7 @@
 use crate::models::{
     ActiveModule, BatteryState, IslandView, MediaSource, MediaTrack, MusicVisualMode, TimeInfo,
 };
+use crate::prayer::PrayerAlert;
 use crate::settings::SettingsTab;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -16,6 +17,7 @@ pub enum AppEvent {
     DndUpdated(bool),
     AudioMuteUpdated(bool),
     NotificationReceived,
+    PrayerAlert(PrayerAlert),
     
     // Platform & windowing
     WindowOverlapChanged(bool),
@@ -48,6 +50,9 @@ pub enum AppEvent {
     SetNotificationReactions(bool),
     SetMusicReactions(bool),
     SetSleepyOnLowBattery(bool),
+    SetPrayerEnabled(bool),
+    SetPrayerCity(u32),
+    SetPrayerReminderMinutes(u32),
     SetMediaVisualMode(MusicVisualMode),
     ResetAvatar,
     ResetSettings,

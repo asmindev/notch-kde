@@ -5,6 +5,11 @@ export struct PlayerSourceItem {
     is-playing: bool,
 }
 
+export struct PrayerCityItem {
+    name: string,
+    region: string,
+}
+
 export struct AvatarChoice {
     index: int,
     label: string,
@@ -59,7 +64,7 @@ export global IslandContext {
     // Media Source Selector
     in-out property <bool> show-source-selector: false;
     in-out property <bool> settings-open: false;
-    in-out property <int> settings-tab: 0; // 0=Avatar, 1=Perilaku, 2=Sistem, 3=Tentang
+    in-out property <int> settings-tab: 0; // 0=Avatar, 1=Perilaku, 2=Sholat, 3=Sistem, 4=Tentang
     in-out property <[PlayerSourceItem]> player-sources: [];
     in-out property <bool> avatar-random: false;
     in-out property <bool> cursor-gaze-enabled: true;
@@ -68,6 +73,29 @@ export global IslandContext {
     in-out property <bool> notification-reactions-enabled: true;
     in-out property <bool> music-reactions-enabled: true;
     in-out property <bool> sleepy-on-low-battery: true;
+    in-out property <bool> prayer-enabled: true;
+    in-out property <int> prayer-city-index: 0;
+    in-out property <int> prayer-reminder-minutes: 10;
+    in-out property <string> prayer-title: "";
+    in-out property <string> prayer-time: "";
+    in-out property <string> prayer-city-label: "";
+
+    in-out property <[PrayerCityItem]> prayer-cities: [
+        { name: "Jakarta", region: "WIB" },
+        { name: "Bandung", region: "WIB" },
+        { name: "Surabaya", region: "WIB" },
+        { name: "Yogyakarta", region: "WIB" },
+        { name: "Semarang", region: "WIB" },
+        { name: "Medan", region: "WIB" },
+        { name: "Padang", region: "WIB" },
+        { name: "Palembang", region: "WIB" },
+        { name: "Makassar", region: "WITA" },
+        { name: "Denpasar", region: "WITA" },
+        { name: "Balikpapan", region: "WITA" },
+        { name: "Kendari", region: "WITA" },
+        { name: "Baubau", region: "WITA" },
+        { name: "Jayapura", region: "WIT" }
+    ];
 
     // Avatar picker choices (shape, palette, expression)
     in-out property <[AvatarChoice]> avatar-shapes: [
@@ -120,7 +148,7 @@ export global IslandContext {
     // 3. PRESENTATION STATE
     // Menentukan hak tampil, layout variant, dan alert aktif
     // ==========================================
-    in-out property <int> alert-kind: 0;           // 0=None, 1=Charging, 2=LowBattery
+    in-out property <int> alert-kind: 0;           // 0=None, 1=Charging, 2=LowBattery, 3=Prayer
     in-out property <int> music-visual-mode: 0;    // 0=ArtworkPrimary (Art Left, Pet Right), 1=PetPrimary (Pet Left, Art Right)
     in-out property <bool> is-visible-state: true; // Shell docking visibility
     in-out property <int> mochi-mood: 0;           // 0=Idle, 1=Happy, 2=Annoyed, 3=Dizzy, 4=Dancing, 5=Sleeping
@@ -173,6 +201,9 @@ export global IslandContext {
     callback set-notification-reactions(bool);
     callback set-music-reactions(bool);
     callback set-sleepy-on-low-battery(bool);
+    callback set-prayer-enabled(bool);
+    callback set-prayer-city(int);
+    callback set-prayer-reminder-minutes(int);
     callback set-media-visual-mode(int);
     callback reset-avatar();
     callback reset-settings();

@@ -26,6 +26,7 @@ pub enum AlertKind {
     None = 0,
     Charging = 1,
     LowBattery = 2,
+    Prayer = 3,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]

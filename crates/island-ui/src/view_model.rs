@@ -1,5 +1,6 @@
 use crate::{ContentRouter, IslandContext, MainWindow, SettingsWindow};
 use island_core::models::ActiveModule;
+use island_core::prayer::CITIES;
 use island_core::state::AppState;
 use slint::ComponentHandle;
 
@@ -42,6 +43,7 @@ impl ViewModel {
         ctx.set_notification_reactions_enabled(state.behavior.notification_reactions);
         ctx.set_music_reactions_enabled(state.behavior.music_reactions);
         ctx.set_sleepy_on_low_battery(state.behavior.sleepy_on_low_battery);
+        sync_prayer_context(&ctx, state);
         ctx.set_pet_is_happy(state.pet_is_happy);
         ctx.set_pet_is_dizzy(state.pet_is_dizzy);
         ctx.set_pet_is_sleepy(state.pet_is_sleepy && state.behavior.sleepy_on_low_battery);
@@ -110,6 +112,7 @@ impl ViewModel {
         ctx.set_notification_reactions_enabled(state.behavior.notification_reactions);
         ctx.set_music_reactions_enabled(state.behavior.music_reactions);
         ctx.set_sleepy_on_low_battery(state.behavior.sleepy_on_low_battery);
+        sync_prayer_context(&ctx, state);
         ctx.set_music_visual_mode(state.music_visual_mode as i32);
         ctx.set_pet_is_happy(state.pet_is_happy);
         ctx.set_pet_is_dizzy(state.pet_is_dizzy);
@@ -117,4 +120,29 @@ impl ViewModel {
         ctx.set_is_playing(false);
         ctx.set_app_version(env!("CARGO_PKG_VERSION").into());
     }
+}
+
+fn sync_prayer_context(ctx: &IslandContext, state: &AppState) {
+    ctx.set_prayer_enabled(state.prayer.enabled);
+    ctx.set_prayer_city_index(state.prayer.city as i32);
+    ctx.set_prayer_reminder_minutes(state.prayer.reminder_minutes as i32);
+
+    if let Some(alert) = &state.prayer_alert {
+        ctx.set_prayer_title(alert.title.clone().into());
+        ctx.set_prayer_time(alert.time_label.clone().into());
+        ctx.set_prayer_city_label(alert.city_label.clone().into());
+    } else {
+        ctx.set_prayer_title("".into());
+        ctx.set_prayer_time("".into());
+        ctx.set_prayer_city_label("".into());
+    }
+
+    let cities: Vec<crate::PrayerCityItem> = CITIES
+        .iter()
+        .map(|city| crate::PrayerCityItem {
+            name: city.name.into(),
+            region: city.region.into(),
+        })
+        .collect();
+    ctx.set_prayer_cities(slint::ModelRc::new(slint::VecModel::from(cities)));
 }

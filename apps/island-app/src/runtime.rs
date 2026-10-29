@@ -2,8 +2,8 @@ use island_core::{reduce, AppEvent, AppState, Effect, PersistedSettings, Setting
 use island_platform::overlap::Rect;
 use island_platform::{KdeManager, OverlapDetector, PlatformWindow};
 use island_services::{
-    AudioService, BatteryService, CavaService, ClockService, DndService,
-    MediaService, NotificationService, ScreenSaverService,
+    AudioService, BatteryService, CavaService, ClockService, DndService, MediaService,
+    NotificationService, PrayerService, ScreenSaverService,
 };
 use island_ui::{IslandContext, MainWindow, SettingsWindow, ViewModel};
 use crate::input_region;
@@ -79,6 +79,7 @@ impl AppRuntime {
         };
         app_state.welcome_subtitle = greeting_sub;
 
+        let (prayer_tx, prayer_rx) = tokio::sync::watch::channel(app_state.prayer);
         let settings_window = SettingsWindow::new()?;
 
         // Sync initial state to UI
@@ -262,6 +263,18 @@ impl AppRuntime {
             let _ = tx.send(AppEvent::SetSleepyOnLowBattery(enabled));
         });
         let tx = event_tx.clone();
+        settings_ctx.on_set_prayer_enabled(move |enabled| {
+            let _ = tx.send(AppEvent::SetPrayerEnabled(enabled));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_prayer_city(move |index| {
+            let _ = tx.send(AppEvent::SetPrayerCity(index.max(0) as u32));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_prayer_reminder_minutes(move |minutes| {
+            let _ = tx.send(AppEvent::SetPrayerReminderMinutes(minutes.max(0) as u32));
+        });
+        let tx = event_tx.clone();
         settings_ctx.on_set_media_visual_mode(move |mode| {
             let visual_mode = if mode == 1 {
                 island_core::models::MusicVisualMode::PetPrimary
@@ -372,6 +385,16 @@ impl AppRuntime {
             tokio::spawn(async move {
                 while notif_rx.recv().await.is_some() {
                     let _ = tx_notif.send(AppEvent::NotificationReceived);
+                }
+            });
+
+            // Prayer Service
+            let (prayer_alert_tx, mut prayer_alert_rx) = mpsc::unbounded_channel();
+            PrayerService::start(prayer_rx, prayer_alert_tx);
+            let tx_prayer = event_tx_services.clone();
+            tokio::spawn(async move {
+                while let Some(alert) = prayer_alert_rx.recv().await {
+                    let _ = tx_prayer.send(AppEvent::PrayerAlert(alert));
                 }
             });
 
@@ -500,12 +523,18 @@ impl AppRuntime {
         let settings_pet3d_events = settings_pet3d.clone();
         let mut last_synced_state = app_state.clone();
         let mut last_settings_open = app_state.settings_open;
+        let mut last_prayer = app_state.prayer;
         let event_tx_effects = event_tx.clone();
         let input_region_events = input_region.clone();
         let mut last_input_rect = initial_input_rect;
         std::thread::spawn(move || {
             while let Some(event) = event_rx.blocking_recv() {
                 let effects = reduce(&mut app_state, event);
+
+                if app_state.prayer != last_prayer {
+                    last_prayer = app_state.prayer;
+                    let _ = prayer_tx.send(app_state.prayer);
+                }
 
                 let input_rect = input_region::rect_for_state(&app_state);
                 if input_rect != last_input_rect {

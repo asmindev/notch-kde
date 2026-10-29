@@ -18,6 +18,7 @@ export component AlertCompactSlot inherits HorizontalLayout {
     property <length> icon-dim: max(8px, min(12px, root.badge-inner * 0.55));
     property <length> font-sz: max(9px, min(13px, ThemeMetrics.compact-height * 0.36));
     property <bool> pulse: true;
+    property <bool> is-prayer: IslandContext.alert-kind == 3;
 
     pulse-timer := Timer {
         interval: 850ms;
@@ -32,13 +33,13 @@ export component AlertCompactSlot inherits HorizontalLayout {
             width: root.badge-outer;
             height: root.badge-outer;
             border-radius: root.badge-outer / 2;
-            background: #22c55e26; // Soft neon-green halo aura
+            background: root.is-prayer ? #5aa2ff26 : #22c55e26;
 
             Rectangle {
                 width: 100%;
                 height: 100%;
                 border-radius: self.width / 2;
-                background: #22c55e;
+                background: root.is-prayer ? ThemeColors.accent : #22c55e;
                 opacity: root.pulse ? 0.22 : 0.06;
                 animate opacity { duration: 700ms; easing: ease-in-out; }
             }
@@ -51,7 +52,28 @@ export component AlertCompactSlot inherits HorizontalLayout {
                 pet-size: root.badge-outer;
             }
 
-            if IslandContext.alert-kind != 1: Rectangle {
+            if IslandContext.alert-kind == 3: Rectangle {
+                x: (root.badge-outer - root.badge-inner) / 2;
+                y: (root.badge-outer - root.badge-inner) / 2;
+                width: root.badge-inner;
+                height: root.badge-inner;
+                border-radius: root.badge-inner / 2;
+                background: #172033;
+                border-width: 1.5px;
+                border-color: ThemeColors.accent;
+
+                Image {
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    width: root.icon-dim;
+                    height: root.icon-dim;
+                    source: Icons.moon;
+                    image-fit: contain;
+                    colorize: ThemeColors.accent;
+                }
+            }
+
+            if IslandContext.alert-kind != 1 && IslandContext.alert-kind != 3: Rectangle {
                 x: (root.badge-outer - root.badge-inner) / 2;
                 y: (root.badge-outer - root.badge-inner) / 2;
                 width: root.badge-inner;
@@ -62,6 +84,8 @@ export component AlertCompactSlot inherits HorizontalLayout {
                 border-color: ThemeColors.success;
 
                 Image {
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
                     width: root.icon-dim;
                     height: root.icon-dim;
                     source: Icons.zap;
@@ -76,7 +100,8 @@ export component AlertCompactSlot inherits HorizontalLayout {
     VerticalLayout {
         alignment: center;
         Text {
-            text: IslandContext.alert-kind == 1 ? "Charging..." : "System Alert";
+            text: IslandContext.alert-kind == 1 ? "Charging..."
+                : (root.is-prayer ? IslandContext.prayer-title : "System Alert");
             color: ThemeColors.foreground;
             font-family: ThemeTypography.font-family;
             font-size: root.font-sz;
@@ -96,8 +121,8 @@ export component AlertCompactSlot inherits HorizontalLayout {
             padding-bottom: 2px;
 
             Text {
-                text: "\{IslandContext.battery-percentage}%";
-                color: ThemeColors.success;
+                text: root.is-prayer ? IslandContext.prayer-time : "\{IslandContext.battery-percentage}%";
+                color: root.is-prayer ? ThemeColors.accent : ThemeColors.success;
                 font-family: ThemeTypography.font-family;
                 font-size: root.font-sz;
                 font-weight: ThemeTypography.weight-bold;

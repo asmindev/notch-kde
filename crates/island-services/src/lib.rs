@@ -5,6 +5,7 @@ pub mod clock;
 pub mod dnd;
 pub mod media;
 pub mod notifications;
+pub mod prayer;
 pub mod screensaver;
 
 pub use audio::AudioService;
@@ -14,4 +15,5 @@ pub use clock::ClockService;
 pub use dnd::DndService;
 pub use media::MediaService;
 pub use notifications::NotificationService;
+pub use prayer::PrayerService;
 pub use screensaver::ScreenSaverService;

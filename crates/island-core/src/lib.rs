@@ -1,5 +1,6 @@
 pub mod events;
 pub mod models;
+pub mod prayer;
 pub mod reducer;
 pub mod settings;
 pub mod state;
@@ -8,6 +9,7 @@ pub mod view_engine;
 
 pub use events::{AppEvent, Effect};
 pub use models::{ActiveModule, AudioSpectrum, BatteryState, IslandMode, IslandView, MediaTrack, TimeInfo};
+pub use prayer::{Prayer, PrayerAlert, PrayerSettings};
 pub use reducer::reduce;
 pub use settings::{AvatarSettings, PersistedSettings, PetBehaviorSettings, SettingsTab};
 pub use state::AppState;

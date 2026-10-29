@@ -245,6 +245,104 @@ component BehaviorSettingsPage inherits Rectangle {
     }
 }
 
+component PrayerCityButton inherits SettingsSegmentButton {
+    in property <int> city-index: 0;
+
+    label: IslandContext.prayer-cities[self.city-index].name;
+    active: IslandContext.prayer-city-index == self.city-index;
+    clicked => { IslandContext.set-prayer-city(self.city-index); }
+}
+
+component PrayerSettingsPage inherits Rectangle {
+    VerticalLayout {
+        spacing: 10px;
+
+        SettingsCard {
+            title: "Notifikasi sholat";
+            description: "Tampilkan pengingat waktu sholat di notch.";
+
+            SettingsToggleRow {
+                title: "Aktifkan";
+                subtitle: "Notifikasi masuk saat waktu sholat dan sebelum waktunya.";
+                checked: IslandContext.prayer-enabled;
+                toggled(value) => { IslandContext.set-prayer-enabled(value); }
+            }
+
+            SettingsDivider {}
+
+            Text {
+                text: "Kota";
+                color: ThemeColors.foreground;
+                font-family: ThemeTypography.font-family;
+                font-size: ThemeTypography.size-sm;
+                font-weight: ThemeTypography.weight-bold;
+            }
+
+            GridLayout {
+                spacing: 5px;
+
+                Row {
+                    for i in 4: PrayerCityButton { city-index: i; }
+                }
+
+                Row {
+                    for i in 4: PrayerCityButton { city-index: i + 4; }
+                }
+
+                Row {
+                    for i in 4: PrayerCityButton { city-index: i + 8; }
+                }
+
+                Row {
+                    for i in 2: PrayerCityButton { city-index: i + 12; }
+                }
+            }
+        }
+
+        SettingsCard {
+            title: "Pengingat";
+            description: "Notifikasi tambahan sebelum waktu sholat.";
+
+            HorizontalLayout {
+                spacing: 5px;
+                alignment: start;
+
+                SettingsSegmentButton {
+                    label: "Off";
+                    active: IslandContext.prayer-reminder-minutes == 0;
+                    clicked => { IslandContext.set-prayer-reminder-minutes(0); }
+                }
+
+                SettingsSegmentButton {
+                    label: "5 mnt";
+                    active: IslandContext.prayer-reminder-minutes == 5;
+                    clicked => { IslandContext.set-prayer-reminder-minutes(5); }
+                }
+
+                SettingsSegmentButton {
+                    label: "10 mnt";
+                    active: IslandContext.prayer-reminder-minutes == 10;
+                    clicked => { IslandContext.set-prayer-reminder-minutes(10); }
+                }
+
+                SettingsSegmentButton {
+                    label: "15 mnt";
+                    active: IslandContext.prayer-reminder-minutes == 15;
+                    clicked => { IslandContext.set-prayer-reminder-minutes(15); }
+                }
+            }
+        }
+
+        Text {
+            text: "Metode Kemenag: Subuh 20°, Isya 18°, Asr Syafi'i, ihtiyati +2 menit.";
+            color: ThemeColors.subtle;
+            font-family: ThemeTypography.font-family;
+            font-size: ThemeTypography.size-xs;
+            wrap: word-wrap;
+        }
+    }
+}
+
 component SystemSettingsPage inherits Rectangle {
     VerticalLayout {
         spacing: 10px;
@@ -466,17 +564,24 @@ export component SettingsWindow inherits Window {
                 }
 
                 SettingsNavItem {
-                    label: "Sistem";
-                    glyph: "⚙";
+                    label: "Sholat";
+                    glyph: "☾";
                     active: IslandContext.settings-tab == 2;
                     clicked => { IslandContext.select-settings-tab(2); }
                 }
 
                 SettingsNavItem {
-                    label: "Tentang";
-                    glyph: "ⓘ";
+                    label: "Sistem";
+                    glyph: "⚙";
                     active: IslandContext.settings-tab == 3;
                     clicked => { IslandContext.select-settings-tab(3); }
+                }
+
+                SettingsNavItem {
+                    label: "Tentang";
+                    glyph: "ⓘ";
+                    active: IslandContext.settings-tab == 4;
+                    clicked => { IslandContext.select-settings-tab(4); }
                 }
 
                 Rectangle {
@@ -509,11 +614,13 @@ export component SettingsWindow inherits Window {
                 SettingsPageHeader {
                     title: IslandContext.settings-tab == 0 ? "Avatar"
                         : IslandContext.settings-tab == 1 ? "Perilaku"
-                        : IslandContext.settings-tab == 2 ? "Sistem"
+                        : IslandContext.settings-tab == 2 ? "Sholat"
+                        : IslandContext.settings-tab == 3 ? "Sistem"
                         : "Tentang";
                     subtitle: IslandContext.settings-tab == 0 ? "Sesuaikan penampilan Bloub."
                         : IslandContext.settings-tab == 1 ? "Atur cara Bloub bereaksi."
-                        : IslandContext.settings-tab == 2 ? "Preferensi tampilan dan reset."
+                        : IslandContext.settings-tab == 2 ? "Notifikasi waktu sholat dan pengingat."
+                        : IslandContext.settings-tab == 3 ? "Preferensi tampilan dan reset."
                         : "Informasi aplikasi dan kredit.";
                 }
 
@@ -538,12 +645,17 @@ export component SettingsWindow inherits Window {
                     height: 100%;
                 }
 
-                if IslandContext.settings-tab == 2: SystemSettingsPage {
+                if IslandContext.settings-tab == 2: PrayerSettingsPage {
                     width: 100%;
                     height: 100%;
                 }
 
-                if IslandContext.settings-tab == 3: AboutSettingsPage {
+                if IslandContext.settings-tab == 3: SystemSettingsPage {
+                    width: 100%;
+                    height: 100%;
+                }
+
+                if IslandContext.settings-tab == 4: AboutSettingsPage {
                     width: 100%;
                     height: 100%;
                 }

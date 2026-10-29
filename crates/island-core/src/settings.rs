@@ -1,4 +1,5 @@
 use crate::models::MusicVisualMode;
+use crate::prayer::PrayerSettings;
 use crate::state::AppState;
 use serde::{Deserialize, Serialize};
 
@@ -13,16 +14,18 @@ pub enum SettingsTab {
     #[default]
     Avatar = 0,
     Behavior = 1,
-    System = 2,
-    About = 3,
+    Prayer = 2,
+    System = 3,
+    About = 4,
 }
 
 impl SettingsTab {
     pub fn from_index(index: i32) -> Self {
         match index {
             1 => Self::Behavior,
-            2 => Self::System,
-            3 => Self::About,
+            2 => Self::Prayer,
+            3 => Self::System,
+            4 => Self::About,
             _ => Self::Avatar,
         }
     }
@@ -90,6 +93,7 @@ pub struct PersistedSettings {
     pub avatar: AvatarSettings,
     pub behavior: PetBehaviorSettings,
     pub media_visual_mode: MusicVisualMode,
+    pub prayer: PrayerSettings,
 }
 
 impl Default for PersistedSettings {
@@ -99,6 +103,7 @@ impl Default for PersistedSettings {
             avatar: AvatarSettings::default(),
             behavior: PetBehaviorSettings::default(),
             media_visual_mode: MusicVisualMode::ArtworkPrimary,
+            prayer: PrayerSettings::default(),
         }
     }
 }
@@ -117,6 +122,7 @@ impl PersistedSettings {
             .normalized(),
             behavior: state.behavior,
             media_visual_mode: state.music_visual_mode,
+            prayer: state.prayer.normalized(),
         }
     }
 
@@ -129,6 +135,7 @@ impl PersistedSettings {
         state.avatar_random = avatar.random;
         state.behavior = self.behavior;
         state.music_visual_mode = self.media_visual_mode;
+        state.prayer = self.prayer.normalized();
     }
 }
 
@@ -145,6 +152,9 @@ mod tests {
         assert_eq!(settings.avatar.expression, 0);
         assert!(settings.behavior.cursor_gaze);
         assert!(settings.behavior.idle_acting);
+        assert!(settings.prayer.enabled);
+        assert_eq!(settings.prayer.city, 0);
+        assert_eq!(settings.prayer.reminder_minutes, 10);
     }
 
     #[test]
@@ -181,6 +191,9 @@ mod tests {
         state.behavior.cursor_gaze = false;
         state.behavior.music_reactions = false;
         state.music_visual_mode = MusicVisualMode::PetPrimary;
+        state.prayer.enabled = false;
+        state.prayer.city = 8;
+        state.prayer.reminder_minutes = 15;
 
         let snapshot = PersistedSettings::from_state(&state);
         let mut restored = AppState::default();
@@ -194,5 +207,8 @@ mod tests {
         assert!(!restored.behavior.cursor_gaze);
         assert!(!restored.behavior.music_reactions);
         assert_eq!(restored.music_visual_mode, MusicVisualMode::PetPrimary);
+        assert!(!restored.prayer.enabled);
+        assert_eq!(restored.prayer.city, 8);
+        assert_eq!(restored.prayer.reminder_minutes, 15);
     }
 }

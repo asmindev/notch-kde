@@ -364,3 +364,49 @@ fn test_click_stunts_can_be_disabled() {
     assert_eq!(state.mochi_generation, generation);
     assert!(!state.pet_is_happy);
 }
+
+#[test]
+fn test_prayer_alert_sets_and_clears_alert() {
+    let mut state = AppState::default();
+    let alert = island_core::prayer::PrayerAlert {
+        prayer: island_core::prayer::Prayer::Fajr,
+        kind: island_core::prayer::PrayerAlertKind::Adhan,
+        at: chrono::Utc::now(),
+        title: "Waktu Subuh".to_string(),
+        time_label: "04:09".to_string(),
+        city_label: "Jakarta".to_string(),
+    };
+
+    let effects = reduce(&mut state, AppEvent::PrayerAlert(alert));
+
+    assert_eq!(state.alert_kind, island_core::models::AlertKind::Prayer);
+    assert_eq!(state.active_module, ActiveModule::Alert);
+    assert_eq!(state.prayer_alert.as_ref().map(|a| a.title.as_str()), Some("Waktu Subuh"));
+    assert_eq!(
+        effects,
+        vec![island_core::Effect::ScheduleTimer {
+            id: "alert_timeout",
+            duration_ms: 9000,
+            generation: 1,
+        }]
+    );
+
+    reduce(&mut state, AppEvent::AlertTimeout(1));
+    assert_eq!(state.alert_kind, island_core::models::AlertKind::None);
+    assert!(state.prayer_alert.is_none());
+}
+
+#[test]
+fn test_prayer_settings_events_are_persisted() {
+    let mut state = AppState::default();
+
+    let effects = reduce(&mut state, AppEvent::SetPrayerEnabled(false));
+    assert!(!state.prayer.enabled);
+    assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
+
+    reduce(&mut state, AppEvent::SetPrayerCity(8));
+    assert_eq!(state.prayer.city, 8);
+
+    reduce(&mut state, AppEvent::SetPrayerReminderMinutes(15));
+    assert_eq!(state.prayer.reminder_minutes, 15);
+}

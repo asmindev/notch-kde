@@ -7,9 +7,13 @@ import { PetView } from "../../components/pet-view.slint";
 
 export component AlertWideSlot inherits Rectangle {
     property <bool> is-charging-alert: IslandContext.alert-kind == 1;
-    in property <string> alert-title: root.is-charging-alert ? "Charger connected" : "Notification";
-    in property <string> alert-message: root.is-charging-alert ? "Battery \{IslandContext.battery-percentage}% • Charging" : "System Alert";
-    in property <image> alert-icon: Icons.zap;
+    property <bool> is-prayer-alert: IslandContext.alert-kind == 3;
+    in property <string> alert-title: root.is-prayer-alert ? IslandContext.prayer-title
+        : (root.is-charging-alert ? "Charger connected" : "Notification");
+    in property <string> alert-message: root.is-prayer-alert
+        ? IslandContext.prayer-time + " • " + IslandContext.prayer-city-label
+        : (root.is-charging-alert ? "Battery \{IslandContext.battery-percentage}% • Charging" : "System Alert");
+    in property <image> alert-icon: root.is-prayer-alert ? Icons.moon : Icons.zap;
 
     width: 100%;
     height: 100%;
@@ -45,7 +49,8 @@ export component AlertWideSlot inherits Rectangle {
 
             Text {
                 text: root.alert-title;
-                color: root.is-charging-alert ? ThemeColors.success : ThemeColors.foreground;
+                color: root.is-prayer-alert ? ThemeColors.accent
+                    : (root.is-charging-alert ? ThemeColors.success : ThemeColors.foreground);
                 font-family: ThemeTypography.font-family;
                 font-size: max(11px, min(15px, ThemeMetrics.wide-height * 0.32));
                 font-weight: ThemeTypography.weight-bold;

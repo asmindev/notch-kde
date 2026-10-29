@@ -1,5 +1,6 @@
 use crate::events::{AppEvent, Effect};
 use crate::models::IslandView;
+use crate::prayer::{PrayerAlertKind, PrayerSettings};
 use crate::settings::{AvatarSettings, PetBehaviorSettings};
 use crate::state::AppState;
 
@@ -59,6 +60,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
                 state.alert_generation += 1;
                 let gen_id = state.alert_generation;
                 state.alert_kind = crate::models::AlertKind::Charging;
+                state.prayer_alert = None;
                 effects.push(Effect::ScheduleTimer {
                     id: "alert_timeout",
                     duration_ms: 2800,
@@ -73,10 +75,28 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.notification_generation = state.notification_generation.wrapping_add(1);
         }
 
+        AppEvent::PrayerAlert(alert) => {
+            let duration_ms = match alert.kind {
+                PrayerAlertKind::Adhan => 9000,
+                PrayerAlertKind::Reminder => 7000,
+            };
+            state.alert_generation += 1;
+            let gen_id = state.alert_generation;
+            state.alert_kind = crate::models::AlertKind::Prayer;
+            state.prayer_alert = Some(alert);
+            state.update_active_module();
+            effects.push(Effect::ScheduleTimer {
+                id: "alert_timeout",
+                duration_ms,
+                generation: gen_id,
+            });
+        }
+
         AppEvent::AlertTimeout(target_gen) => {
             // Only dismiss if the timeout belongs to the current alert generation
             if state.alert_generation == target_gen {
                 state.alert_kind = crate::models::AlertKind::None;
+                state.prayer_alert = None;
                 state.update_active_module();
             }
         }
@@ -314,6 +334,24 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             effects.push(Effect::PersistSettings);
         }
 
+        AppEvent::SetPrayerEnabled(enabled) => {
+            state.prayer.enabled = enabled;
+            state.prayer = state.prayer.normalized();
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetPrayerCity(city) => {
+            state.prayer.city = city;
+            state.prayer = state.prayer.normalized();
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetPrayerReminderMinutes(minutes) => {
+            state.prayer.reminder_minutes = minutes;
+            state.prayer = state.prayer.normalized();
+            effects.push(Effect::PersistSettings);
+        }
+
         AppEvent::SetMediaVisualMode(mode) => {
             state.music_visual_mode = mode;
             effects.push(Effect::PersistSettings);
@@ -337,6 +375,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.blob_expression_custom = avatar.expression_custom;
             state.avatar_random = avatar.random;
             state.behavior = PetBehaviorSettings::default();
+            state.prayer = PrayerSettings::default();
             state.music_visual_mode = crate::models::MusicVisualMode::ArtworkPrimary;
             effects.push(Effect::PersistSettings);
         }
