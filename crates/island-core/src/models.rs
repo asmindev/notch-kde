@@ -1,3 +1,4 @@
+use crate::module::{ModuleId, UnknownModuleId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -18,6 +19,31 @@ pub enum ActiveModule {
     Media,
     Alert,
     Prayer,
+}
+
+impl From<ActiveModule> for ModuleId {
+    fn from(module: ActiveModule) -> Self {
+        match module {
+            ActiveModule::System => Self::SYSTEM,
+            ActiveModule::Media => Self::MEDIA,
+            ActiveModule::Alert => Self::ALERT,
+            ActiveModule::Prayer => Self::PRAYER,
+        }
+    }
+}
+
+impl TryFrom<ModuleId> for ActiveModule {
+    type Error = UnknownModuleId;
+
+    fn try_from(id: ModuleId) -> Result<Self, Self::Error> {
+        match id {
+            ModuleId::SYSTEM => Ok(Self::System),
+            ModuleId::MEDIA => Ok(Self::Media),
+            ModuleId::ALERT => Ok(Self::Alert),
+            ModuleId::PRAYER => Ok(Self::Prayer),
+            _ => Err(UnknownModuleId(id)),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]

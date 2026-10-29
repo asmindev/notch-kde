@@ -22,7 +22,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T1.1 — Tambah `ModuleId` dan `ModuleDescriptor`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `T0.4`
 - **Trace:** `MOD-1`, `MOD-2`, `MOD-5`
@@ -36,6 +36,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - `ModuleId` dapat dipakai sebagai key lookup.
   - Tidak ada `String` allocation untuk ID statis.
 - **Risiko:** Rendah–sedang.
+- **Catatan verifikasi:** `ModuleId`, konstanta `SYSTEM`/`MEDIA`/`ALERT`/`PRAYER`, `ModuleDescriptor`, dan `UnknownModuleId` ditambahkan di `crates/island-core/src/module.rs`. Konversi eksplisit `ActiveModule -> ModuleId` serta `TryFrom<ModuleId>` tersedia; `ActiveModule` tetap dipertahankan untuk event dan kompatibilitas test. Test round-trip dan penolakan ID unknown lulus.
 
 ## T1.2 — Tambah `ModuleRegistry`
 

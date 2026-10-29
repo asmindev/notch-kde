@@ -45,7 +45,7 @@ Legenda status: `[ ]` belum, `[~]` dikerjakan, `[x]` selesai, `[-]` dibatalkan.
 |---|---|---|---|---|
 | 0 | Baseline | `T0.1`–`T0.4` | `[x]` | Baseline test terpercaya |
 | R | Render activity | `TR1`–`TR6` | `[x]` | Hidden tanpa redraw/tick periodik |
-| 1 | Module | `T1.1`–`T1.5` | `[ ]` | Module dummy tanpa sentuh ViewEngine |
+| 1 | Module | `T1.1`–`T1.5` | `[~]` | Module dummy tanpa sentuh ViewEngine |
 | 2 | Content | `T2.1`–`T2.5` | `[ ]` | Tidak ada aturan konten di Slint |
 | 3 | View/state | `T3.1`–`T3.4` | `[ ]` | Tidak ada state navigasi divergen |
 | 4 | Timer/effect | `T4.1`–`T4.4` | `[ ]` | Tidak ada string timer |
