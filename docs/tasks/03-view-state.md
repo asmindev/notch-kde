@@ -75,7 +75,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T3.4 — Test invariant state
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T3.2`
 - **Trace:** `STATE-4`
@@ -86,3 +86,4 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Invariant utama tercakup.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** `crates/island-core/tests/state_invariants.rs` memeriksa bahwa module aktif sama dengan engine dan selalu mendukung tier aktif setelah rangkaian event view, prayer panel dibuang saat pindah ke Compact, serta visibility/overlap/hover konsisten dengan `TransitionPolicy` selama reveal/dismiss. `cargo test --workspace` lulus 161 test.
