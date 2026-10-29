@@ -1,12 +1,12 @@
+mod effects;
 mod timers;
 
 use crate::input_region;
 use crate::pet3d;
 use crate::render_stats::RenderStats;
 use crate::settings_store::SettingsStore;
-use island_core::{
-    AppEvent, AppState, Effect, PersistedSettings, SettingsTab, TimerId, reduce, render_policy,
-};
+use effects::EffectExecutor;
+use island_core::{AppEvent, AppState, Effect, SettingsTab, TimerId, reduce, render_policy};
 use island_platform::overlap::Rect;
 use island_platform::{KdeManager, OverlapDetector, PlatformWindow};
 use island_services::{
@@ -598,11 +598,14 @@ impl AppRuntime {
         let input_region_events = input_region.clone();
         let mut last_input_rect = initial_input_rect;
         std::thread::spawn(move || {
-            let mut timers = timers::TimerScheduler::new(timer_runtime, event_tx_effects.clone());
-            timers.schedule(
-                TimerId::Welcome,
-                std::time::Duration::from_millis(3500),
-                app_state.presentation.welcome_generation,
+            let mut effect_executor = EffectExecutor::new(timer_runtime, event_tx_effects.clone());
+            effect_executor.execute(
+                Effect::ScheduleTimer {
+                    id: TimerId::Welcome,
+                    duration_ms: 3500,
+                    generation: app_state.presentation.welcome_generation,
+                },
+                &app_state,
             );
 
             while let Some(event) = event_rx.blocking_recv() {
@@ -647,57 +650,8 @@ impl AppRuntime {
                 last_spectrum_active = policy.spectrum;
                 pet3d_events.set_render_active(policy.pet_3d);
 
-                // Execute any side effects
                 for effect in effects {
-                    match effect {
-                        Effect::PlayPause => {
-                            tokio_rt.spawn(async {
-                                MediaService::play_pause().await;
-                            });
-                        }
-                        Effect::NextTrack => {
-                            tokio_rt.spawn(async {
-                                MediaService::next().await;
-                            });
-                        }
-                        Effect::PreviousTrack => {
-                            tokio_rt.spawn(async {
-                                MediaService::previous().await;
-                            });
-                        }
-                        Effect::ToggleMute => {
-                            debug!("Toggling system mute");
-                            tokio_rt.spawn(async {
-                                AudioService::toggle_mute().await;
-                            });
-                        }
-                        Effect::ToggleDnd => {
-                            debug!("Toggling notification Do-Not-Disturb");
-                            tokio_rt.spawn(async {
-                                DndService::toggle_dnd().await;
-                            });
-                        }
-                        Effect::PersistSettings => {
-                            SettingsStore::save(&PersistedSettings::from_state(&app_state));
-                        }
-                        Effect::SelectMediaSource(player_id) => {
-                            debug!("Switching active media source to: {}", player_id);
-                            tokio_rt.spawn(async move {
-                                MediaService::select_source(&player_id).await;
-                            });
-                        }
-                        Effect::ScheduleTimer {
-                            id,
-                            duration_ms,
-                            generation,
-                        } => {
-                            timers.schedule(
-                                id,
-                                std::time::Duration::from_millis(duration_ms),
-                                generation,
-                            );
-                        }
-                    }
+                    effect_executor.execute(effect, &app_state);
                 }
 
                 // Dirty diff: only dispatch to Slint UI thread if state actually changed
@@ -758,7 +712,7 @@ impl AppRuntime {
                     });
                 }
             }
-            timers.shutdown();
+            effect_executor.shutdown();
         });
 
         // 8. Show Window and Run Slint GUI event loop

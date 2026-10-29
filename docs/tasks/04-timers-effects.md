@@ -55,7 +55,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T4.3 — Ekstrak `EffectExecutor`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T4.2`
 - **Trace:** `TIMER-4`, `TIMER-5`
@@ -67,6 +67,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Event loop utama lebih pendek dan fokus pada dispatch.
   - Test effect per varian.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `runtime/effects.rs` mengeksekusi seluruh varian `Effect`; event loop hanya memanggil `execute`/`shutdown`. Executor tidak memutasi `AppState` (hanya membaca untuk persist settings). Test memastikan seluruh `TimerId` diteruskan ke scheduler beserta generation.
 
 ## T4.4 — Test lifecycle timer
 
