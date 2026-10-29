@@ -6,6 +6,8 @@ use super::shape::{self, Silhouette};
 use super::skins::ShapeId;
 use super::states::{self, Pose, StateId};
 
+pub const EXPRESSION_MORPH_DURATION: f32 = 0.35;
+
 #[derive(Clone, Debug)]
 pub struct BloubFrame {
     pub silhouette: Silhouette,
@@ -23,6 +25,10 @@ pub struct BloubEngine {
     state: StateId,
     state_started: f32,
     expression: Option<ExpressionId>,
+    expression_from: Option<ExpressionVisual>,
+    expression_started: f32,
+    expression_duration: f32,
+    expression_visual: Option<ExpressionVisual>,
     shape: ShapeId,
     shape_from: Silhouette,
     shape_to: Silhouette,
@@ -49,6 +55,10 @@ impl Default for BloubEngine {
             state: StateId::Idle,
             state_started: 0.0,
             expression: None,
+            expression_from: None,
+            expression_started: 0.0,
+            expression_duration: EXPRESSION_MORPH_DURATION,
+            expression_visual: None,
             shape,
             shape_from: sil.clone(),
             shape_to: sil,
@@ -112,11 +122,21 @@ impl BloubEngine {
         self.start_shape_morph(target, t);
     }
 
-    pub fn set_expression(&mut self, expression: ExpressionId, _t: f32) {
+    pub fn set_expression(&mut self, expression: ExpressionId, t: f32) {
+        if self.expression == Some(expression) {
+            return;
+        }
+        self.expression_from = self.expression_visual;
+        self.expression_started = t;
         self.expression = Some(expression);
     }
 
     pub fn clear_expression(&mut self) {
+        if self.expression.is_none() {
+            return;
+        }
+        self.expression_from = self.expression_visual;
+        self.expression_started = self.time;
         self.expression = None;
     }
 
@@ -193,18 +213,37 @@ impl BloubEngine {
 
         let expr_id = self.expression.unwrap_or(p.face);
         let expr = expressions::expression(expr_id);
-        let mut eye_cfgs = expr.eyes.unwrap_or(p.eyes);
-        let mut gaze = if self.expression.is_some() {
-            expr.gaze
-        } else {
-            p.gaze
+        let target_visual = ExpressionVisual {
+            eyes: expr.eyes.unwrap_or(p.eyes),
+            gaze: if self.expression.is_some() {
+                expr.gaze
+            } else {
+                p.gaze
+            },
+            split: if expr.eyes.is_some() {
+                expr.split
+            } else {
+                p.split
+            },
+            lift: expr.lift,
         };
-        p.split = if expr.eyes.is_some() {
-            expr.split
+        let visual = if let Some(from) = self.expression_from {
+            let u = clamp01((t - self.expression_started) / self.expression_duration);
+            if u >= 1.0 {
+                self.expression_from = None;
+                target_visual
+            } else {
+                blend_expression_visual(from, target_visual, ease_in_out_cubic(u))
+            }
         } else {
-            p.split
+            target_visual
         };
-        p.lift += expr.lift;
+        self.expression_visual = Some(visual);
+
+        let mut eye_cfgs = visual.eyes;
+        let mut gaze = visual.gaze;
+        p.split = visual.split;
+        p.lift += visual.lift;
 
         if self.compact {
             for eye in &mut eye_cfgs {
@@ -289,6 +328,30 @@ impl BloubEngine {
             expression: expr_id,
             shape: self.shape,
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct ExpressionVisual {
+    eyes: [EyeCfg; 2],
+    gaze: HeadGaze,
+    split: f32,
+    lift: f32,
+}
+
+fn blend_expression_visual(a: ExpressionVisual, b: ExpressionVisual, u: f32) -> ExpressionVisual {
+    ExpressionVisual {
+        eyes: [
+            blend_eye(a.eyes[0], b.eyes[0], u),
+            blend_eye(a.eyes[1], b.eyes[1], u),
+        ],
+        gaze: HeadGaze {
+            yaw: lerp(a.gaze.yaw, b.gaze.yaw, u),
+            pitch: lerp(a.gaze.pitch, b.gaze.pitch, u),
+            roll: lerp(a.gaze.roll, b.gaze.roll, u),
+        },
+        split: lerp(a.split, b.split, u),
+        lift: lerp(a.lift, b.lift, u),
     }
 }
 

@@ -185,6 +185,28 @@ fn robot_expression_uses_square_eyes() {
 }
 
 #[test]
+fn expression_eye_shape_morphs_between_expressions() {
+    let mut engine = BloubEngine::new();
+    engine.set_expression(ExpressionId::Robot, 0.0);
+    let robot = engine.sample(0.0);
+    let robot_corner = robot.eyes[0].corner;
+    let robot_h = robot.eyes[0].h;
+
+    engine.set_expression(ExpressionId::Heureux, 1.0);
+    let start = engine.sample(1.0);
+    assert!((start.eyes[0].corner - robot_corner).abs() < 1e-4);
+
+    let mid = engine.sample(1.0 + engine::EXPRESSION_MORPH_DURATION * 0.5);
+    assert!(mid.eyes[0].corner > robot_corner + 0.05);
+    assert!(mid.eyes[0].corner < 0.99);
+    assert!(mid.eyes[0].h > 0.17 && mid.eyes[0].h < robot_h);
+
+    let end = engine.sample(1.0 + engine::EXPRESSION_MORPH_DURATION + 0.05);
+    assert!(end.eyes[0].corner > 0.99);
+    assert!(end.eyes[0].h < robot_h);
+}
+
+#[test]
 fn backflip_rotates_the_body_around_x() {
     let mut engine = BloubEngine::new();
     engine.set_state(StateId::Backflip, 0.0);
