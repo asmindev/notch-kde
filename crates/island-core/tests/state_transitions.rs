@@ -428,6 +428,13 @@ fn test_settings_events_open_tab_toggle_and_persist() {
     assert!(!state.settings.behavior.music_reactions);
     assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
 
+    let effects = reduce(
+        &mut state,
+        AppEvent::SetPetRenderer(island_core::PetRenderer::TwoD),
+    );
+    assert_eq!(state.settings.pet_renderer, island_core::PetRenderer::TwoD);
+    assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
+
     reduce(&mut state, AppEvent::CloseSettings);
     assert!(!state.presentation.settings_open);
 }
@@ -487,6 +494,7 @@ fn test_reset_settings_restores_defaults_and_persists() {
     state.settings.shadow.offset_x = -8;
     state.settings.shadow.offset_y = 12;
     state.settings.music_visual_mode = island_core::models::MusicVisualMode::PetPrimary;
+    state.settings.pet_renderer = island_core::PetRenderer::TwoD;
 
     let effects = reduce(&mut state, AppEvent::ResetSettings);
 
@@ -505,6 +513,10 @@ fn test_reset_settings_restores_defaults_and_persists() {
     assert_eq!(
         state.settings.music_visual_mode,
         island_core::models::MusicVisualMode::ArtworkPrimary
+    );
+    assert_eq!(
+        state.settings.pet_renderer,
+        island_core::PetRenderer::ThreeD
     );
     assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
 }

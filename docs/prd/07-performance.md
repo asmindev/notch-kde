@@ -28,7 +28,7 @@ Kondisi setelah implementasi:
 
 - `UiSyncCache` menyimpan snapshot terakhir dan cache UI per window (main/settings).
 - `SyncGroups::between` hanya mengirim kelompok navigation/time/battery/media/prayer/settings/presentation yang berubah.
-- Album art di-cache berdasarkan path + mtime + length, kapasitas 8 entri; path kosong/hilang tidak diulang.
+- Album art di-cache berdasarkan path + mtime + length, kapasitas 4 entri; path kosong/hilang tidak diulang.
 - Jadwal prayer dan label kota memakai cache key kota + tanggal + menit; model dipakai ulang saat key sama.
 - Player sources hanya membangun `VecModel` baru jika daftar berubah.
 - Sinkronisasi settings window dilewati saat window hidden dan panel tidak terbuka.

@@ -37,7 +37,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Config deployment dapat diubah tanpa menyentuh user settings.
 - **Risiko:** Sedang.
-- **Catatan verifikasi:** `AppConfig`, `WindowSpec`, `CavaConfig`, dan `ServiceToggles` berada di `apps/island-app/src/config.rs`; `PersistedSettings` tetap hanya berisi preferensi user. Default mempertahankan 480x208, compact 156, wide 390, expand 440, dan CAVA aktif.
+- **Catatan verifikasi:** `AppConfig`, `WindowSpec`, `CavaConfig`, `PetConfig`, dan `ServiceToggles` berada di `apps/island-app/src/config.rs`; `PersistedSettings` tetap hanya berisi preferensi user. Default mempertahankan 480x208, compact 156, wide 390, expand 440, CAVA aktif, dan pet 3D. `pet.renderer` menerima `"3d"` atau `"2d"`; mode 2D memakai software renderer dan tidak memasang renderer pet 3D. Settings menulis override `PersistedSettings.pet_renderer`; nilai tersimpan dipakai sebelum window/backend dibuat dan berlaku setelah restart.
 
 ## T6.2 — Buat `ConfigLoader`
 
@@ -140,4 +140,4 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Cakupan config memadai.
 - **Risiko:** Rendah.
-- **Catatan verifikasi:** Test mencakup default, partial JSON, malformed JSON, nilai di luar batas, override env di loader, fallback geometry, migrasi versi lama, dan versi masa depan. `cargo test --workspace` lulus 187 test.
+- **Catatan verifikasi:** Test mencakup default, partial JSON, malformed JSON, nilai di luar batas, override env di loader, fallback geometry, migrasi versi lama, dan versi masa depan. `cargo test --workspace` lulus 191 test.

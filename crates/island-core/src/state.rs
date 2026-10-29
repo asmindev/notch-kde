@@ -5,7 +5,7 @@ use crate::models::{
 };
 use crate::module::{ModuleContext, ModuleId};
 use crate::prayer::{PrayerAlert, PrayerSettings};
-use crate::settings::{PetBehaviorSettings, SettingsTab, ShadowSettings};
+use crate::settings::{PetBehaviorSettings, PetRenderer, SettingsTab, ShadowSettings};
 use crate::view_engine::ViewEngine;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -115,6 +115,7 @@ pub struct UserSettings {
     pub shadow: ShadowSettings,
     pub prayer: PrayerSettings,
     pub music_visual_mode: MusicVisualMode,
+    pub pet_renderer: PetRenderer,
     pub blob_character: u32,
     pub blob_palette: u32,
     pub blob_expression: u32,
@@ -130,6 +131,7 @@ impl Default for UserSettings {
             shadow: ShadowSettings::default(),
             prayer: PrayerSettings::default(),
             music_visual_mode: MusicVisualMode::ArtworkPrimary,
+            pet_renderer: PetRenderer::ThreeD,
             blob_character: 1,
             blob_palette: 0,
             blob_expression: 0,

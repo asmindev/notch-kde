@@ -18,6 +18,8 @@ Memisahkan konfigurasi deployment/internal dari preferensi pengguna, memusatkan 
 - `ConfigLoader` membaca `config.json`, memvalidasi nilai, dan fallback ke default dengan warning.
 - Override environment hanya ada di `ConfigLoader`: `NOTCHDE_CONFIG_DIR`, `NOTCHDE_CAVA_CONFIG`, `ISLAND_DODGE`, dan `PILL_DODGE`.
 - `WindowSpec` menjadi sumber dimensi window, notch, touch region, dan `ThemeMetrics`.
+- `AppConfig.pet.renderer` adalah default pet `"3d"` atau `"2d"`; mode `"2d"` memakai software renderer Slint dan tidak menginisialisasi renderer 3D/WGPU.
+- `PersistedSettings.pet_renderer` dapat menimpa default config setelah user memilih renderer dari Settings; nilai hilang/null memakai default `AppConfig`.
 - Path settings dan CAVA berasal dari `AppConfig`; default CAVA tetap `$XDG_CONFIG_HOME/island-cava/cava.conf`.
 - `settings.version` dimigrasikan eksplisit; versi masa depan ditolak dengan fallback default tanpa panic.
 - `KdeManager::get_primary_screen_geometry()` mengembalikan `Option`; bootstrap/runtime memakai fallback geometry.
@@ -35,6 +37,9 @@ Referensi: `apps/island-app/src/config.rs`, `apps/island-app/src/settings_store.
     "expand_width": 440
   },
   "dodge_enabled": true,
+  "pet": {
+    "renderer": "3d"
+  },
   "cava": {
     "enabled": true,
     "config_path": "/home/user/.config/island-cava/cava.conf"
@@ -59,7 +64,7 @@ Field yang tidak ditulis memakai default. `config_dir` opsional dan default ke d
 | ID | Requirement | Prioritas | Task |
 |---|---|---|---|
 | `CFG-1` | `AppConfig` terpisah dari `PersistedSettings`. | P1 | `T6.1` |
-| `CFG-2` | `AppConfig` memuat window spec, enable dodge, path, service enable, dan path CAVA. | P1 | `T6.1`, `T6.2` |
+| `CFG-2` | `AppConfig` memuat window spec, enable dodge, path, service enable, path CAVA, dan renderer pet 2D/3D. | P1 | `T6.1`, `T6.2` |
 | `CFG-3` | `PersistedSettings` tetap memuat preferensi pengguna: avatar, behavior, shadow, prayer, media visual. | P1 | `T6.1` |
 | `CFG-4` | Environment variable developer tidak dibaca di `island-core`. | P1 | `T6.3` |
 | `CFG-5` | Konfigurasi divalidasi saat load; jika gagal, gunakan default dan catat warning. | P1 | `T6.2` |
@@ -74,6 +79,8 @@ AppConfig (deployment/internal)
 ├── window: WindowSpec
 ├── dodge_enabled: bool
 ├── config_dir: PathBuf
+├── pet: PetConfig
+│   └── renderer: ThreeD | TwoD
 ├── cava: CavaConfig
 └── services: ServiceToggles
 
@@ -82,6 +89,7 @@ PersistedSettings (preferensi user)
 ├── avatar
 ├── behavior
 ├── shadow
+├── pet_renderer: Option<ThreeD | TwoD>
 ├── prayer
 └── media_visual
 ```
@@ -92,6 +100,10 @@ Aturan:
 - `PersistedSettings` tidak memuat path tool atau flag developer.
 - `AppConfig` dimuat sekali saat bootstrap dan diteruskan read-only.
 - Perubahan settings user tidak boleh mengubah `AppConfig` secara langsung.
+- `settings.json` dimuat sebelum backend Slint dipilih; `pet_renderer` yang tersimpan menimpa `AppConfig.pet.renderer`.
+- Perubahan `pet.renderer` dari Settings berlaku setelah restart karena pemilihan backend Slint terjadi sebelum window dibuat.
+- Mode `"3d"` membutuhkan WGPU; mode `"2d"` memakai software renderer dan vector pet tanpa renderer 3D.
+- Mode `"2d"` menghindari inisialisasi WGPU/Vulkan saat runtime; kode WGPU masih ikut ter-compile sampai pemisahan build feature dilakukan.
 
 ## 5. WindowSpec
 

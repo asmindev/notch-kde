@@ -486,6 +486,45 @@ component SystemSettingsPage inherits Rectangle {
             }
 
             SettingsCard {
+                title: "Renderer Bloub";
+                description: "Pilih tampilan pet. Perubahan berlaku setelah restart.";
+
+                Rectangle {
+                    height: 32px;
+                    border-radius: 9px;
+                    background: #0f0f12;
+                    border-width: 1px;
+                    border-color: ThemeColors.divider;
+
+                    HorizontalLayout {
+                        spacing: 4px;
+                        padding: 3px;
+                        alignment: start;
+
+                        SettingsSegmentButton {
+                            label: "3D";
+                            active: IslandContext.pet-renderer == 0;
+                            clicked => { IslandContext.set-pet-renderer(0); }
+                        }
+
+                        SettingsSegmentButton {
+                            label: "2D";
+                            active: IslandContext.pet-renderer == 1;
+                            clicked => { IslandContext.set-pet-renderer(1); }
+                        }
+                    }
+                }
+
+                Text {
+                    text: "2D lebih ringan dan tidak memuat Vulkan saat aplikasi dimulai.";
+                    color: ThemeColors.subtle;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-xs;
+                    wrap: word-wrap;
+                }
+            }
+
+            SettingsCard {
                 title: "Tampilan media";
                 description: "Pilih fokus utama saat musik diputar.";
 

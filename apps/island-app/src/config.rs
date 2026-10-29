@@ -1,3 +1,4 @@
+use island_core::PetRenderer;
 use island_platform::kde::ScreenGeometry;
 use island_platform::overlap::Rect;
 use island_ui::{MainWindow, ThemeMetrics};
@@ -198,6 +199,12 @@ impl Default for CavaConfig {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct PetConfig {
+    pub renderer: PetRenderer,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ServiceToggles {
@@ -233,6 +240,7 @@ pub struct AppConfig {
     pub dodge_enabled: bool,
     pub config_dir: PathBuf,
     pub cava: CavaConfig,
+    pub pet: PetConfig,
     pub services: ServiceToggles,
 }
 
@@ -243,6 +251,7 @@ impl Default for AppConfig {
             dodge_enabled: true,
             config_dir: PathBuf::new(),
             cava: CavaConfig::default(),
+            pet: PetConfig::default(),
             services: ServiceToggles::default(),
         }
     }
@@ -361,6 +370,7 @@ impl ConfigLoader {
             config_dir = %config.config_dir.display(),
             dodge_enabled = config.dodge_enabled,
             cava_enabled = config.cava.enabled,
+            pet_renderer = ?config.pet.renderer,
             "loaded app config"
         );
         config
@@ -456,8 +466,22 @@ mod tests {
         assert_eq!(config.window.expand_width, 440);
         assert!(config.dodge_enabled);
         assert!(config.cava.enabled);
+        assert_eq!(config.pet.renderer, PetRenderer::ThreeD);
         assert!(config.services.clock);
         assert!(config.services.media);
+    }
+
+    #[test]
+    fn pet_renderer_accepts_2d_and_3d() {
+        let two_d: AppConfig =
+            serde_json::from_str(r#"{"pet":{"renderer":"2d"}}"#).expect("parse 2d pet");
+        let three_d: AppConfig =
+            serde_json::from_str(r#"{"pet":{"renderer":"3d"}}"#).expect("parse 3d pet");
+
+        assert_eq!(two_d.pet.renderer, PetRenderer::TwoD);
+        assert!(!two_d.pet.renderer.is_3d());
+        assert_eq!(three_d.pet.renderer, PetRenderer::ThreeD);
+        assert!(three_d.pet.renderer.is_3d());
     }
 
     #[test]

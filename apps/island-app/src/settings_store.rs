@@ -111,6 +111,18 @@ mod tests {
     }
 
     #[test]
+    fn loads_persisted_pet_renderer() {
+        let path = temporary_path();
+        fs::write(&path, br#"{"version":1,"pet_renderer":"2d"}"#)
+            .expect("write settings with pet renderer");
+
+        let loaded = SettingsStore::load_from(&path).expect("load pet renderer");
+
+        assert_eq!(loaded.pet_renderer, Some(island_core::PetRenderer::TwoD));
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
     fn malformed_file_returns_error() {
         let path = temporary_path();
         fs::write(&path, b"not json").expect("write malformed settings");

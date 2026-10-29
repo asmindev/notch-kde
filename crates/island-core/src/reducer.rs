@@ -433,6 +433,11 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             effects.push(Effect::PersistSettings);
         }
 
+        AppEvent::SetPetRenderer(renderer) => {
+            state.settings.pet_renderer = renderer;
+            effects.push(Effect::PersistSettings);
+        }
+
         AppEvent::ResetAvatar => {
             let avatar = AvatarSettings::default();
             state.settings.blob_character = avatar.character;
@@ -454,6 +459,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.settings.shadow = ShadowSettings::default();
             state.settings.prayer = PrayerSettings::default();
             state.settings.music_visual_mode = crate::models::MusicVisualMode::ArtworkPrimary;
+            state.settings.pet_renderer = crate::settings::PetRenderer::default();
             effects.push(Effect::PersistSettings);
         }
 

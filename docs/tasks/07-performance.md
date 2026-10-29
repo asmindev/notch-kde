@@ -36,7 +36,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Spectrum update tidak memicu load album art.
 - **Risiko:** Sedang.
-- **Catatan verifikasi:** `ArtCache` memakai key path + mtime + length, kapasitas 8 entri, dan mengembalikan `Unchanged` untuk URL/path yang sama. Path kosong atau hilang menghasilkan `Update(None)` sekali. Test 100 iterasi berulang membuktikan tidak ada load ulang.
+- **Catatan verifikasi:** `ArtCache` memakai key path + mtime + length, kapasitas 4 entri, dan mengembalikan `Unchanged` untuk URL/path yang sama. Path kosong atau hilang menghasilkan `Update(None)` sekali. Test 100 iterasi berulang membuktikan tidak ada load ulang. Kapasitas diturunkan dari 8 ke 4 untuk membatasi retensi artwork resolusi penuh di heap.
 
 ## T7.2 — Cache jadwal prayer dan model Slint
 

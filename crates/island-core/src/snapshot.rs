@@ -3,7 +3,7 @@ use crate::models::{
 };
 use crate::module::ModuleId;
 use crate::prayer::{PrayerAlert, PrayerSettings};
-use crate::settings::{PetBehaviorSettings, SettingsTab, ShadowSettings};
+use crate::settings::{PetBehaviorSettings, PetRenderer, SettingsTab, ShadowSettings};
 use crate::state::{AppState, MochiMoodState};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -57,6 +57,7 @@ pub struct SettingsSnapshot {
     pub shadow: ShadowSettings,
     pub prayer: PrayerSettings,
     pub music_visual_mode: MusicVisualMode,
+    pub pet_renderer: PetRenderer,
     pub blob_character: u32,
     pub blob_palette: u32,
     pub blob_expression: u32,
@@ -120,6 +121,7 @@ impl ViewSnapshot {
                 shadow: state.settings.shadow,
                 prayer: state.settings.prayer,
                 music_visual_mode: state.settings.music_visual_mode,
+                pet_renderer: state.settings.pet_renderer,
                 blob_character: state.settings.blob_character,
                 blob_palette: state.settings.blob_palette,
                 blob_expression: state.settings.blob_expression,

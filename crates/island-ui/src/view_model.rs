@@ -13,7 +13,7 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-const ART_CACHE_CAPACITY: usize = 8;
+const ART_CACHE_CAPACITY: usize = 4;
 
 thread_local! {
     static MAIN_SYNC_CACHE: RefCell<UiSyncCache> = RefCell::new(UiSyncCache::default());
@@ -112,6 +112,11 @@ impl ViewModel {
         ctx.set_music_reactions_enabled(state.settings.behavior.music_reactions);
         ctx.set_sleepy_on_low_battery(state.settings.behavior.sleepy_on_low_battery);
         ctx.set_music_visual_mode(state.settings.music_visual_mode as i32);
+        ctx.set_pet_renderer(if state.settings.pet_renderer.is_3d() {
+            0
+        } else {
+            1
+        });
         sync_shadow_context(ctx, state);
     }
 
@@ -635,8 +640,8 @@ fn format_date_id(date: NaiveDate) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        ArtCache, ArtUpdate, PrayerCache, PrayerScheduleKey, SourceCache, SyncGroups, art_key,
-        format_date_id, line_markers,
+        ART_CACHE_CAPACITY, ArtCache, ArtUpdate, PrayerCache, PrayerScheduleKey, SourceCache,
+        SyncGroups, art_key, format_date_id, line_markers,
     };
     use chrono::{NaiveDate, TimeZone};
     use island_core::AppState;
@@ -769,6 +774,28 @@ mod tests {
 
         assert_ne!(first, second);
         let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn art_cache_evicts_beyond_capacity() {
+        let dir =
+            std::env::temp_dir().join(format!("notchde-art-cache-capacity-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("create art cache test dir");
+        let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("assets")
+            .join("pet")
+            .join("labubu_idle.png");
+        let mut cache = ArtCache::default();
+
+        for index in 0..=ART_CACHE_CAPACITY {
+            let path = dir.join(format!("art-{index}.png"));
+            std::fs::copy(&source, &path).expect("copy art fixture");
+            let path = path.to_str().expect("utf8 path");
+            assert!(matches!(cache.resolve(path), ArtUpdate::Update(Some(_))));
+        }
+
+        assert_eq!(cache.entries.len(), ART_CACHE_CAPACITY);
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

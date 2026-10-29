@@ -34,6 +34,21 @@ impl SettingsTab {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum PetRenderer {
+    #[default]
+    #[serde(rename = "3d")]
+    ThreeD,
+    #[serde(rename = "2d")]
+    TwoD,
+}
+
+impl PetRenderer {
+    pub fn is_3d(self) -> bool {
+        matches!(self, Self::ThreeD)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AvatarSettings {
@@ -129,6 +144,7 @@ pub struct PersistedSettings {
     pub behavior: PetBehaviorSettings,
     pub shadow: ShadowSettings,
     pub media_visual_mode: MusicVisualMode,
+    pub pet_renderer: Option<PetRenderer>,
     pub prayer: PrayerSettings,
 }
 
@@ -140,6 +156,7 @@ impl Default for PersistedSettings {
             behavior: PetBehaviorSettings::default(),
             shadow: ShadowSettings::default(),
             media_visual_mode: MusicVisualMode::ArtworkPrimary,
+            pet_renderer: None,
             prayer: PrayerSettings::default(),
         }
     }
@@ -204,6 +221,7 @@ impl PersistedSettings {
             behavior: state.settings.behavior,
             shadow: state.settings.shadow.normalized(),
             media_visual_mode: state.settings.music_visual_mode,
+            pet_renderer: Some(state.settings.pet_renderer),
             prayer: state.settings.prayer.normalized(),
         }
     }
@@ -218,6 +236,9 @@ impl PersistedSettings {
         state.settings.behavior = self.behavior;
         state.settings.shadow = self.shadow.normalized();
         state.settings.music_visual_mode = self.media_visual_mode;
+        if let Some(renderer) = self.pet_renderer {
+            state.settings.pet_renderer = renderer;
+        }
         state.settings.prayer = self.prayer.normalized();
     }
 }
@@ -240,6 +261,7 @@ mod tests {
         assert_eq!(settings.shadow.radius, 18);
         assert_eq!(settings.shadow.offset_x, 0);
         assert_eq!(settings.shadow.offset_y, 6);
+        assert_eq!(settings.pet_renderer, None);
         assert!(settings.prayer.enabled);
         assert_eq!(settings.prayer.city, 0);
         assert_eq!(settings.prayer.reminder_minutes, 10);
@@ -269,6 +291,16 @@ mod tests {
     }
 
     #[test]
+    fn missing_persisted_renderer_preserves_config_default() {
+        let mut state = AppState::default();
+        state.settings.pet_renderer = PetRenderer::TwoD;
+
+        PersistedSettings::default().apply_to_state(&mut state);
+
+        assert_eq!(state.settings.pet_renderer, PetRenderer::TwoD);
+    }
+
+    #[test]
     fn round_trips_state_settings() {
         let mut state = AppState::default();
         state.settings.blob_character = 5;
@@ -284,6 +316,7 @@ mod tests {
         state.settings.shadow.offset_x = -8;
         state.settings.shadow.offset_y = 12;
         state.settings.music_visual_mode = MusicVisualMode::PetPrimary;
+        state.settings.pet_renderer = PetRenderer::TwoD;
         state.settings.prayer.enabled = false;
         state.settings.prayer.city = 8;
         state.settings.prayer.reminder_minutes = 15;
@@ -308,6 +341,7 @@ mod tests {
             restored.settings.music_visual_mode,
             MusicVisualMode::PetPrimary
         );
+        assert_eq!(restored.settings.pet_renderer, PetRenderer::TwoD);
         assert!(!restored.settings.prayer.enabled);
         assert_eq!(restored.settings.prayer.city, 8);
         assert_eq!(restored.settings.prayer.reminder_minutes, 15);
