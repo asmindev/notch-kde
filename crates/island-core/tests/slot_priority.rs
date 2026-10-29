@@ -1,8 +1,6 @@
 use chrono::Utc;
 use island_core::prayer::{Prayer, PrayerAlert, PrayerAlertKind};
-use island_core::{
-    reduce, ActiveModule, AppEvent, AppState, BatteryState, IslandMode, MediaTrack,
-};
+use island_core::{ActiveModule, AppEvent, AppState, BatteryState, IslandMode, MediaTrack, reduce};
 
 #[test]
 fn test_default_slot_is_system() {
@@ -99,11 +97,9 @@ fn test_source_selector_keeps_paused_media_active_in_wide() {
     assert!(state.show_source_selector);
     assert_eq!(state.active_module, ActiveModule::Media);
 
-    // Characterization: closing the selector does not recompute the module
-    // until the next view/state transition updates it.
     reduce(&mut state, AppEvent::ToggleSourceSelector);
     assert!(!state.show_source_selector);
-    assert_eq!(state.active_module, ActiveModule::Media);
+    assert_eq!(state.active_module, ActiveModule::System);
 
     reduce(&mut state, AppEvent::UserHoverChanged(false));
     assert_eq!(state.mode, IslandMode::Compact);
@@ -365,4 +361,27 @@ fn test_prayer_panel_and_source_selector_are_mutually_exclusive() {
     assert!(state.prayer_panel_open);
     assert!(!state.show_source_selector);
     assert_eq!(state.active_module, ActiveModule::Prayer);
+}
+
+#[test]
+fn test_module_switch_request_cannot_bypass_resolver() {
+    let mut state = AppState::default();
+    reduce(&mut state, AppEvent::WelcomeTimeout);
+
+    reduce(
+        &mut state,
+        AppEvent::ModuleSwitchRequested(ActiveModule::Prayer),
+    );
+    assert_eq!(state.active_module, ActiveModule::System);
+
+    let mut playing = paused_track();
+    playing.is_playing = true;
+    reduce(&mut state, AppEvent::MediaUpdated(playing));
+    assert_eq!(state.active_module, ActiveModule::Media);
+
+    reduce(
+        &mut state,
+        AppEvent::ModuleSwitchRequested(ActiveModule::System),
+    );
+    assert_eq!(state.active_module, ActiveModule::Media);
 }

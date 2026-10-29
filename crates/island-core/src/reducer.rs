@@ -154,8 +154,12 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
 
         AppEvent::ToggleSwapPetArt => {
             state.music_visual_mode = match state.music_visual_mode {
-                crate::models::MusicVisualMode::PetPrimary => crate::models::MusicVisualMode::ArtworkPrimary,
-                crate::models::MusicVisualMode::ArtworkPrimary => crate::models::MusicVisualMode::PetPrimary,
+                crate::models::MusicVisualMode::PetPrimary => {
+                    crate::models::MusicVisualMode::ArtworkPrimary
+                }
+                crate::models::MusicVisualMode::ArtworkPrimary => {
+                    crate::models::MusicVisualMode::PetPrimary
+                }
             };
             effects.push(Effect::PersistSettings);
         }
@@ -216,7 +220,9 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         }
 
         AppEvent::MochiAnnoyedTimeout(target_gen) => {
-            if state.mochi_generation == target_gen && state.mochi_mood == crate::state::MochiMoodState::Annoyed {
+            if state.mochi_generation == target_gen
+                && state.mochi_mood == crate::state::MochiMoodState::Annoyed
+            {
                 state.mochi_mood = if state.media.is_playing {
                     crate::state::MochiMoodState::Dancing
                 } else if state.battery.percentage <= 20 && !state.battery.is_charging {
@@ -289,8 +295,8 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.show_source_selector = !state.show_source_selector;
             if state.show_source_selector {
                 state.prayer_panel_open = false;
-                state.active_module = crate::models::ActiveModule::Media.into();
             }
+            state.update_active_module();
         }
 
         AppEvent::TogglePrayerPanel => {
@@ -533,8 +539,20 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         }
 
         AppEvent::ModuleSwitchRequested(module) => {
-            state.engine.active_module = module.into();
-            state.sync_engine();
+            let requested = module.into();
+            let supported = state
+                .engine
+                .registry()
+                .get(requested)
+                .is_some_and(|module| {
+                    module
+                        .descriptor()
+                        .tiers
+                        .supports(state.engine.current_view)
+                });
+            if supported {
+                state.update_active_module();
+            }
         }
 
         AppEvent::WelcomeTimeout => {
