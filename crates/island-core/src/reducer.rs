@@ -94,7 +94,10 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             });
         }
 
-        AppEvent::AlertTimeout(target_gen) => {
+        AppEvent::TimerFired {
+            id: TimerId::Alert,
+            generation: target_gen,
+        } => {
             // Only dismiss if the timeout belongs to the current alert generation
             if state.domain.alert_generation == target_gen {
                 state.domain.alert_kind = crate::models::AlertKind::None;
@@ -221,7 +224,10 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             });
         }
 
-        AppEvent::MochiAnnoyedTimeout(target_gen) => {
+        AppEvent::TimerFired {
+            id: TimerId::MochiAnnoyed,
+            generation: target_gen,
+        } => {
             if state.presentation.mochi_generation == target_gen
                 && state.presentation.mochi_mood == crate::state::MochiMoodState::Annoyed
             {
@@ -236,7 +242,10 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             }
         }
 
-        AppEvent::MochiDizzyTimeout(target_gen) | AppEvent::PetDizzyTimeout(target_gen) => {
+        AppEvent::TimerFired {
+            id: TimerId::MochiDizzy | TimerId::PetDizzy,
+            generation: target_gen,
+        } => {
             if state.presentation.mochi_generation == target_gen
                 || state.presentation.pet_dizzy_generation == target_gen
             {
@@ -254,7 +263,10 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             }
         }
 
-        AppEvent::MochiHappyTimeout(target_gen) | AppEvent::PetHappyTimeout(target_gen) => {
+        AppEvent::TimerFired {
+            id: TimerId::PetHappy,
+            generation: target_gen,
+        } => {
             if state.presentation.mochi_generation == target_gen
                 || state.presentation.pet_happy_generation == target_gen
             {
@@ -273,7 +285,10 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             }
         }
 
-        AppEvent::MochiSlapReset(target_gen) | AppEvent::PetPokeReset(target_gen) => {
+        AppEvent::TimerFired {
+            id: TimerId::MochiSlapReset | TimerId::PetPokeReset,
+            generation: target_gen,
+        } => {
             if state.presentation.mochi_generation == target_gen
                 || state.presentation.pet_happy_generation == target_gen
             {
@@ -500,14 +515,20 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             }
         }
 
-        AppEvent::OverlapRevealTimeout(generation) => {
+        AppEvent::TimerFired {
+            id: TimerId::OverlapReveal,
+            generation,
+        } => {
             if generation == state.runtime.overlap_reveal_generation {
                 state.view.engine.finish_overlap_reveal();
                 state.update_active_module();
             }
         }
 
-        AppEvent::OverlapDismissCompactTimeout(generation) => {
+        AppEvent::TimerFired {
+            id: TimerId::OverlapDismissCompact,
+            generation,
+        } => {
             if generation == state.runtime.overlap_dismiss_generation
                 && state.view.engine.overlap_dismiss_active
                 && state.view.engine.is_overlapping
@@ -522,7 +543,10 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             }
         }
 
-        AppEvent::OverlapDismissHideTimeout(generation) => {
+        AppEvent::TimerFired {
+            id: TimerId::OverlapDismissHide,
+            generation,
+        } => {
             if generation == state.runtime.overlap_dismiss_generation
                 && state.view.engine.overlap_dismiss_active
                 && state.view.engine.is_overlapping
@@ -532,7 +556,10 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             }
         }
 
-        AppEvent::CollapseCompactTimeout(generation) => {
+        AppEvent::TimerFired {
+            id: TimerId::CollapseCompact,
+            generation,
+        } => {
             if generation == state.runtime.overlap_dismiss_generation
                 && state.view.engine.overlap_dismiss_active
                 && !state.view.engine.is_overlapping
@@ -569,7 +596,13 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             }
         }
 
-        AppEvent::WelcomeTimeout => {
+        AppEvent::TimerFired {
+            id: TimerId::Welcome,
+            generation,
+        } => {
+            if generation != state.presentation.welcome_generation {
+                return effects;
+            }
             state.presentation.is_welcome = false;
             // Settle into CompactView if not hovered
             if !state.view.engine.is_hovered {

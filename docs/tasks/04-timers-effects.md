@@ -38,7 +38,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T4.2 — Implementasikan `TimerScheduler`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T4.1`
 - **Trace:** `TIMER-2`, `TIMER-3`
@@ -51,6 +51,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Test cancel dan generation lulus.
   - Tidak ada timer stale yang mengubah state.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `runtime/timers.rs` menyimpan satu handle per `TimerId`; `schedule` membatalkan timer lama, `cancel`/`cancel_all`/`shutdown` menghentikan task, dan `Drop` membersihkan semua. Scheduler mengirim `AppEvent::TimerFired { id, generation }`; reducer memvalidasi generation per timer. Test schedule, reschedule, cancel, dan shutdown lulus.
 
 ## T4.3 — Ekstrak `EffectExecutor`
 

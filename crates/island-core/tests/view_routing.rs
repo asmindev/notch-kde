@@ -41,7 +41,13 @@ fn test_view_routing_click_expand_and_collapse() {
             generation,
         }]
     );
-    reduce(&mut state, AppEvent::CollapseCompactTimeout(generation));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::CollapseCompact,
+            generation: generation,
+        },
+    );
     assert_eq!(state.view.mode(), IslandMode::Compact);
 }
 
@@ -65,7 +71,13 @@ fn test_collapse_stages_through_wide_before_compact() {
 
     // 3. The scheduled transition completes at Compact
     let generation = state.runtime.overlap_dismiss_generation;
-    reduce(&mut state, AppEvent::CollapseCompactTimeout(generation));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::CollapseCompact,
+            generation: generation,
+        },
+    );
     assert_eq!(state.view.mode(), IslandMode::Compact);
 
     // 4. Cursor exits the notch area -> re-arms hover
@@ -102,7 +114,13 @@ fn test_expand_click_collapses_directly_to_compact() {
             generation,
         }]
     );
-    reduce(&mut state, AppEvent::CollapseCompactTimeout(generation));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::CollapseCompact,
+            generation: generation,
+        },
+    );
     assert_eq!(state.view.mode(), IslandMode::Compact);
     assert!(state.view.engine.hover_suppressed);
 }

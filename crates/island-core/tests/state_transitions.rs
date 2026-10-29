@@ -1,5 +1,16 @@
 use island_core::{ActiveModule, AppEvent, AppState, IslandMode, MediaTrack, reduce};
 
+fn fire_welcome(state: &mut AppState) {
+    let generation = state.presentation.welcome_generation;
+    reduce(
+        state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::Welcome,
+            generation,
+        },
+    );
+}
+
 #[test]
 fn test_initial_state_wide_welcome() {
     let state = AppState::default();
@@ -16,7 +27,7 @@ fn test_welcome_timeout_to_compact() {
     assert!(state.presentation.is_welcome);
     assert_eq!(state.view.mode(), IslandMode::Wide);
 
-    reduce(&mut state, AppEvent::WelcomeTimeout);
+    fire_welcome(&mut state);
     assert_eq!(state.view.mode(), IslandMode::Compact);
     assert!(!state.presentation.is_welcome);
 }
@@ -25,7 +36,7 @@ fn test_welcome_timeout_to_compact() {
 fn test_screen_unlocked_triggers_welcome() {
     let mut state = AppState::default();
     // First settle to compact
-    reduce(&mut state, AppEvent::WelcomeTimeout);
+    fire_welcome(&mut state);
     assert_eq!(state.view.mode(), IslandMode::Compact);
     assert!(!state.presentation.is_welcome);
 
@@ -51,7 +62,7 @@ fn test_screen_unlocked_triggers_welcome() {
     );
 
     // Timeout settles it back to compact
-    reduce(&mut state, AppEvent::WelcomeTimeout);
+    fire_welcome(&mut state);
     assert_eq!(state.view.mode(), IslandMode::Compact);
     assert!(!state.presentation.is_welcome);
 }
@@ -195,11 +206,23 @@ fn test_pet_clicked_and_happy_timeout() {
     );
 
     // Stale timeout generation 1 does not reset happy state
-    reduce(&mut state, AppEvent::PetHappyTimeout(1));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::PetHappy,
+            generation: 1,
+        },
+    );
     assert!(state.presentation.pet_is_happy);
 
     // Matching timeout generation 2 resets happy state
-    reduce(&mut state, AppEvent::PetHappyTimeout(2));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::PetHappy,
+            generation: 2,
+        },
+    );
     assert!(!state.presentation.pet_is_happy);
 }
 
@@ -243,7 +266,13 @@ fn test_pet_rapid_poking_triggers_dizzy() {
 
     // Dizzy timeout resets dizzy state
     let generation = state.presentation.mochi_generation;
-    reduce(&mut state, AppEvent::MochiDizzyTimeout(generation));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::MochiDizzy,
+            generation: generation,
+        },
+    );
     assert!(!state.presentation.pet_is_dizzy);
     assert_eq!(
         state.presentation.mochi_mood,
@@ -525,7 +554,13 @@ fn test_prayer_alert_sets_and_clears_alert() {
         }]
     );
 
-    reduce(&mut state, AppEvent::AlertTimeout(1));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::Alert,
+            generation: 1,
+        },
+    );
     assert_eq!(
         state.domain.alert_kind,
         island_core::models::AlertKind::None

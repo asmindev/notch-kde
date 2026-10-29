@@ -24,6 +24,7 @@ pub enum TimerId {
 pub enum AppEvent {
     // Time & periodic
     Tick(TimeInfo),
+    TimerFired { id: TimerId, generation: u64 },
 
     // Services
     BatteryUpdated(BatteryState),
@@ -38,15 +39,10 @@ pub enum AppEvent {
     // Platform & windowing
     WindowOverlapChanged(bool),
     UserHoverChanged(bool),
-    OverlapRevealTimeout(u64),
-    OverlapDismissCompactTimeout(u64),
-    OverlapDismissHideTimeout(u64),
-    CollapseCompactTimeout(u64),
 
     // Mode & module transitions
     ViewSwitchRequested(IslandView),
     ModuleSwitchRequested(ActiveModule),
-    WelcomeTimeout,
     ScreenUnlocked,
     TriggerWelcome,
 
@@ -83,14 +79,7 @@ pub enum AppEvent {
     CollapseClicked,
     ToggleSwapPetArt,
     PetClicked,
-    PetHappyTimeout(u64),
-    PetDizzyTimeout(u64),
-    PetPokeReset(u64),
     MochiSlapped,
-    MochiAnnoyedTimeout(u64),
-    MochiDizzyTimeout(u64),
-    MochiHappyTimeout(u64),
-    MochiSlapReset(u64),
     CycleBlobCharacter,
     SetBlobCharacter(u32),
     CycleBlobPalette,
@@ -100,7 +89,6 @@ pub enum AppEvent {
     RandomizeAvatar,
     AvatarRandomTick,
     ToggleAvatarRandom,
-    AlertTimeout(u64),
 }
 
 #[derive(Debug, Clone, PartialEq)]

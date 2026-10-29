@@ -2,6 +2,17 @@ use chrono::Utc;
 use island_core::prayer::{Prayer, PrayerAlert, PrayerAlertKind};
 use island_core::{ActiveModule, AppEvent, AppState, BatteryState, IslandMode, MediaTrack, reduce};
 
+fn fire_welcome(state: &mut AppState) {
+    let generation = state.presentation.welcome_generation;
+    reduce(
+        state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::Welcome,
+            generation,
+        },
+    );
+}
+
 #[test]
 fn test_default_slot_is_system() {
     let state = AppState::default();
@@ -48,7 +59,7 @@ fn paused_track() -> MediaTrack {
 #[test]
 fn test_paused_media_stays_in_compact_but_falls_back_in_wide() {
     let mut state = AppState::default();
-    reduce(&mut state, AppEvent::WelcomeTimeout);
+    fire_welcome(&mut state);
     assert_eq!(state.view.mode(), IslandMode::Compact);
 
     reduce(&mut state, AppEvent::MediaUpdated(paused_track()));
@@ -66,7 +77,7 @@ fn test_paused_media_stays_in_compact_but_falls_back_in_wide() {
 #[test]
 fn test_paused_media_falls_back_in_expand() {
     let mut state = AppState::default();
-    reduce(&mut state, AppEvent::WelcomeTimeout);
+    fire_welcome(&mut state);
     reduce(&mut state, AppEvent::MediaUpdated(paused_track()));
     assert_eq!(state.view.active_module(), ActiveModule::Media);
 
@@ -76,7 +87,13 @@ fn test_paused_media_falls_back_in_expand() {
 
     reduce(&mut state, AppEvent::CollapseClicked);
     let generation = state.runtime.overlap_dismiss_generation;
-    reduce(&mut state, AppEvent::CollapseCompactTimeout(generation));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::CollapseCompact,
+            generation: generation,
+        },
+    );
     assert_eq!(state.view.mode(), IslandMode::Compact);
     assert_eq!(state.view.active_module(), ActiveModule::Media);
 }
@@ -84,7 +101,7 @@ fn test_paused_media_falls_back_in_expand() {
 #[test]
 fn test_source_selector_keeps_paused_media_active_in_wide() {
     let mut state = AppState::default();
-    reduce(&mut state, AppEvent::WelcomeTimeout);
+    fire_welcome(&mut state);
     reduce(&mut state, AppEvent::MediaUpdated(paused_track()));
     assert_eq!(state.view.mode(), IslandMode::Compact);
     assert_eq!(state.view.active_module(), ActiveModule::Media);
@@ -122,7 +139,13 @@ fn test_playing_media_stays_active_in_all_views() {
 
     reduce(&mut state, AppEvent::CollapseClicked);
     let generation = state.runtime.overlap_dismiss_generation;
-    reduce(&mut state, AppEvent::CollapseCompactTimeout(generation));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::CollapseCompact,
+            generation: generation,
+        },
+    );
     assert_eq!(state.view.mode(), IslandMode::Compact);
     assert_eq!(state.view.active_module(), ActiveModule::Media);
 }
@@ -174,7 +197,13 @@ fn test_critical_battery_takes_priority_over_media() {
     }));
 
     // Timeout occurs with matching generation -> Alert dismissed, falls back to Media (Priority::HIGH 100)
-    reduce(&mut state, AppEvent::AlertTimeout(1));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::Alert,
+            generation: 1,
+        },
+    );
     assert_eq!(state.view.active_module(), ActiveModule::Media);
 }
 
@@ -212,12 +241,24 @@ fn test_alert_generation_safety() {
     assert_eq!(state.view.active_module(), ActiveModule::Alert);
 
     // 3. Stale timer from Gen 1 arrives -> Ignored, Alert remains active!
-    reduce(&mut state, AppEvent::AlertTimeout(1));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::Alert,
+            generation: 1,
+        },
+    );
     assert_eq!(state.domain.alert_generation, 2);
     assert_eq!(state.view.active_module(), ActiveModule::Alert); // Still alert!
 
     // 4. Timer for Gen 2 arrives -> Properly dismissed!
-    reduce(&mut state, AppEvent::AlertTimeout(2));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::Alert,
+            generation: 2,
+        },
+    );
     assert_eq!(state.view.active_module(), ActiveModule::System);
 }
 
@@ -274,7 +315,7 @@ fn test_dnd_and_audio_mute_events() {
 }
 
 fn settle_wide(state: &mut AppState) {
-    reduce(state, AppEvent::WelcomeTimeout);
+    fire_welcome(state);
     reduce(state, AppEvent::UserHoverChanged(true));
 }
 
@@ -328,7 +369,13 @@ fn test_alert_overrides_prayer_and_returns_to_prayer() {
     assert_eq!(state.view.active_module(), ActiveModule::Alert);
 
     let generation = state.domain.alert_generation;
-    reduce(&mut state, AppEvent::AlertTimeout(generation));
+    reduce(
+        &mut state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::Alert,
+            generation: generation,
+        },
+    );
     assert_eq!(state.view.active_module(), ActiveModule::Prayer);
 }
 
@@ -375,7 +422,7 @@ fn test_prayer_panel_and_source_selector_are_mutually_exclusive() {
 #[test]
 fn test_module_switch_request_cannot_bypass_resolver() {
     let mut state = AppState::default();
-    reduce(&mut state, AppEvent::WelcomeTimeout);
+    fire_welcome(&mut state);
 
     reduce(
         &mut state,

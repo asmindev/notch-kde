@@ -1,9 +1,11 @@
+mod timers;
+
 use crate::input_region;
 use crate::pet3d;
 use crate::render_stats::RenderStats;
 use crate::settings_store::SettingsStore;
 use island_core::{
-    AppEvent, AppState, Effect, PersistedSettings, SettingsTab, reduce, render_policy,
+    AppEvent, AppState, Effect, PersistedSettings, SettingsTab, TimerId, reduce, render_policy,
 };
 use island_platform::overlap::Rect;
 use island_platform::{KdeManager, OverlapDetector, PlatformWindow};
@@ -15,7 +17,7 @@ use island_ui::{IslandContext, MainWindow, ModuleUiRegistry, SettingsWindow, Vie
 use slint::ComponentHandle;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 const COMPACT_NOTCH_WIDTH: u32 = 156;
 const COMPACT_NOTCH_HEIGHT: u32 = 30;
@@ -500,14 +502,6 @@ impl AppRuntime {
                     let _ = tx_unlock.send(AppEvent::ScreenUnlocked);
                 }
             });
-
-            // Welcome Timeout (Phase 4): Transition after 3.5 seconds
-            let tx4 = event_tx_services.clone();
-            tokio::spawn(async move {
-                tokio::time::sleep(tokio::time::Duration::from_millis(3500)).await;
-                info!("Welcome hold timeout triggered -> morphing to standard view");
-                let _ = tx4.send(AppEvent::WelcomeTimeout);
-            });
         });
 
         // 4. Start CAVA Audio Spectrum Visualizer
@@ -600,9 +594,17 @@ impl AppRuntime {
         let mut last_settings_open = app_state.presentation.settings_open;
         let mut last_prayer = app_state.settings.prayer;
         let event_tx_effects = event_tx.clone();
+        let timer_runtime = tokio_rt.handle().clone();
         let input_region_events = input_region.clone();
         let mut last_input_rect = initial_input_rect;
         std::thread::spawn(move || {
+            let mut timers = timers::TimerScheduler::new(timer_runtime, event_tx_effects.clone());
+            timers.schedule(
+                TimerId::Welcome,
+                std::time::Duration::from_millis(3500),
+                app_state.presentation.welcome_generation,
+            );
+
             while let Some(event) = event_rx.blocking_recv() {
                 if matches!(&event, AppEvent::SpectrumUpdated(_)) {
                     let policy = render_policy(&app_state);
@@ -689,129 +691,11 @@ impl AppRuntime {
                             duration_ms,
                             generation,
                         } => {
-                            if id == "overlap_reveal" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ =
-                                        tx_timer.send(AppEvent::OverlapRevealTimeout(generation));
-                                });
-                            } else if id == "overlap_dismiss_compact" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ = tx_timer
-                                        .send(AppEvent::OverlapDismissCompactTimeout(generation));
-                                });
-                            } else if id == "overlap_dismiss_hide" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ = tx_timer
-                                        .send(AppEvent::OverlapDismissHideTimeout(generation));
-                                });
-                            } else if id == "collapse_compact" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ =
-                                        tx_timer.send(AppEvent::CollapseCompactTimeout(generation));
-                                });
-                            } else if id == "alert_timeout" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ = tx_timer.send(AppEvent::AlertTimeout(generation));
-                                });
-                            } else if id == "mochi_annoyed_timeout" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ =
-                                        tx_timer.send(AppEvent::MochiAnnoyedTimeout(generation));
-                                });
-                            } else if id == "mochi_dizzy_timeout" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ = tx_timer.send(AppEvent::MochiDizzyTimeout(generation));
-                                });
-                            } else if id == "mochi_happy_timeout" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ = tx_timer.send(AppEvent::MochiHappyTimeout(generation));
-                                });
-                            } else if id == "mochi_slap_reset" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ = tx_timer.send(AppEvent::MochiSlapReset(generation));
-                                });
-                            } else if id == "pet_happy_timeout" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ = tx_timer.send(AppEvent::PetHappyTimeout(generation));
-                                });
-                            } else if id == "pet_dizzy_timeout" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ = tx_timer.send(AppEvent::PetDizzyTimeout(generation));
-                                });
-                            } else if id == "pet_poke_reset" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ = tx_timer.send(AppEvent::PetPokeReset(generation));
-                                });
-                            } else if id == "welcome_timeout" {
-                                let tx_timer = event_tx_effects.clone();
-                                tokio_rt.spawn(async move {
-                                    tokio::time::sleep(tokio::time::Duration::from_millis(
-                                        duration_ms,
-                                    ))
-                                    .await;
-                                    let _ = tx_timer.send(AppEvent::WelcomeTimeout);
-                                });
-                            }
+                            timers.schedule(
+                                id,
+                                std::time::Duration::from_millis(duration_ms),
+                                generation,
+                            );
                         }
                     }
                 }
@@ -874,6 +758,7 @@ impl AppRuntime {
                     });
                 }
             }
+            timers.shutdown();
         });
 
         // 8. Show Window and Run Slint GUI event loop

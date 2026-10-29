@@ -2,6 +2,17 @@ use island_core::models::IslandView;
 use island_core::transition_policy::TransitionPolicy;
 use island_core::{AppEvent, AppState, MediaTrack, ModuleId, reduce};
 
+fn fire_welcome(state: &mut AppState) {
+    let generation = state.presentation.welcome_generation;
+    reduce(
+        state,
+        AppEvent::TimerFired {
+            id: island_core::TimerId::Welcome,
+            generation,
+        },
+    );
+}
+
 fn assert_invariants(state: &AppState) {
     let engine = &state.view.engine;
     let active = state.view.active_module();
@@ -39,8 +50,10 @@ fn active_module_stays_supported_after_view_events() {
     let mut state = AppState::default();
     assert_invariants(&state);
 
+    fire_welcome(&mut state);
+    assert_invariants(&state);
+
     let events = [
-        AppEvent::WelcomeTimeout,
         AppEvent::MediaUpdated(playing_media()),
         AppEvent::TogglePrayerPanel,
         AppEvent::ViewSwitchRequested(IslandView::Wide),
@@ -83,7 +96,7 @@ fn prayer_module_is_dropped_when_new_tier_does_not_support_it() {
 #[test]
 fn visibility_tracks_overlap_and_hover_engine_state() {
     let mut state = AppState::default();
-    reduce(&mut state, AppEvent::WelcomeTimeout);
+    fire_welcome(&mut state);
     assert_invariants(&state);
 
     reduce(&mut state, AppEvent::WindowOverlapChanged(true));
@@ -97,7 +110,10 @@ fn visibility_tracks_overlap_and_hover_engine_state() {
     let reveal_generation = state.runtime.overlap_reveal_generation;
     reduce(
         &mut state,
-        AppEvent::OverlapRevealTimeout(reveal_generation),
+        AppEvent::TimerFired {
+            id: island_core::TimerId::OverlapReveal,
+            generation: reveal_generation,
+        },
     );
     assert_eq!(state.view.mode(), IslandView::Wide);
     assert_invariants(&state);
@@ -108,13 +124,19 @@ fn visibility_tracks_overlap_and_hover_engine_state() {
 
     reduce(
         &mut state,
-        AppEvent::OverlapDismissCompactTimeout(dismiss_generation),
+        AppEvent::TimerFired {
+            id: island_core::TimerId::OverlapDismissCompact,
+            generation: dismiss_generation,
+        },
     );
     assert_invariants(&state);
 
     reduce(
         &mut state,
-        AppEvent::OverlapDismissHideTimeout(dismiss_generation),
+        AppEvent::TimerFired {
+            id: island_core::TimerId::OverlapDismissHide,
+            generation: dismiss_generation,
+        },
     );
     assert!(!state.view.is_visible());
     assert_invariants(&state);
