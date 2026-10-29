@@ -23,7 +23,7 @@ Dokumen PRD adalah target arsitektur. Kode adalah sumber kebenaran perilaku saat
 - **Produk:** Dynamic Island untuk KDE Plasma 6 Wayland.
 - **Stack:** Rust edition 2024, Slint 1.18, Tokio, zbus, Wayland.
 - **Bentuk:** Modular monolith, 6 workspace member.
-- **Baseline test:** `cargo test --workspace` lulus 161 test.
+- **Baseline test:** `cargo test --workspace` lulus 166 test.
 - **Render policy:** Aktivitas render/pet/spectrum/timer ditentukan oleh `RenderPolicy`; hidden tidak boleh melakukan render kontinu.
 
 ### Struktur
@@ -108,7 +108,7 @@ island-app -> island-ui -> island-core
 
 ### 4.6 Timer
 
-- Gunakan `TimerId` bertipe setelah Phase 4.
+- Gunakan `TimerId` bertipe.
 - Jangan menambah timer string baru.
 - Scheduling ulang ID yang sama harus membatalkan timer lama.
 - Timer mengirim event; timer tidak mengubah state domain secara langsung.

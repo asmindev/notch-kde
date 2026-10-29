@@ -71,7 +71,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T4.4 — Test lifecycle timer
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T4.2`
 - **Trace:** `TEST-4`
@@ -83,3 +83,4 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Perilaku timer deterministik di test.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** `runtime/timers.rs` menguji schedule lalu fire, schedule ulang membatalkan timer lama, cancel, dan shutdown/cancel_all. Generation diverifikasi pada event yang diterima. `cargo test --workspace` lulus 166 test.

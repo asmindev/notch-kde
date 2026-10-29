@@ -16,9 +16,9 @@ Domain ini mengatur timer domain/runtime. Gating timer animasi Slint berdasarkan
 
 ## 2. Temuan Saat Ini
 
-- `Effect::ScheduleTimer` memakai `id: &'static str`.
-- `runtime.rs` memiliki cabang besar per ID timer.
-- `Effect::CancelTimer` sudah dihapus di `T0.2`; cancel akan ditambahkan kembali melalui `TimerScheduler` di `T4.2`.
+- `Effect::ScheduleTimer` memakai `TimerId` bertipe setelah `T4.1`.
+- `runtime.rs` telah memakai `EffectExecutor` dan `TimerScheduler`; cabang besar per ID timer dihapus setelah `T4.3`.
+- `CancelTimer` tidak lagi menjadi effect; pembatalan ditangani `TimerScheduler` melalui `cancel`/`cancel_all` setelah `T4.2`.
 - Setiap timer memakai pola spawn/sleep/send yang serupa.
 - Generation check sudah ada, tetapi belum terpusat.
 

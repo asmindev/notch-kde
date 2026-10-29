@@ -3,7 +3,7 @@
 Status: Draft  
 Tanggal: 2026-10-29  
 Basis: audit source code aktual, bukan asumsi desain  
-Baseline verifikasi: `cargo test --workspace` lulus 161 test
+Baseline verifikasi: `cargo test --workspace` lulus 166 test
 
 ---
 
@@ -43,7 +43,7 @@ PRD ini menetapkan target arsitektur dan kriteria penerimaan untuk perbaikan ink
 2. **Aturan pemilihan konten terduplikasi.** Priority di `island-core`, override langsung di reducer, dan kondisi `show-system`/`show-media`/`show-prayer` di Slint memiliki semantik yang tidak selalu sama. Contoh: media paused bisa dipilih sebagai module Media oleh engine, tetapi WideView merender System.
 3. **`AppState` adalah god object dengan dual ownership.** Field navigasi disalin dari `ViewEngine` melalui `sync_engine()`. Beberapa reducer menulis langsung ke engine. Ini rawan divergensi.
 4. **Runtime dan service lifecycle monolitik.** `AppRuntime::run` menangani wiring puluhan callback, semua channel service, timer, dan sinkronisasi UI. Service tidak memiliki kontrak start/stop yang seragam, tidak ada health state, dan tidak ada shutdown terpusat.
-5. **Timer memakai string ID dan mega-switch.** `Effect::ScheduleTimer` memakai `&'static str`; `CancelTimer` yang tidak terpakai sudah dihapus di `T0.2` dan akan dikembalikan melalui `TimerScheduler` di Phase 4.
+5. **Timer typed dan executor (selesai Phase 4).** `Effect::ScheduleTimer` memakai `TimerId`; `TimerScheduler` menyimpan handle per ID dan `EffectExecutor` memisahkan eksekusi effect dari event loop.
 6. **Sinkronisasi UI penuh setiap perubahan.** Album art dimuat ulang dari disk dan jadwal prayer dihitung ulang pada setiap update, termasuk saat spectrum CAVA berjalan 30 FPS.
 7. **Konfigurasi tersebar.** Dimensi window di-hardcode di beberapa file, `ISLAND_DODGE` dibaca di `island-core`, dan path config tersebar.
 8. **API mati dan test orphan.** `handle_media_update`, `resolve_view_on_*`, dan root `tests/` yang tidak termasuk workspace dapat menyesatkan. Root `tests/` sudah dihapus di `T0.1`; API mati sudah dihapus di `T0.2`.
@@ -191,7 +191,7 @@ Platform -> Overlap/Geometry event -> Runtime -> Reducer
 | Duplikasi aturan konten | Rust + reducer + 3 Slint view | Hanya resolver |
 | Service dengan lifecycle seragam | 2 dari 9 | Semua |
 | Timer string ID | 13+ cabang | 0 |
-| Test workspace | 161 lulus | ≥ 161 dan bertambah untuk timer/service/config |
+| Test workspace | 166 lulus | ≥ 166 dan bertambah untuk service/config |
 | Reload album art saat spectrum | Berpotensi setiap update | 0 kali jika `art_url` sama |
 | Tick pet 3D saat hidden | ~30 FPS | 0 |
 | Timer animasi saat hidden | Beberapa timer aktif | 0 timer non-input |
