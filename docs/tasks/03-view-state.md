@@ -59,7 +59,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T3.3 — Tambah snapshot `ViewSnapshot`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T3.2`
 - **Trace:** `VIEW-3`
@@ -71,6 +71,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - UI tidak dapat mengakses field internal state.
   - Snapshot mudah di-diff.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `ViewSnapshot` memiliki `NavigationSnapshot`, `DomainSnapshot`, `PresentationSnapshot`, dan `SettingsSnapshot`, semuanya owned, read-only, dan `PartialEq`. `AppState::snapshot()` membangun snapshot dari sub-state. `ViewModel` dan pet 3D sekarang menerima `&ViewSnapshot`; tidak ada lagi import `AppState` di `island-ui`. Test snapshot stabil dan mendeteksi perubahan state lulus.
 
 ## T3.4 — Test invariant state
 

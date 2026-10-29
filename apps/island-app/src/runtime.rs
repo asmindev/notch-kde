@@ -91,14 +91,15 @@ impl AppRuntime {
 
         // Sync initial state to UI
         let render_stats = Arc::new(RenderStats::default());
+        let initial_snapshot = app_state.snapshot();
         let initial_policy = render_policy(&app_state);
         render_stats.ui_sync();
-        ViewModel::sync_state_to_ui(&self.window, &app_state, initial_policy);
+        ViewModel::sync_state_to_ui(&self.window, &initial_snapshot, initial_policy);
         if !initial_policy.spectrum {
             render_stats.ui_sync();
             ViewModel::clear_spectrum_to_ui(&self.window);
         }
-        ViewModel::sync_settings_to_ui(&settings_window, &app_state);
+        ViewModel::sync_settings_to_ui(&settings_window, &initial_snapshot);
 
         let input_region = input_region::InputRegionHandle::spawn();
         let initial_input_rect = input_region::rect_for_state(&app_state);
@@ -106,7 +107,7 @@ impl AppRuntime {
         // Install the offscreen Momo renderer before the window is shown.
         let pet3d = pet3d::install(&self.window);
         pet3d.set_render_active(initial_policy.pet_3d);
-        pet3d.update_from_state(&app_state);
+        pet3d.update_from_state(&initial_snapshot);
         if initial_policy.pet_3d {
             render_stats.pet_tick();
             pet3d.tick();
@@ -114,7 +115,7 @@ impl AppRuntime {
 
         // The Settings window has its own WGPU context, so it needs its own renderer.
         let settings_pet3d = pet3d::install_settings(&settings_window);
-        settings_pet3d.update_from_state(&app_state);
+        settings_pet3d.update_from_state(&initial_snapshot);
         settings_pet3d.tick();
 
         // 2. Wire UI Callbacks to Event Channel
@@ -609,7 +610,7 @@ impl AppRuntime {
                     last_synced_state = app_state.clone();
                     if policy.spectrum {
                         let bars = app_state.domain.spectrum.bars;
-                        let state_clone = app_state.clone();
+                        let snapshot = app_state.snapshot();
                         let w = window_weak_clone.clone();
                         let pet3d = pet3d_events.clone();
                         let stats = render_stats_events.clone();
@@ -618,7 +619,7 @@ impl AppRuntime {
                             if let Some(win) = w.upgrade() {
                                 ViewModel::sync_spectrum_to_ui(&win, &bars);
                                 if policy.pet_3d {
-                                    pet3d.update_from_state(&state_clone);
+                                    pet3d.update_from_state(&snapshot);
                                 }
                             }
                         });
@@ -818,7 +819,7 @@ impl AppRuntime {
                 // Dirty diff: only dispatch to Slint UI thread if state actually changed
                 if app_state != last_synced_state {
                     last_synced_state = app_state.clone();
-                    let state_clone = app_state.clone();
+                    let snapshot = app_state.snapshot();
                     let w = window_weak_clone.clone();
                     let settings_w = settings_weak_events.clone();
                     let pet3d = pet3d_events.clone();
@@ -827,12 +828,12 @@ impl AppRuntime {
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(win) = w.upgrade() {
                             stats.ui_sync();
-                            ViewModel::sync_state_to_ui(&win, &state_clone, policy);
+                            ViewModel::sync_state_to_ui(&win, &snapshot, policy);
                             if spectrum_stopped {
                                 stats.ui_sync();
                                 ViewModel::clear_spectrum_to_ui(&win);
                             }
-                            pet3d.update_from_state(&state_clone);
+                            pet3d.update_from_state(&snapshot);
                             if policy.pet_3d {
                                 stats.pet_tick();
                                 if pet3d.tick().dirty {
@@ -841,8 +842,8 @@ impl AppRuntime {
                                 }
                             }
                             if let Some(settings) = settings_w.upgrade() {
-                                ViewModel::sync_settings_to_ui(&settings, &state_clone);
-                                settings_pet3d.update_from_state(&state_clone);
+                                ViewModel::sync_settings_to_ui(&settings, &snapshot);
+                                settings_pet3d.update_from_state(&snapshot);
                                 if settings.window().is_visible() {
                                     settings_pet3d.tick();
                                     settings.window().request_redraw();
@@ -856,12 +857,13 @@ impl AppRuntime {
                     last_settings_open = app_state.presentation.settings_open;
                     let settings_w = settings_weak_events.clone();
                     let state_clone = app_state.clone();
+                    let snapshot = app_state.snapshot();
                     let settings_pet3d = settings_pet3d_events.clone();
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(settings) = settings_w.upgrade() {
                             if state_clone.presentation.settings_open {
-                                ViewModel::sync_settings_to_ui(&settings, &state_clone);
-                                settings_pet3d.update_from_state(&state_clone);
+                                ViewModel::sync_settings_to_ui(&settings, &snapshot);
+                                settings_pet3d.update_from_state(&snapshot);
                                 settings_pet3d.tick();
                                 settings.window().request_redraw();
                                 let _ = settings.show();

@@ -7,6 +7,7 @@ pub mod prayer;
 pub mod reducer;
 pub mod render_policy;
 pub mod settings;
+pub mod snapshot;
 pub mod state;
 pub mod transition_policy;
 pub mod view_engine;
@@ -24,6 +25,9 @@ pub use reducer::reduce;
 pub use render_policy::{RenderPolicy, render_policy};
 pub use settings::{
     AvatarSettings, PersistedSettings, PetBehaviorSettings, SettingsTab, ShadowSettings,
+};
+pub use snapshot::{
+    DomainSnapshot, NavigationSnapshot, PresentationSnapshot, SettingsSnapshot, ViewSnapshot,
 };
 pub use state::AppState;
 pub use transition_policy::TransitionPolicy;

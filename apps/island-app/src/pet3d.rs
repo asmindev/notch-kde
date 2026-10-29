@@ -5,7 +5,8 @@ use std::time::{Duration, Instant};
 
 use crate::render_stats::RenderStats;
 use island_core::models::{AlertKind, IslandView};
-use island_core::state::{AppState, MochiMoodState};
+use island_core::snapshot::ViewSnapshot;
+use island_core::state::MochiMoodState;
 use island_pet3d::{
     BloubEngine, BloubFrame, BloubPalette, BloubRenderer, ExpressionId, ShapeId, StateId,
 };
@@ -225,65 +226,65 @@ impl Pet3dInner {
         self.render_active.load(Ordering::Relaxed)
     }
 
-    pub fn update_from_state(&self, app_state: &AppState) {
+    pub fn update_from_state(&self, snapshot: &ViewSnapshot) {
         let mut input = self.input.lock().unwrap();
         let preview = self.preview;
         input.is_singing = !preview
-            && app_state.domain.media.is_playing
-            && app_state.settings.behavior.music_reactions;
+            && snapshot.domain.media.is_playing
+            && snapshot.settings.behavior.music_reactions;
         input.bass = if preview {
             0.0
         } else {
-            ((app_state.domain.spectrum.bars[0] + app_state.domain.spectrum.bars[1]) * 0.5)
-                .clamp(0.0, 1.0)
+            ((snapshot.domain.spectrum[0] + snapshot.domain.spectrum[1]) * 0.5).clamp(0.0, 1.0)
         };
-        input.pet_is_happy = app_state.presentation.pet_is_happy;
-        input.pet_happy_generation = app_state.presentation.pet_happy_generation;
-        input.pet_dizzy_generation = app_state.presentation.pet_dizzy_generation;
-        input.is_welcome = !preview && app_state.presentation.is_welcome;
-        input.welcome_generation = app_state.presentation.welcome_generation;
-        input.is_dizzy = app_state.presentation.pet_is_dizzy;
+        input.pet_is_happy = snapshot.presentation.pet_is_happy;
+        input.pet_happy_generation = snapshot.presentation.pet_happy_generation;
+        input.pet_dizzy_generation = snapshot.presentation.pet_dizzy_generation;
+        input.is_welcome = !preview && snapshot.presentation.is_welcome;
+        input.welcome_generation = snapshot.presentation.welcome_generation;
+        input.is_dizzy = snapshot.presentation.pet_is_dizzy;
         input.is_sleepy = !preview
-            && app_state.presentation.pet_is_sleepy
-            && app_state.settings.behavior.sleepy_on_low_battery;
-        input.is_charging = !preview && app_state.domain.battery.is_charging;
+            && snapshot.presentation.pet_is_sleepy
+            && snapshot.settings.behavior.sleepy_on_low_battery;
+        input.is_charging = !preview && snapshot.domain.battery.is_charging;
         input.alert_kind = if preview {
             AlertKind::None
         } else {
-            app_state.domain.alert_kind
+            snapshot.domain.alert_kind
         };
         input.notification_generation = if preview {
             0
         } else {
-            app_state.presentation.notification_generation
+            snapshot.presentation.notification_generation
         };
-        input.is_compact = !preview && matches!(app_state.view.mode(), IslandView::Compact);
+        input.is_compact =
+            !preview && matches!(snapshot.navigation.current_view, IslandView::Compact);
         input.mochi_mood = if preview {
             MochiMoodState::Idle
         } else {
-            app_state.presentation.mochi_mood
+            snapshot.presentation.mochi_mood
         };
-        input.blob_character = app_state.settings.blob_character;
-        input.blob_palette = app_state.settings.blob_palette;
-        input.blob_expression = app_state.settings.blob_expression;
-        input.blob_expression_custom = app_state.settings.blob_expression_custom;
-        input.cursor_gaze_enabled = !preview && app_state.settings.behavior.cursor_gaze;
-        input.idle_acting_enabled = app_state.settings.behavior.idle_acting;
+        input.blob_character = snapshot.settings.blob_character;
+        input.blob_palette = snapshot.settings.blob_palette;
+        input.blob_expression = snapshot.settings.blob_expression;
+        input.blob_expression_custom = snapshot.settings.blob_expression_custom;
+        input.cursor_gaze_enabled = !preview && snapshot.settings.behavior.cursor_gaze;
+        input.idle_acting_enabled = snapshot.settings.behavior.idle_acting;
         input.notification_reactions_enabled =
-            !preview && app_state.settings.behavior.notification_reactions;
+            !preview && snapshot.settings.behavior.notification_reactions;
         input.welcome_age = if preview { -1.0 } else { 0.0 };
 
         let mut timing = self.timing.lock().unwrap();
         if preview {
             timing.welcome_start = None;
-        } else if app_state.presentation.welcome_generation != timing.last_welcome_generation {
-            timing.welcome_start = if app_state.presentation.is_welcome {
+        } else if snapshot.presentation.welcome_generation != timing.last_welcome_generation {
+            timing.welcome_start = if snapshot.presentation.is_welcome {
                 Some(Instant::now())
             } else {
                 None
             };
         }
-        if !preview && !app_state.presentation.is_welcome {
+        if !preview && !snapshot.presentation.is_welcome {
             timing.welcome_start = None;
         }
     }
@@ -584,6 +585,7 @@ pub fn start_settings_timer(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use island_core::state::AppState;
 
     fn idle_input() -> Pet3dInput {
         Pet3dInput {
@@ -688,7 +690,7 @@ mod tests {
         let inner = Pet3dInner::new_preview();
         let mut state = AppState::default();
         state.settings.behavior.cursor_gaze = true;
-        inner.update_from_state(&state);
+        inner.update_from_state(&state.snapshot());
 
         inner.set_gaze(0.75, -0.35);
         assert!(!inner.input.lock().unwrap().gaze_active);
@@ -705,7 +707,7 @@ mod tests {
         state.settings.blob_character = 4;
         state.settings.blob_palette = 9;
 
-        inner.update_from_state(&state);
+        inner.update_from_state(&state.snapshot());
         inner.tick();
 
         let input = *inner.input.lock().unwrap();
@@ -739,7 +741,7 @@ mod tests {
         state.settings.behavior.notification_reactions = false;
 
         let inner = Pet3dInner::new();
-        inner.update_from_state(&state);
+        inner.update_from_state(&state.snapshot());
         {
             let input = inner.input.lock().unwrap();
             assert!(!input.is_singing);

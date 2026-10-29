@@ -6,38 +6,38 @@ use island_core::prayer::{
     CITIES, Prayer, PrayerPhase, PrayerTimes, SkyState, moment_for, sky_for, times_for,
 };
 use island_core::render_policy::RenderPolicy;
-use island_core::state::AppState;
+use island_core::snapshot::ViewSnapshot;
 use slint::ComponentHandle;
 
 pub struct ViewModel;
 
 impl ViewModel {
-    pub fn sync_state_to_ui(window: &MainWindow, state: &AppState, policy: RenderPolicy) {
+    pub fn sync_state_to_ui(window: &MainWindow, state: &ViewSnapshot, policy: RenderPolicy) {
         let ctx = window.global::<IslandContext>();
 
         ctx.set_render_main_visible(policy.main_visible);
         ctx.set_render_pet(policy.pet_3d);
         ctx.set_render_spectrum(policy.spectrum);
         ctx.set_render_animations(policy.animations);
-        ctx.set_active_mode(ContentRouter::mode_to_index(state.view.mode()));
+        ctx.set_active_mode(ContentRouter::mode_to_index(state.navigation.current_view));
         let module_ui = ModuleUiRegistry::default();
         ctx.set_compact_module(
             module_ui
-                .slot_for(state.view.active_module(), IslandView::Compact)
+                .slot_for(state.navigation.active_module, IslandView::Compact)
                 .index(),
         );
         ctx.set_wide_module(
             module_ui
-                .slot_for(state.view.active_module(), IslandView::Wide)
+                .slot_for(state.navigation.active_module, IslandView::Wide)
                 .index(),
         );
         ctx.set_expand_module(
             module_ui
-                .slot_for(state.view.active_module(), IslandView::Expand)
+                .slot_for(state.navigation.active_module, IslandView::Expand)
                 .index(),
         );
         ctx.set_alert_kind(state.domain.alert_kind as i32);
-        ctx.set_is_visible_state(state.view.is_visible());
+        ctx.set_is_visible_state(state.navigation.is_visible);
 
         ctx.set_time_str(state.domain.time.time_str.clone().into());
         ctx.set_date_str(state.domain.time.date_str.clone().into());
@@ -49,7 +49,7 @@ impl ViewModel {
         ctx.set_song_artist(state.domain.media.artist.clone().into());
         ctx.set_is_playing(state.domain.media.is_playing);
         ctx.set_has_audio(
-            state.domain.media.is_playing || state.domain.spectrum.bars.iter().any(|&b| b > 0.05),
+            state.domain.media.is_playing || state.domain.spectrum.iter().any(|&b| b > 0.05),
         );
         ctx.set_music_visual_mode(state.settings.music_visual_mode as i32);
         ctx.set_mochi_mood(state.presentation.mochi_mood as i32);
@@ -98,7 +98,7 @@ impl ViewModel {
         ctx.set_is_dnd(state.domain.is_dnd);
 
         // Media sources selection
-        ctx.set_show_source_selector(state.module.show_source_selector);
+        ctx.set_show_source_selector(state.presentation.show_source_selector);
         let items: Vec<crate::PlayerSourceItem> = state
             .domain
             .media_sources
@@ -113,7 +113,7 @@ impl ViewModel {
         ctx.set_player_sources(slint::ModelRc::new(slint::VecModel::from(items)));
 
         if policy.spectrum {
-            Self::sync_spectrum_to_ui(window, &state.domain.spectrum.bars);
+            Self::sync_spectrum_to_ui(window, &state.domain.spectrum);
         }
     }
 
@@ -133,7 +133,7 @@ impl ViewModel {
         Self::sync_spectrum_to_ui(window, &[0.0; 8]);
     }
 
-    pub fn sync_settings_to_ui(settings: &SettingsWindow, state: &AppState) {
+    pub fn sync_settings_to_ui(settings: &SettingsWindow, state: &ViewSnapshot) {
         let ctx = settings.global::<IslandContext>();
 
         ctx.set_settings_open(state.presentation.settings_open);
@@ -161,7 +161,7 @@ impl ViewModel {
     }
 }
 
-fn sync_shadow_context(ctx: &IslandContext, state: &AppState) {
+fn sync_shadow_context(ctx: &IslandContext, state: &ViewSnapshot) {
     let shadow = state.settings.shadow.normalized();
     let intensity = shadow.intensity as f32 / 100.0;
     let alpha = if shadow.enabled { intensity * 0.8 } else { 0.0 };
@@ -173,9 +173,9 @@ fn sync_shadow_context(ctx: &IslandContext, state: &AppState) {
     ctx.set_shadow_color(slint::Color::from_argb_f32(alpha, 0.0, 0.0, 0.0));
 }
 
-fn sync_prayer_context(ctx: &IslandContext, state: &AppState) {
+fn sync_prayer_context(ctx: &IslandContext, state: &ViewSnapshot) {
     ctx.set_prayer_enabled(state.settings.prayer.enabled);
-    ctx.set_prayer_panel_open(state.module.prayer_panel_open);
+    ctx.set_prayer_panel_open(state.presentation.prayer_panel_open);
     ctx.set_prayer_city_index(state.settings.prayer.city as i32);
     ctx.set_prayer_reminder_minutes(state.settings.prayer.reminder_minutes as i32);
 
@@ -198,7 +198,7 @@ fn sync_prayer_context(ctx: &IslandContext, state: &AppState) {
     sync_prayer_schedule(ctx, state);
 }
 
-fn sync_prayer_schedule(ctx: &IslandContext, state: &AppState) {
+fn sync_prayer_schedule(ctx: &IslandContext, state: &ViewSnapshot) {
     let city = state.settings.prayer.city();
     let now = Utc::now().with_timezone(&city.offset());
     let date = now.date_naive();
