@@ -6,8 +6,9 @@ use slint::wgpu_30::wgpu;
 use wgpu::util::DeviceExt;
 
 use super::decor::{ArcRender, Dot, NotifRender};
+use super::face::eye_transform;
 use super::math::TAU;
-use super::shape::{radius_at_angle, Silhouette};
+use super::shape::Silhouette;
 use super::{BloubFrame, BloubPalette};
 
 const SUPERSAMPLE: u32 = 2;
@@ -215,12 +216,11 @@ impl BloubRenderer {
                 ],
             });
 
-        let body_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("bloub-body-pipeline-layout"),
-                bind_group_layouts: &[Some(&body_bind_group_layout)],
-                immediate_size: 0,
-            });
+        let body_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("bloub-body-pipeline-layout"),
+            bind_group_layouts: &[Some(&body_bind_group_layout)],
+            immediate_size: 0,
+        });
         let overlay_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("bloub-overlay-pipeline-layout"),
@@ -433,13 +433,74 @@ impl BloubRenderer {
         slint::Image::try_from(self.final_texture.clone())
     }
 
+    pub fn image_size(&self) -> u32 {
+        TEXTURE_SIZE
+    }
+
+    pub fn read_rgba(&self) -> Result<Vec<u8>, String> {
+        let size = TEXTURE_SIZE;
+        let bytes_per_row = size * 4;
+        let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("bloub-readback"),
+            size: u64::from(bytes_per_row * size),
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("bloub-readback-encoder"),
+            });
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture: &self.final_texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &buffer,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(bytes_per_row),
+                    rows_per_image: Some(size),
+                },
+            },
+            wgpu::Extent3d {
+                width: size,
+                height: size,
+                depth_or_array_layers: 1,
+            },
+        );
+        self.queue.submit(Some(encoder.finish()));
+
+        let slice = buffer.slice(..);
+        let (sender, receiver) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |result| {
+            let _ = sender.send(result);
+        });
+        self.device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .map_err(|err| format!("Bloub readback poll failed: {err}"))?;
+        receiver
+            .recv()
+            .map_err(|err| format!("Bloub readback callback failed: {err}"))?
+            .map_err(|err| format!("Bloub readback map failed: {err}"))?;
+        let data = slice
+            .get_mapped_range()
+            .map_err(|err| format!("Bloub readback range failed: {err}"))?
+            .to_vec();
+        buffer.unmap();
+        Ok(data)
+    }
+
     pub fn update(&mut self, frame: &BloubFrame, palette: BloubPalette) {
         let extent = frame.extent.max(1.08);
         let (vertices, indices) = build_body(&frame.silhouette);
         self.body_vertices
             .write(&self.device, &self.queue, &vertices);
-        self.body_indices
-            .write(&self.device, &self.queue, &indices);
+        self.body_indices.write(&self.device, &self.queue, &indices);
         self.body_index_count = indices.len() as u32;
 
         let uniform = build_uniform(frame, palette, extent);
@@ -447,10 +508,8 @@ impl BloubRenderer {
             .write_buffer(&self.body_uniform, 0, bytemuck::bytes_of(&uniform));
 
         let (back, front) = build_overlay(frame, palette, extent);
-        self.back_vertices
-            .write(&self.device, &self.queue, &back);
-        self.front_vertices
-            .write(&self.device, &self.queue, &front);
+        self.back_vertices.write(&self.device, &self.queue, &back);
+        self.front_vertices.write(&self.device, &self.queue, &front);
         self.back_vertex_count = back.len() as u32;
         self.front_vertex_count = front.len() as u32;
     }
@@ -563,7 +622,9 @@ fn create_color_texture(
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+            | wgpu::TextureUsages::TEXTURE_BINDING
+            | wgpu::TextureUsages::COPY_SRC,
         view_formats: &[],
     })
 }
@@ -641,8 +702,7 @@ fn build_body(sil: &Silhouette) -> (Vec<BodyVertex>, Vec<u32>) {
 fn build_uniform(frame: &BloubFrame, palette: BloubPalette, extent: f32) -> BodyUniform {
     let camera_pos = Vec3::new(0.0, 0.0, 3.0);
     let view = Mat4::look_at_rh(camera_pos, Vec3::ZERO, Vec3::Y);
-    let projection =
-        Mat4::orthographic_rh(-extent, extent, -extent, extent, 0.1, 10.0);
+    let projection = Mat4::orthographic_rh(-extent, extent, -extent, extent, 0.1, 10.0);
     let view_proj = projection * view;
 
     let mut uniform = BodyUniform::zeroed();
@@ -652,9 +712,18 @@ fn build_uniform(frame: &BloubFrame, palette: BloubPalette, extent: f32) -> Body
     uniform.eye_color = palette.eye;
     uniform.params = [frame.body_alpha, frame.eye_alpha, 0.0, 0.0];
     uniform.light_dirs = [
-        Vec3::new(-0.45, 0.80, 0.65).normalize().extend(0.0).to_array(),
-        Vec3::new(0.75, 0.20, 0.50).normalize().extend(0.0).to_array(),
-        Vec3::new(0.20, 0.55, -0.80).normalize().extend(0.0).to_array(),
+        Vec3::new(-0.45, 0.80, 0.65)
+            .normalize()
+            .extend(0.0)
+            .to_array(),
+        Vec3::new(0.75, 0.20, 0.50)
+            .normalize()
+            .extend(0.0)
+            .to_array(),
+        Vec3::new(0.20, 0.55, -0.80)
+            .normalize()
+            .extend(0.0)
+            .to_array(),
     ];
     uniform.light_colors = [
         [1.35, 1.28, 1.18, 0.0],
@@ -676,47 +745,6 @@ fn build_uniform(frame: &BloubFrame, palette: BloubPalette, extent: f32) -> Body
     }
 
     uniform
-}
-
-fn eye_transform(
-    sil: &Silhouette,
-    eye: &super::face::EyePose,
-) -> ([f32; 2], [f32; 4], f32, f32, f32, bool) {
-    let cr = sil.rot.cos();
-    let sr = sil.rot.sin();
-    let (flip_sin, flip_cos) = sil.flip.sin_cos();
-    let fit = radius_at_angle(&sil.radii, eye.y.atan2(eye.x) - sil.rot).clamp(0.2, 2.0);
-    let ex = eye.x * fit;
-    let ey0 = eye.y * fit;
-    let ez0 = eye.depth;
-    let ey = ey0 * flip_cos - ez0 * flip_sin;
-    let ez = ey0 * flip_sin + ez0 * flip_cos;
-    let rx = ex * cr - ey * sr;
-    let ry = ex * sr + ey * cr;
-    let center = [rx * sil.sx + sil.cx, -(ry * sil.sy + sil.cy)];
-
-    let transform = |x: f32, y: f32| {
-        let rx = x * cr - y * sr;
-        let ry = x * sr + y * cr;
-        [rx * sil.sx, -(ry * sil.sy)]
-    };
-    let u = transform(eye.a, eye.b * flip_cos);
-    let v = transform(eye.c, eye.d * flip_cos);
-    let det = u[0] * v[1] - v[0] * u[1];
-    let inv = if det.abs() < 1e-6 {
-        [1.0, 0.0, 0.0, 1.0]
-    } else {
-        [v[1] / det, -v[0] / det, -u[1] / det, u[0] / det]
-    };
-
-    (
-        center,
-        inv,
-        (eye.w * 0.5).abs().max(1e-4),
-        (eye.h * 0.5).abs().max(1e-4),
-        eye.open.clamp(0.06, 1.0),
-        ez > 0.02,
-    )
 }
 
 fn build_overlay(
@@ -757,15 +785,43 @@ fn push_arc(target: &mut Vec<OverlayVertex>, arc: &ArcRender, extent: f32) {
         let b = ndc(p0.x - nx, p0.y - ny, extent);
         let c = ndc(p1.x + nx, p1.y + ny, extent);
         let d = ndc(p1.x - nx, p1.y - ny, extent);
-        let c0 = [p0.color[0], p0.color[1], p0.color[2], p0.color[3] * arc.opacity];
-        let c1 = [p1.color[0], p1.color[1], p1.color[2], p1.color[3] * arc.opacity];
+        let c0 = [
+            p0.color[0],
+            p0.color[1],
+            p0.color[2],
+            p0.color[3] * arc.opacity,
+        ];
+        let c1 = [
+            p1.color[0],
+            p1.color[1],
+            p1.color[2],
+            p1.color[3] * arc.opacity,
+        ];
         target.extend_from_slice(&[
-            OverlayVertex { position: a, color: c0 },
-            OverlayVertex { position: b, color: c0 },
-            OverlayVertex { position: c, color: c1 },
-            OverlayVertex { position: b, color: c0 },
-            OverlayVertex { position: d, color: c1 },
-            OverlayVertex { position: c, color: c1 },
+            OverlayVertex {
+                position: a,
+                color: c0,
+            },
+            OverlayVertex {
+                position: b,
+                color: c0,
+            },
+            OverlayVertex {
+                position: c,
+                color: c1,
+            },
+            OverlayVertex {
+                position: b,
+                color: c0,
+            },
+            OverlayVertex {
+                position: d,
+                color: c1,
+            },
+            OverlayVertex {
+                position: c,
+                color: c1,
+            },
         ]);
     }
 }
@@ -792,7 +848,10 @@ fn push_disc(
         let a0 = i as f32 / segments as f32 * TAU;
         let a1 = (i + 1) as f32 / segments as f32 * TAU;
         target.extend_from_slice(&[
-            OverlayVertex { position: center, color: c },
+            OverlayVertex {
+                position: center,
+                color: c,
+            },
             OverlayVertex {
                 position: ndc(x + a0.cos() * r, y + a0.sin() * r, extent),
                 color: c,
@@ -825,12 +884,30 @@ fn push_rect(
     let p2 = ndc(l, b, extent);
     let p3 = ndc(r, b, extent);
     target.extend_from_slice(&[
-        OverlayVertex { position: p0, color: c },
-        OverlayVertex { position: p2, color: c },
-        OverlayVertex { position: p1, color: c },
-        OverlayVertex { position: p1, color: c },
-        OverlayVertex { position: p2, color: c },
-        OverlayVertex { position: p3, color: c },
+        OverlayVertex {
+            position: p0,
+            color: c,
+        },
+        OverlayVertex {
+            position: p2,
+            color: c,
+        },
+        OverlayVertex {
+            position: p1,
+            color: c,
+        },
+        OverlayVertex {
+            position: p1,
+            color: c,
+        },
+        OverlayVertex {
+            position: p2,
+            color: c,
+        },
+        OverlayVertex {
+            position: p3,
+            color: c,
+        },
     ]);
 }
 

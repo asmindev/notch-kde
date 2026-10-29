@@ -3,6 +3,6 @@
 mod bloub;
 
 pub use bloub::{
-    BloubEngine, BloubFrame, BloubPalette, BloubRenderer, ColorId, ExpressionId, Look, ShapeId,
-    StateId,
+    BloubEngine, BloubFlatRenderer, BloubFrame, BloubPalette, BloubRenderer, ColorId, ExpressionId,
+    Look, ShapeId, StateId,
 };

@@ -90,9 +90,9 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Prioritas:** P1
 - **Dependency:** `TR2`
 - **Trace:** `RENDER-2`, `RENDER-3`, `RENDER-5`
-- **Lokasi:** `crates/island-ui/ui/main.slint`, `components/pet-view.slint`, `components/blobatar-pet.slint`, `components/charging-indicator.slint`, `modules/**/*.slint`, `components/clock.slint` bila perlu.
+- **Lokasi:** `crates/island-ui/ui/main.slint`, `components/pet-view.slint`, `components/charging-indicator.slint`, `modules/**/*.slint`, `components/clock.slint` bila perlu.
 - **Langkah:**
-  1. Tambahkan properti `active` pada komponen berat (`PetView`, `BlobatarPet`, `ChargingIndicator`, prayer/alert slot).
+  1. Tambahkan properti `active` pada komponen berat (`PetView`, `ChargingIndicator`, prayer/alert slot).
   2. Gate `blink-timer`, `breath-timer`, `shake-timer`, `pulse-timer`, dan star timer dengan `active && render-animations`.
   3. Ganti `running: root.is-hovered || true` menjadi kondisi yang benar.
   4. Pastikan Compact hanya aktif saat `active-mode == 0`; Wide hanya saat `1`; Expand hanya saat `2`.

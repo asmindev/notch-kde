@@ -783,12 +783,12 @@ mod tests {
         std::fs::create_dir_all(&dir).expect("create art cache test dir");
         let source = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("assets")
-            .join("pet")
-            .join("labubu_idle.png");
+            .join("icons")
+            .join("play.svg");
         let mut cache = ArtCache::default();
 
         for index in 0..=ART_CACHE_CAPACITY {
-            let path = dir.join(format!("art-{index}.png"));
+            let path = dir.join(format!("art-{index}.svg"));
             std::fs::copy(&source, &path).expect("copy art fixture");
             let path = path.to_str().expect("utf8 path");
             assert!(matches!(cache.resolve(path), ArtUpdate::Update(Some(_))));

@@ -1,4 +1,4 @@
-use super::math::{clamp01, Rng, TAU};
+use super::math::{Rng, TAU, clamp01};
 
 pub const RING_A: f32 = 0.84;
 pub const RING_B: f32 = 1.13;
@@ -146,7 +146,16 @@ pub fn ring(
 }
 
 pub fn swoosh(angle: f32, span: f32, hue: f32, opacity: f32, width: f32) -> ArcRender {
-    arc(SWOOSH_A, SWOOSH_A * 0.90, span, angle, hue, opacity, width, false)
+    arc(
+        SWOOSH_A,
+        SWOOSH_A * 0.90,
+        span,
+        angle,
+        hue,
+        opacity,
+        width,
+        false,
+    )
 }
 
 pub fn particles(t: f32, count: usize, seed: u32, hue: f32, behind: bool) -> Vec<Dot> {

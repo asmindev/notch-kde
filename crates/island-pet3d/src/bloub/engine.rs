@@ -1,7 +1,7 @@
 use super::decor::{ArcRender, DecorRender, Dot};
 use super::expressions::{self, ExpressionId};
-use super::face::{blink_at, eye_poses_pair, wander, EyeCfg, EyePose, HeadGaze, Look};
-use super::math::{clamp, clamp01, ease_in_out_cubic, lerp, loop_noise, shortest_angle_delta, Rng};
+use super::face::{EyeCfg, EyePose, HeadGaze, Look, blink_at, eye_poses_pair, wander};
+use super::math::{Rng, clamp, clamp01, ease_in_out_cubic, lerp, loop_noise, shortest_angle_delta};
 use super::shape::{self, Silhouette};
 use super::skins::ShapeId;
 use super::states::{self, Pose, StateId};
@@ -449,7 +449,10 @@ fn blend_pose(a: &Pose, b: &Pose, u: f32) -> Pose {
         (None, Some(y)) => Some(y.clone()),
         (None, None) => None,
     };
-    let eyes = [blend_eye(a.eyes[0], b.eyes[0], u), blend_eye(a.eyes[1], b.eyes[1], u)];
+    let eyes = [
+        blend_eye(a.eyes[0], b.eyes[0], u),
+        blend_eye(a.eyes[1], b.eyes[1], u),
+    ];
     Pose {
         sil,
         flip: lerp(a.flip, b.flip, u),
@@ -467,7 +470,11 @@ fn blend_pose(a: &Pose, b: &Pose, u: f32) -> Pose {
         dots: blend_dots(&a.dots, &b.dots, u),
         arcs: blend_arcs(&a.arcs, &b.arcs, u),
         notif: if u >= 0.5 { b.notif } else { a.notif },
-        dots_behind: if u >= 0.5 { b.dots_behind } else { a.dots_behind },
+        dots_behind: if u >= 0.5 {
+            b.dots_behind
+        } else {
+            a.dots_behind
+        },
         face: if u >= 0.5 { b.face } else { a.face },
         lift: lerp(a.lift, b.lift, u),
     }

@@ -144,20 +144,41 @@ fn every_shape_has_positive_silhouette() {
 #[test]
 fn neutral_eyes_are_tall_sphere_capsules() {
     let cfg = [face::EyeCfg::default(); 2];
-    let eyes = face::eye_poses_pair(cfg, face::REST_GAZE, face::EYE_SPLIT, face::Look::default(), 1.0);
+    let eyes = face::eye_poses_pair(
+        cfg,
+        face::REST_GAZE,
+        face::EYE_SPLIT,
+        face::Look::default(),
+        1.0,
+    );
     for eye in eyes {
         assert!(eye.h > eye.w * 2.0, "eye should be a tall capsule");
         assert!(eye.depth > 0.2, "resting eyes face the viewer");
         let det = eye.a * eye.d - eye.c * eye.b;
-        assert!(det > 0.05 && det <= 1.02, "projected tangent basis should keep volume");
+        assert!(
+            det > 0.05 && det <= 1.02,
+            "projected tangent basis should keep volume"
+        );
     }
 }
 
 #[test]
 fn blink_squashes_eyes_vertically() {
     let cfg = [face::EyeCfg::default(); 2];
-    let open = face::eye_poses_pair(cfg, face::REST_GAZE, face::EYE_SPLIT, face::Look::default(), 1.0);
-    let closed = face::eye_poses_pair(cfg, face::REST_GAZE, face::EYE_SPLIT, face::Look::default(), 0.08);
+    let open = face::eye_poses_pair(
+        cfg,
+        face::REST_GAZE,
+        face::EYE_SPLIT,
+        face::Look::default(),
+        1.0,
+    );
+    let closed = face::eye_poses_pair(
+        cfg,
+        face::REST_GAZE,
+        face::EYE_SPLIT,
+        face::Look::default(),
+        0.08,
+    );
     assert!(closed[0].open < open[0].open * 0.2);
     assert!((closed[0].a - open[0].a).abs() < 1e-5);
 }
@@ -165,12 +186,22 @@ fn blink_squashes_eyes_vertically() {
 #[test]
 fn look_turns_the_head() {
     let cfg = [face::EyeCfg::default(); 2];
-    let rest = face::eye_poses_pair(cfg, face::REST_GAZE, face::EYE_SPLIT, face::Look::default(), 1.0);
+    let rest = face::eye_poses_pair(
+        cfg,
+        face::REST_GAZE,
+        face::EYE_SPLIT,
+        face::Look::default(),
+        1.0,
+    );
     let right = face::eye_poses_pair(
         cfg,
         face::REST_GAZE,
         face::EYE_SPLIT,
-        face::Look { x: 1.0, y: 0.0, active: true },
+        face::Look {
+            x: 1.0,
+            y: 0.0,
+            active: true,
+        },
         1.0,
     );
     assert!(right[0].x > rest[0].x);

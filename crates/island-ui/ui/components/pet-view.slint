@@ -1,6 +1,5 @@
 import { IslandContext } from "../context.slint";
 import { FloatingNotes } from "floating-notes.slint";
-import { BlobatarPet } from "blobatar-pet.slint";
 
 export component PetView inherits Rectangle {
     in property <bool> active: true;
@@ -15,7 +14,7 @@ export component PetView inherits Rectangle {
     property <bool> is-happy: IslandContext.pet-is-happy || IslandContext.is-welcome;
 
     // ==========================================
-    // 1. BLOUB 3D PET (WGPU) + VECTOR FALLBACK
+    // 1. BLOUB PET (WGPU 3D OR CPU FLAT 2D)
     // ==========================================
     if IslandContext.pet-3d-ready : Image {
         x: (parent.width - self.width) / 2;
@@ -24,13 +23,6 @@ export component PetView inherits Rectangle {
         height: root.pet-size;
         source: IslandContext.pet-3d-image;
         image-fit: contain;
-    }
-
-    if !IslandContext.pet-3d-ready : BlobatarPet {
-        x: (parent.width - self.width) / 2;
-        y: (parent.height - self.height) / 2;
-        active: root.active;
-        pet-size: root.pet-size;
     }
 
     touch := TouchArea {

@@ -1,4 +1,4 @@
-use super::face::{EyeCfg, HeadGaze, EYE_SPLIT, REST_GAZE};
+use super::face::{EYE_SPLIT, EyeCfg, HeadGaze, REST_GAZE};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ExpressionId {

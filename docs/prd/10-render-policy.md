@@ -31,7 +31,7 @@ Domain ini menjawab pertanyaan:
 - `is-visible-state = false` hanya menggeser notch ke `y: -160px`; surface 480×208 dan input strip 28px tetap ada.
 - Sync UI penuh terjadi setiap perubahan state, termasuk update spectrum CAVA.
 
-Referensi: `crates/island-ui/ui/main.slint:51-91`, `wide-view.slint:80-101`, `expand-view.slint:107-122`, `island-shell.slint:122-132`, `apps/island-app/src/pet3d.rs:14`, `pet3d.rs:376-381`, `pet3d.rs:522-535`, `apps/island-app/src/input_region.rs:25-52`, `crates/island-ui/src/view_model.rs:60-75`, `view_model.rs:168-224`, `prayer-expand-slot.slint:22-25`, `blobatar-pet.slint:216-222`.
+Referensi: `crates/island-ui/ui/main.slint:51-91`, `wide-view.slint:80-101`, `expand-view.slint:107-122`, `island-shell.slint:122-132`, `apps/island-app/src/pet3d.rs:14`, `pet3d.rs:376-381`, `pet3d.rs:522-535`, `apps/island-app/src/input_region.rs:25-52`, `crates/island-ui/src/view_model.rs:60-75`, `view_model.rs:168-224`, `prayer-expand-slot.slint:22-25`, `crates/island-pet3d/src/bloub/flat.rs`.
 
 ## 3. Requirement
 
@@ -84,6 +84,7 @@ Aturan kontrak:
 - `RenderPolicy` adalah logika murni dan dapat dites tanpa Slint/KDE.
 - `island-ui` hanya memetakan flag ke properti context; tidak menghitung ulang aturan.
 - `island-app` memakai `pet_3d` dan `main_visible` untuk mengontrol timer/renderer.
+- `pet_3d` berarti slot pet aktif; aturan yang sama menggate timer renderer Bloub 3D dan publisher image flat CPU 2D.
 - `spectrum` mengontrol update model/visualizer, bukan lifecycle service CAVA.
 - `animations` mengontrol timer dekoratif, bukan transisi wajib.
 - Jangan menambah `RenderPolicy` per komponen; satu policy per state.

@@ -1,4 +1,5 @@
-use super::math::{clamp01, lerp, loop_noise, Rng};
+use super::math::{Rng, clamp01, lerp, loop_noise};
+use super::shape::{Silhouette, radius_at_angle};
 
 pub const EYE_SPLIT: f32 = 15.46;
 pub const EYE_W: f32 = 0.186;
@@ -89,6 +90,47 @@ pub struct EyePose {
     pub corner: f32,
 }
 
+pub(crate) fn eye_transform(
+    sil: &Silhouette,
+    eye: &EyePose,
+) -> ([f32; 2], [f32; 4], f32, f32, f32, bool) {
+    let cr = sil.rot.cos();
+    let sr = sil.rot.sin();
+    let (flip_sin, flip_cos) = sil.flip.sin_cos();
+    let fit = radius_at_angle(&sil.radii, eye.y.atan2(eye.x) - sil.rot).clamp(0.2, 2.0);
+    let ex = eye.x * fit;
+    let ey0 = eye.y * fit;
+    let ez0 = eye.depth;
+    let ey = ey0 * flip_cos - ez0 * flip_sin;
+    let ez = ey0 * flip_sin + ez0 * flip_cos;
+    let rx = ex * cr - ey * sr;
+    let ry = ex * sr + ey * cr;
+    let center = [rx * sil.sx + sil.cx, -(ry * sil.sy + sil.cy)];
+
+    let transform = |x: f32, y: f32| {
+        let rx = x * cr - y * sr;
+        let ry = x * sr + y * cr;
+        [rx * sil.sx, -(ry * sil.sy)]
+    };
+    let u = transform(eye.a, eye.b * flip_cos);
+    let v = transform(eye.c, eye.d * flip_cos);
+    let det = u[0] * v[1] - v[0] * u[1];
+    let inv = if det.abs() < 1e-6 {
+        [1.0, 0.0, 0.0, 1.0]
+    } else {
+        [v[1] / det, -v[0] / det, -u[1] / det, u[0] / det]
+    };
+
+    (
+        center,
+        inv,
+        (eye.w * 0.5).abs().max(1e-4),
+        (eye.h * 0.5).abs().max(1e-4),
+        eye.open.clamp(0.06, 1.0),
+        ez > 0.02,
+    )
+}
+
 fn blink_window(local: f32, start: f32, dur: f32) -> f32 {
     if local < start || local > start + dur {
         return 1.0;
@@ -152,7 +194,12 @@ pub fn eye_poses_pair(
     blink: f32,
 ) -> [EyePose; 2] {
     let yaw = deg(gaze.yaw) + if look.active { look.x * deg(30.0) } else { 0.0 };
-    let pitch = deg(gaze.pitch) + if look.active { -look.y * deg(22.0) } else { 0.0 };
+    let pitch = deg(gaze.pitch)
+        + if look.active {
+            -look.y * deg(22.0)
+        } else {
+            0.0
+        };
     let roll = deg(gaze.roll);
 
     let mut forward = [0.0, 0.0, 1.0];

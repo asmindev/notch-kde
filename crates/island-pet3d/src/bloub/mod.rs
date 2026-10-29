@@ -2,6 +2,7 @@ mod decor;
 mod engine;
 mod expressions;
 mod face;
+mod flat;
 mod math;
 mod profiles;
 mod renderer;
@@ -10,10 +11,11 @@ mod skins;
 mod states;
 
 pub use engine::{BloubEngine, BloubFrame};
-pub use renderer::BloubRenderer;
 pub use expressions::ExpressionId;
 pub use face::Look;
-pub use skins::{hex_to_rgba, luminance, ColorId, ShapeId};
+pub use flat::BloubFlatRenderer;
+pub use renderer::BloubRenderer;
+pub use skins::{ColorId, ShapeId, hex_to_rgba, luminance};
 pub use states::StateId;
 
 #[derive(Clone, Copy, Debug, PartialEq)]

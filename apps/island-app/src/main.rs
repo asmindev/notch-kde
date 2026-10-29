@@ -18,13 +18,11 @@ fn main() -> Result<(), slint::PlatformError> {
     // 2. Load deployment config before touching the UI or platform.
     let config = ConfigLoader::load();
     let settings = SettingsStore::load(&config.settings_path());
-    let pet_renderer = settings.pet_renderer.unwrap_or(config.pet.renderer);
-
     // 3. Configure KWin placement and rules
     Bootstrap::setup_window_rules(&config.window);
 
     // 4. Create Slint Main Window
-    let window = Bootstrap::create_window(pet_renderer)?;
+    let window = Bootstrap::create_window()?;
     config.window.apply_to_ui(&window);
 
     // 5. Start Event-driven Runtime

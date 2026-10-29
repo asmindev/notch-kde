@@ -95,7 +95,7 @@ Test unit dapat memakai cache key dan fake loader. Pengukuran runtime dilakukan 
 - Cache prayer: 100 request pada menit yang sama hanya memicu satu refresh jadwal.
 - Jalur `SpectrumUpdated` hanya memperbarui bar dan pet; tidak memanggil full `UiSyncCache`.
 - Smoke run KDE Wayland 30 detik berhasil start dengan WGPU. `RenderStats` mencatat `ui_syncs_per_sec=0.27`, `pet_ticks_per_sec=1.33`, dan `pet_redraws_per_sec=1.33`.
-- Fallback vector pet tidak dipicu pada run ini; fallback tetap tersedia dan tidak diubah oleh optimasi cache.
+- Fallback pet CPU flat tidak dipicu pada run WGPU ini; fallback tetap tersedia dan tidak diubah oleh optimasi cache.
 
 ## 7. Out of Scope
 

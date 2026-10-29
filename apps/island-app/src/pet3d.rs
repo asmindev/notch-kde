@@ -4,14 +4,17 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::render_stats::RenderStats;
+use island_core::PetRenderer;
 use island_core::models::{AlertKind, IslandView};
 use island_core::snapshot::ViewSnapshot;
 use island_core::state::MochiMoodState;
 use island_pet3d::{
-    BloubEngine, BloubFrame, BloubPalette, BloubRenderer, ExpressionId, ShapeId, StateId,
+    BloubEngine, BloubFlatRenderer, BloubFrame, BloubPalette, BloubRenderer, ExpressionId, ShapeId,
+    StateId,
 };
 use island_ui::{IslandContext, MainWindow, SettingsWindow};
-use slint::{ComponentHandle, GraphicsAPI, RenderingState};
+use slint::ComponentHandle;
+use slint::wgpu_30::wgpu;
 use tracing::{debug, info, warn};
 
 const FRAME_INTERVAL: Duration = Duration::from_millis(33);
@@ -177,20 +180,33 @@ pub struct Pet3dInner {
     timing: Mutex<Pet3dTiming>,
     engine: Mutex<BloubEngine>,
     renderer: Mutex<Option<BloubRenderer>>,
+    flat: BloubFlatRenderer,
     render_active: AtomicBool,
+    cpu: AtomicBool,
+    target: Mutex<PetRenderer>,
     preview: bool,
 }
 
 impl Pet3dInner {
+    #[cfg(test)]
     fn new() -> Self {
-        Self::with_preview(false)
+        Self::with_mode(false, false)
     }
 
+    #[cfg(test)]
     fn new_preview() -> Self {
-        Self::with_preview(true)
+        Self::with_mode(true, false)
     }
 
-    fn with_preview(preview: bool) -> Self {
+    fn new_cpu() -> Self {
+        Self::with_mode(false, true)
+    }
+
+    fn new_cpu_preview() -> Self {
+        Self::with_mode(true, true)
+    }
+
+    fn with_mode(preview: bool, cpu: bool) -> Self {
         let now = Instant::now();
         Self {
             start: now,
@@ -213,7 +229,14 @@ impl Pet3dInner {
             }),
             engine: Mutex::new(BloubEngine::new()),
             renderer: Mutex::new(None),
+            flat: BloubFlatRenderer::new(),
             render_active: AtomicBool::new(true),
+            cpu: AtomicBool::new(cpu),
+            target: Mutex::new(if cpu {
+                PetRenderer::TwoD
+            } else {
+                PetRenderer::ThreeD
+            }),
             preview,
         }
     }
@@ -224,6 +247,102 @@ impl Pet3dInner {
 
     pub fn is_render_active(&self) -> bool {
         self.render_active.load(Ordering::Relaxed)
+    }
+
+    pub fn is_cpu(&self) -> bool {
+        self.cpu.load(Ordering::Relaxed)
+    }
+
+    pub fn cpu_image(&self) -> Option<slint::Image> {
+        if !self.is_cpu() {
+            return None;
+        }
+        let (frame, palette) = {
+            let mut shared = self.shared.lock().unwrap();
+            shared.dirty = false;
+            (shared.frame.clone()?, shared.palette)
+        };
+        let size = self.flat.size();
+        let rgba = self.flat.render(&frame, palette);
+        let buffer =
+            slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(&rgba, size, size);
+        Some(slint::Image::from_rgba8(buffer))
+    }
+
+    pub fn gpu_image(&self) -> Option<slint::Image> {
+        if self.is_cpu() {
+            return None;
+        }
+        let (frame, palette) = {
+            let mut shared = self.shared.lock().unwrap();
+            shared.dirty = false;
+            (shared.frame.clone()?, shared.palette)
+        };
+        let mut failure = None;
+        let rendered = {
+            let mut guard = self.renderer.lock().unwrap();
+            let renderer = guard.as_mut()?;
+            renderer.update(&frame, palette);
+            renderer.render();
+            match renderer.read_rgba() {
+                Ok(rgba) => {
+                    let size = renderer.image_size();
+                    let buffer = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
+                        &rgba, size, size,
+                    );
+                    Some(slint::Image::from_rgba8(buffer))
+                }
+                Err(err) => {
+                    failure = Some(err);
+                    None
+                }
+            }
+        };
+        if let Some(err) = failure {
+            warn!("Bloub 3D readback failed ({err}); switching to flat renderer");
+            self.shared.lock().unwrap().failed = true;
+            return self.use_cpu();
+        }
+        rendered
+    }
+
+    pub fn target(&self) -> PetRenderer {
+        *self.target.lock().unwrap()
+    }
+
+    pub fn switch_renderer(&self, target: PetRenderer) -> Option<slint::Image> {
+        *self.target.lock().unwrap() = target;
+        if target.is_3d() {
+            if !self.is_cpu() && self.renderer.lock().unwrap().is_some() {
+                return self.gpu_image();
+            }
+            match create_gpu_renderer() {
+                Ok(renderer) => {
+                    *self.renderer.lock().unwrap() = Some(renderer);
+                    self.cpu.store(false, Ordering::Relaxed);
+                    {
+                        let mut shared = self.shared.lock().unwrap();
+                        shared.ready = true;
+                        shared.failed = false;
+                    }
+                    info!("Bloub 3D renderer ready");
+                    self.gpu_image().or_else(|| self.use_cpu())
+                }
+                Err(err) => {
+                    warn!("Could not initialize Bloub 3D renderer ({err}); using flat renderer");
+                    self.use_cpu()
+                }
+            }
+        } else {
+            self.use_cpu()
+        }
+    }
+
+    fn use_cpu(&self) -> Option<slint::Image> {
+        *self.renderer.lock().unwrap() = None;
+        self.cpu.store(true, Ordering::Relaxed);
+        self.shared.lock().unwrap().ready = true;
+        self.cpu_image()
     }
 
     pub fn update_from_state(&self, snapshot: &ViewSnapshot) {
@@ -410,135 +529,59 @@ impl Pet3dInner {
 
         TickResult { dirty: true }
     }
-
-    fn notify<F>(&self, state: RenderingState, graphics_api: &GraphicsAPI<'_>, set_ready: &F)
-    where
-        F: Fn(Option<slint::Image>),
-    {
-        match state {
-            RenderingState::RenderingSetup => {
-                let (device, queue) = match graphics_api {
-                    GraphicsAPI::WGPU30 { device, queue, .. } => (device.clone(), queue.clone()),
-                    _ => {
-                        warn!("Bloub 3D renderer requires the WGPU backend; using vector fallback");
-                        self.shared.lock().unwrap().failed = true;
-                        set_ready(None);
-                        return;
-                    }
-                };
-
-                match BloubRenderer::new(device, queue) {
-                    Ok(mut renderer) => {
-                        let (frame, palette) = {
-                            let shared = self.shared.lock().unwrap();
-                            (shared.frame.clone(), shared.palette)
-                        };
-                        if let Some(frame) = frame {
-                            renderer.update(&frame, palette);
-                        }
-                        renderer.render();
-
-                        let image = match renderer.image() {
-                            Ok(image) => image,
-                            Err(err) => {
-                                warn!("Could not import Bloub texture into Slint: {err}");
-                                self.shared.lock().unwrap().failed = true;
-                                set_ready(None);
-                                return;
-                            }
-                        };
-
-                        set_ready(Some(image));
-
-                        *self.renderer.lock().unwrap() = Some(renderer);
-                        let mut shared = self.shared.lock().unwrap();
-                        shared.ready = true;
-                        shared.failed = false;
-                        shared.dirty = false;
-                        info!("Bloub 3D renderer ready");
-                    }
-                    Err(err) => {
-                        warn!("Could not initialize Bloub 3D renderer: {err}");
-                        self.shared.lock().unwrap().failed = true;
-                        set_ready(None);
-                    }
-                }
-            }
-            RenderingState::BeforeRendering => {
-                let (frame, palette) = {
-                    let mut shared = self.shared.lock().unwrap();
-                    if !shared.ready || !shared.dirty {
-                        return;
-                    }
-                    shared.dirty = false;
-                    (shared.frame.clone(), shared.palette)
-                };
-
-                if let Some(frame) = frame
-                    && let Some(renderer) = self.renderer.lock().unwrap().as_mut()
-                {
-                    renderer.update(&frame, palette);
-                    renderer.render();
-                }
-            }
-            RenderingState::RenderingTeardown => {
-                *self.renderer.lock().unwrap() = None;
-                let mut shared = self.shared.lock().unwrap();
-                shared.ready = false;
-                shared.dirty = false;
-            }
-            _ => {}
-        }
-    }
 }
 
-fn install_notifier<F>(window: &slint::Window, inner: &Arc<Pet3dInner>, set_ready: F)
-where
-    F: Fn(Option<slint::Image>) + 'static,
-{
-    let inner_cb = inner.clone();
-    if let Err(err) = window.set_rendering_notifier(move |state, graphics_api| {
-        inner_cb.notify(state, graphics_api, &set_ready);
-    }) {
-        warn!("Could not install Bloub rendering notifier: {err}");
+fn create_gpu_renderer() -> Result<BloubRenderer, String> {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|err| format!("Could not create WGPU init runtime: {err}"))?;
+    runtime.block_on(async {
+        let instance = wgpu::Instance::default();
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions::default())
+            .await
+            .map_err(|err| format!("No WGPU adapter: {err}"))?;
+        let (device, queue) = adapter
+            .request_device(&wgpu::DeviceDescriptor {
+                label: Some("bloub-standalone"),
+                ..Default::default()
+            })
+            .await
+            .map_err(|err| format!("No WGPU device: {err}"))?;
+        BloubRenderer::new(device, queue)
+    })
+}
+
+fn publish(window: &MainWindow, inner: &Pet3dInner) {
+    let image = if inner.is_cpu() {
+        inner.cpu_image()
+    } else {
+        inner.gpu_image()
+    };
+    let ctx = window.global::<IslandContext>();
+    if let Some(image) = image {
+        ctx.set_pet_3d_image(image);
+        ctx.set_pet_3d_ready(true);
     }
 }
 
 pub fn install(window: &MainWindow) -> Arc<Pet3dInner> {
-    let inner = Arc::new(Pet3dInner::new());
+    let inner = Arc::new(Pet3dInner::new_cpu());
     inner.tick();
-
-    let weak = window.as_weak();
-    install_notifier(window.window(), &inner, move |image| {
-        if let Some(win) = weak.upgrade() {
-            let ctx = win.global::<IslandContext>();
-            if let Some(image) = image {
-                ctx.set_pet_3d_image(image);
-                ctx.set_pet_3d_ready(true);
-            } else {
-                ctx.set_pet_3d_ready(false);
-            }
-        }
-    });
+    publish(window, &inner);
+    info!("Bloub 2D renderer ready");
     inner
 }
 
 pub fn install_settings(window: &SettingsWindow) -> Arc<Pet3dInner> {
-    let inner = Arc::new(Pet3dInner::new_preview());
+    let inner = Arc::new(Pet3dInner::new_cpu_preview());
     inner.tick();
-
-    let weak = window.as_weak();
-    install_notifier(window.window(), &inner, move |image| {
-        if let Some(win) = weak.upgrade() {
-            let ctx = win.global::<IslandContext>();
-            if let Some(image) = image {
-                ctx.set_pet_3d_image(image);
-                ctx.set_pet_3d_ready(true);
-            } else {
-                ctx.set_pet_3d_ready(false);
-            }
-        }
-    });
+    let ctx = window.global::<IslandContext>();
+    if let Some(image) = inner.cpu_image() {
+        ctx.set_pet_3d_image(image);
+        ctx.set_pet_3d_ready(true);
+    }
     inner
 }
 
@@ -553,10 +596,23 @@ pub fn start_timer(
             return;
         }
         stats.pet_tick();
-        let result = inner.tick();
-        if result.dirty
+        inner.tick();
+        if inner.is_cpu() {
+            if let Some(image) = inner.cpu_image()
+                && let Some(win) = window.upgrade()
+            {
+                let ctx = win.global::<IslandContext>();
+                ctx.set_pet_3d_image(image);
+                ctx.set_pet_3d_ready(true);
+                stats.pet_redraw();
+                win.window().request_redraw();
+            }
+        } else if let Some(image) = inner.gpu_image()
             && let Some(win) = window.upgrade()
         {
+            let ctx = win.global::<IslandContext>();
+            ctx.set_pet_3d_image(image);
+            ctx.set_pet_3d_ready(true);
             stats.pet_redraw();
             win.window().request_redraw();
         }
@@ -576,7 +632,18 @@ pub fn start_settings_timer(
         if !win.window().is_visible() {
             return;
         }
-        if inner.tick().dirty {
+        inner.tick();
+        if inner.is_cpu() {
+            if let Some(image) = inner.cpu_image() {
+                let ctx = win.global::<IslandContext>();
+                ctx.set_pet_3d_image(image);
+                ctx.set_pet_3d_ready(true);
+                win.window().request_redraw();
+            }
+        } else if let Some(image) = inner.gpu_image() {
+            let ctx = win.global::<IslandContext>();
+            ctx.set_pet_3d_image(image);
+            ctx.set_pet_3d_ready(true);
             win.window().request_redraw();
         }
     });
@@ -672,6 +739,17 @@ mod tests {
 
         assert!(result.dirty);
         assert!(inner.shared.lock().unwrap().frame.is_some());
+    }
+
+    #[test]
+    fn cpu_renderer_publishes_image() {
+        let inner = Pet3dInner::new_cpu();
+        inner.tick();
+
+        let image = inner.cpu_image().expect("cpu image");
+
+        assert_eq!(image.size().width, 192);
+        assert_eq!(image.size().height, 192);
     }
 
     #[test]

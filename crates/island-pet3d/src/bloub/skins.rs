@@ -95,7 +95,11 @@ fn build_shapes() -> Vec<(ShapeId, Vec<f32>)> {
     );
 
     let droplet = normalize(
-        profile_from_polygon(&hull_of_circles(0.0, 0.28, 0.66, 0.0, -0.96, 0.05, 96), 0.0, 0.0),
+        profile_from_polygon(
+            &hull_of_circles(0.0, 0.28, 0.66, 0.0, -0.96, 0.05, 96),
+            0.0,
+            0.0,
+        ),
         1.04,
     );
 
@@ -108,7 +112,10 @@ fn build_shapes() -> Vec<(ShapeId, Vec<f32>)> {
     vec![
         (ShapeId::Cercle, vec![1.0; PROFILE_SAMPLES]),
         (ShapeId::Galet, pebble),
-        (ShapeId::Squircle, normalize(superellipse_profile(4.2, 1.0, 1.0), 1.15)),
+        (
+            ShapeId::Squircle,
+            normalize(superellipse_profile(4.2, 1.0, 1.0), 1.15),
+        ),
         (ShapeId::Capsule, capsule),
         (
             ShapeId::Triangle,

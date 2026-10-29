@@ -1,5 +1,4 @@
 use crate::config::WindowSpec;
-use island_core::PetRenderer;
 use island_platform::kde::ScreenGeometry;
 use island_platform::{KdeManager, PlatformWindow};
 use island_ui::MainWindow;
@@ -35,33 +34,15 @@ impl Bootstrap {
         }
     }
 
-    pub fn create_window(pet_renderer: PetRenderer) -> Result<MainWindow, slint::PlatformError> {
-        match pet_renderer {
-            PetRenderer::ThreeD => {
-                info!("Selecting Slint WGPU backend...");
-                match slint::BackendSelector::new()
-                    .require_wgpu_30(slint::wgpu_30::WGPUConfiguration::default())
-                    .select()
-                {
-                    Ok(()) => info!("Using Slint WGPU backend"),
-                    Err(err) => {
-                        warn!("WGPU backend unavailable ({err}); falling back to default backend")
-                    }
-                }
-            }
-            PetRenderer::TwoD => {
-                info!("Selecting Slint software backend...");
-                match slint::BackendSelector::new()
-                    .renderer_name("software".to_string())
-                    .select()
-                {
-                    Ok(()) => info!("Using Slint software backend"),
-                    Err(err) => {
-                        warn!(
-                            "Software backend unavailable ({err}); falling back to default backend"
-                        )
-                    }
-                }
+    pub fn create_window() -> Result<MainWindow, slint::PlatformError> {
+        info!("Selecting Slint femtovg (OpenGL) backend...");
+        match slint::BackendSelector::new()
+            .renderer_name("femtovg".to_string())
+            .select()
+        {
+            Ok(()) => info!("Using Slint femtovg (OpenGL) backend"),
+            Err(err) => {
+                warn!("Femtovg backend unavailable ({err}); falling back to default backend")
             }
         }
 

@@ -18,7 +18,7 @@ Memisahkan konfigurasi deployment/internal dari preferensi pengguna, memusatkan 
 - `ConfigLoader` membaca `config.json`, memvalidasi nilai, dan fallback ke default dengan warning.
 - Override environment hanya ada di `ConfigLoader`: `NOTCHDE_CONFIG_DIR`, `NOTCHDE_CAVA_CONFIG`, `ISLAND_DODGE`, dan `PILL_DODGE`.
 - `WindowSpec` menjadi sumber dimensi window, notch, touch region, dan `ThemeMetrics`.
-- `AppConfig.pet.renderer` adalah default pet `"3d"` atau `"2d"`; mode `"2d"` memakai software renderer Slint dan tidak menginisialisasi renderer 3D/WGPU.
+- `AppConfig.pet.renderer` adalah default pet `"3d"` atau `"2d"`; window Slint selalu memakai backend femtovg/OpenGL. Mode `"2d"` merender Bloub flat di CPU; mode `"3d"` merender Bloub dengan WGPU standalone lalu mengunggah frame sebagai `Image`.
 - `PersistedSettings.pet_renderer` dapat menimpa default config setelah user memilih renderer dari Settings; nilai hilang/null memakai default `AppConfig`.
 - Path settings dan CAVA berasal dari `AppConfig`; default CAVA tetap `$XDG_CONFIG_HOME/island-cava/cava.conf`.
 - `settings.version` dimigrasikan eksplisit; versi masa depan ditolak dengan fallback default tanpa panic.
@@ -100,10 +100,12 @@ Aturan:
 - `PersistedSettings` tidak memuat path tool atau flag developer.
 - `AppConfig` dimuat sekali saat bootstrap dan diteruskan read-only.
 - Perubahan settings user tidak boleh mengubah `AppConfig` secara langsung.
-- `settings.json` dimuat sebelum backend Slint dipilih; `pet_renderer` yang tersimpan menimpa `AppConfig.pet.renderer`.
-- Perubahan `pet.renderer` dari Settings berlaku setelah restart karena pemilihan backend Slint terjadi sebelum window dibuat.
-- Mode `"3d"` membutuhkan WGPU; mode `"2d"` memakai software renderer dan vector pet tanpa renderer 3D.
-- Mode `"2d"` menghindari inisialisasi WGPU/Vulkan saat runtime; kode WGPU masih ikut ter-compile sampai pemisahan build feature dilakukan.
+- `settings.json` dimuat saat bootstrap; `pet_renderer` yang tersimpan menimpa `AppConfig.pet.renderer`.
+- Perubahan `pet.renderer` dari Settings langsung mengganti renderer pet tanpa restart service karena backend window tidak berubah.
+- Mode `"3d"` membuat perangkat WGPU standalone saat dipilih lalu merender `BloubFrame` ke tekstur dan membacanya kembali sebagai `Image`; mode `"2d"` merasterisasi frame yang sama ke RGBA di CPU.
+- Window selalu memakai backend femtovg/OpenGL agar area transparan tetap bekerja di Wayland.
+- Mode `"2d"` mempertahankan animasi, ekspresi, dekor, dan silhouette Bloub; hanya lighting, rim, dan tonemap GPU yang tidak dipakai.
+- Mode `"2d"` menghindari inisialisasi WGPU/Vulkan; memilih `"3d"` menginisialisasi WGPU standalone dan melepasnya saat kembali ke `"2d"`. Kode WGPU masih ikut ter-compile sampai pemisahan build feature dilakukan.
 
 ## 5. WindowSpec
 

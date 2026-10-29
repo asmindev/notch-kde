@@ -1,4 +1,4 @@
-use super::math::{clamp, lerp, shortest_angle_delta, TAU};
+use super::math::{TAU, clamp, lerp, shortest_angle_delta};
 use super::profiles::PROFILE_SAMPLES;
 
 #[derive(Clone, Debug, PartialEq)]

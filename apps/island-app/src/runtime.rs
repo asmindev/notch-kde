@@ -103,25 +103,27 @@ impl AppRuntime {
         let input_region = input_region::InputRegionHandle::spawn();
         let initial_input_rect = input_region::rect_for_state(&app_state, &window_spec);
 
-        // Install the offscreen Momo renderer before the window is shown. In 2D mode
-        // the Slint software renderer draws the vector pet instead.
-        let pet_3d_enabled = app_state.settings.pet_renderer.is_3d();
-        let pet3d = pet_3d_enabled.then(|| pet3d::install(&self.window));
-        if let Some(pet3d) = &pet3d {
-            pet3d.set_render_active(initial_policy.pet_3d);
-            pet3d.update_from_state(&initial_snapshot);
-            if initial_policy.pet_3d {
-                render_stats.pet_tick();
-                pet3d.tick();
+        // Install the flat renderer first. 3D initializes a standalone WGPU
+        // device so both modes can switch at runtime without changing the
+        // OpenGL window backend.
+        let pet3d = pet3d::install(&self.window);
+        pet3d.set_render_active(initial_policy.pet_3d);
+        pet3d.update_from_state(&initial_snapshot);
+        if initial_policy.pet_3d {
+            render_stats.pet_tick();
+            pet3d.tick();
+        }
+        if app_state.settings.pet_renderer.is_3d() {
+            if let Some(image) = pet3d.switch_renderer(app_state.settings.pet_renderer) {
+                let ctx = self.window.global::<IslandContext>();
+                ctx.set_pet_3d_image(image);
+                ctx.set_pet_3d_ready(true);
             }
         }
 
-        // In 3D mode the Settings window has its own WGPU context, so it needs its own renderer.
-        let settings_pet3d = pet_3d_enabled.then(|| pet3d::install_settings(&settings_window));
-        if let Some(settings_pet3d) = &settings_pet3d {
-            settings_pet3d.update_from_state(&initial_snapshot);
-            settings_pet3d.tick();
-        }
+        let settings_pet3d = pet3d::install_settings(&settings_window);
+        settings_pet3d.update_from_state(&initial_snapshot);
+        settings_pet3d.tick();
 
         // 2. Wire UI Callbacks to Event Channel
         let tx = event_tx.clone();
@@ -389,15 +391,12 @@ impl AppRuntime {
         let render_stats_cursor = render_stats.clone();
         let cursor_window = self.window.as_weak();
         ctx.on_cursor_moved(move |x, y| {
-            let Some(pet3d) = &pet3d_cursor else {
-                return;
-            };
-            if !pet3d.is_render_active() {
+            if !pet3d_cursor.is_render_active() {
                 return;
             }
-            pet3d.set_gaze(x, y);
+            pet3d_cursor.set_gaze(x, y);
             render_stats_cursor.pet_tick();
-            if pet3d.tick().dirty
+            if pet3d_cursor.tick().dirty
                 && let Some(win) = cursor_window.upgrade()
             {
                 render_stats_cursor.pet_redraw();
@@ -615,9 +614,7 @@ impl AppRuntime {
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(win) = w.upgrade() {
                                 ViewModel::sync_spectrum_to_ui(&win, &bars);
-                                if policy.pet_3d
-                                    && let Some(pet3d) = &pet3d
-                                {
+                                if policy.pet_3d {
                                     pet3d.update_from_state(&snapshot);
                                 }
                             }
@@ -642,9 +639,7 @@ impl AppRuntime {
                 let policy = render_policy(&app_state);
                 let spectrum_stopped = last_spectrum_active && !policy.spectrum;
                 last_spectrum_active = policy.spectrum;
-                if let Some(pet3d) = &pet3d_events {
-                    pet3d.set_render_active(policy.pet_3d);
-                }
+                pet3d_events.set_render_active(policy.pet_3d);
 
                 for effect in effects {
                     effect_executor.execute(effect, &app_state);
@@ -667,14 +662,20 @@ impl AppRuntime {
                                 stats.ui_sync();
                                 ViewModel::clear_spectrum_to_ui(&win);
                             }
-                            if let Some(pet3d) = &pet3d {
-                                pet3d.update_from_state(&snapshot);
-                                if policy.pet_3d {
-                                    stats.pet_tick();
-                                    if pet3d.tick().dirty {
-                                        stats.pet_redraw();
-                                        win.window().request_redraw();
-                                    }
+                            pet3d.update_from_state(&snapshot);
+                            let target = snapshot.settings.pet_renderer;
+                            if pet3d.target() != target {
+                                if let Some(image) = pet3d.switch_renderer(target) {
+                                    let ctx = win.global::<IslandContext>();
+                                    ctx.set_pet_3d_image(image);
+                                    ctx.set_pet_3d_ready(true);
+                                }
+                            }
+                            if policy.pet_3d {
+                                stats.pet_tick();
+                                if pet3d.tick().dirty {
+                                    stats.pet_redraw();
+                                    win.window().request_redraw();
                                 }
                             }
                             if let Some(settings) = settings_w.upgrade()
@@ -682,12 +683,17 @@ impl AppRuntime {
                                     || settings.window().is_visible())
                             {
                                 ViewModel::sync_settings_to_ui(&settings, &snapshot);
-                                if let Some(settings_pet3d) = &settings_pet3d {
-                                    settings_pet3d.update_from_state(&snapshot);
-                                    if settings.window().is_visible() {
-                                        settings_pet3d.tick();
-                                        settings.window().request_redraw();
+                                settings_pet3d.update_from_state(&snapshot);
+                                if settings_pet3d.target() != target {
+                                    if let Some(image) = settings_pet3d.switch_renderer(target) {
+                                        let ctx = settings.global::<IslandContext>();
+                                        ctx.set_pet_3d_image(image);
+                                        ctx.set_pet_3d_ready(true);
                                     }
+                                }
+                                if settings.window().is_visible() {
+                                    settings_pet3d.tick();
+                                    settings.window().request_redraw();
                                 }
                             }
                         }
@@ -704,14 +710,21 @@ impl AppRuntime {
                         if let Some(settings) = settings_w.upgrade() {
                             if state_clone.presentation.settings_open {
                                 ViewModel::sync_settings_to_ui(&settings, &snapshot);
-                                if let Some(settings_pet3d) = &settings_pet3d {
-                                    settings_pet3d.update_from_state(&snapshot);
-                                    settings_pet3d.tick();
-                                    settings.window().request_redraw();
+                                settings_pet3d.update_from_state(&snapshot);
+                                let target = snapshot.settings.pet_renderer;
+                                if settings_pet3d.target() != target {
+                                    if let Some(image) = settings_pet3d.switch_renderer(target) {
+                                        let ctx = settings.global::<IslandContext>();
+                                        ctx.set_pet_3d_image(image);
+                                        ctx.set_pet_3d_ready(true);
+                                    }
                                 }
+                                settings_pet3d.tick();
+                                settings.window().request_redraw();
                                 let _ = settings.show();
                             } else {
                                 let _ = settings.hide();
+                                let _ = settings_pet3d.switch_renderer(PetRenderer::TwoD);
                             }
                         }
                     });
@@ -725,12 +738,9 @@ impl AppRuntime {
         // 8. Show Window and Run Slint GUI event loop
         self.window.show()?;
         input_region::schedule_init(self.window.as_weak(), input_region, initial_input_rect, 20);
-        let _pet3d_timer = pet3d
-            .as_ref()
-            .map(|inner| pet3d::start_timer(inner.clone(), self.window.as_weak(), render_stats));
-        let _settings_pet3d_timer = settings_pet3d
-            .as_ref()
-            .map(|inner| pet3d::start_settings_timer(inner.clone(), settings_window.as_weak()));
+        let _pet3d_timer = pet3d::start_timer(pet3d, self.window.as_weak(), render_stats);
+        let _settings_pet3d_timer =
+            pet3d::start_settings_timer(settings_pet3d, settings_window.as_weak());
         let result = self.window.run();
         let _ = event_tx.send(AppEvent::Shutdown);
         let _ = event_thread.join();

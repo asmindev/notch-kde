@@ -1,11 +1,9 @@
-use super::decor::{
-    self, colored_dot, dot, tear, ArcRender, NotifRender,
-};
+use super::decor::{self, ArcRender, NotifRender, colored_dot, dot, tear};
 use super::expressions::ExpressionId;
-use super::face::{EyeCfg, EYE_SPLIT, REST_GAZE};
-use super::math::{clamp01, ease_in_out_cubic, ease_out_cubic, TAU};
-use super::shape::{silhouette, Silhouette};
-use super::skins::{shape_radii, ShapeId};
+use super::face::{EYE_SPLIT, EyeCfg, REST_GAZE};
+use super::math::{TAU, clamp01, ease_in_out_cubic, ease_out_cubic};
+use super::shape::{Silhouette, silhouette};
+use super::skins::{ShapeId, shape_radii};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StateId {
@@ -212,14 +210,10 @@ fn add_ring(pose: &mut Pose, angle: f32, opacity: f32, width: f32, hue: f32, beh
 fn add_orbit_decor(pose: &mut Pose, t: f32, opacity: f32) {
     add_ring(pose, t * 0.9, opacity, 0.018, 0.56, true);
     add_ring(pose, -t * 0.7 + 1.4, opacity * 0.8, 0.014, 0.78, true);
-    pose.arcs.push(decor::swoosh(
-        t * 1.4,
-        0.9,
-        0.08,
-        opacity * 0.9,
-        0.024,
-    ));
-    pose.dots.extend(decor::particles(t, 14, 0x51a3_2b7d, 0.62, true));
+    pose.arcs
+        .push(decor::swoosh(t * 1.4, 0.9, 0.08, opacity * 0.9, 0.024));
+    pose.dots
+        .extend(decor::particles(t, 14, 0x51a3_2b7d, 0.62, true));
     pose.dots_behind = true;
 }
 
@@ -237,7 +231,8 @@ fn add_swirl_decor(pose: &mut Pose, t: f32) {
             i % 2 == 0,
         ));
     }
-    pose.dots.extend(decor::particles(t, 10, 0x7f4a_1c3b, 0.72, true));
+    pose.dots
+        .extend(decor::particles(t, 10, 0x7f4a_1c3b, 0.72, true));
     pose.dots_behind = true;
 }
 
@@ -336,7 +331,8 @@ pub fn pose(state: StateId, t: f32) -> Pose {
             p.off_x = (t * 8.5).sin() * 0.018 * (1.0 - u);
             p.gaze = REST_GAZE.offset(0.18, -0.42);
             add_ring(&mut p, t * 1.5, 0.75 * (1.0 - u), 0.075, 0.33, true);
-            p.dots.extend(decor::particles(t, 10, 0x7a31_c0de, 0.14, true));
+            p.dots
+                .extend(decor::particles(t, 10, 0x7a31_c0de, 0.14, true));
             for i in 0..3 {
                 let phase = i as f32 * 2.1;
                 p.dots.push(colored_dot(
