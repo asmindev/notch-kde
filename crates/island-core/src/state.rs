@@ -5,7 +5,8 @@ use crate::models::{
 use crate::module::ModuleId;
 use crate::prayer::{PrayerAlert, PrayerSettings};
 use crate::settings::{PetBehaviorSettings, SettingsTab, ShadowSettings};
-use crate::view_engine::{SlotContext, ViewEngine};
+use crate::module::ModuleContext;
+use crate::view_engine::ViewEngine;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[repr(i32)]
@@ -96,8 +97,8 @@ impl AppState {
         self.is_hovered = self.engine.is_hovered;
     }
 
-    pub fn slot_context(&self) -> SlotContext<'_> {
-        SlotContext {
+    pub fn module_context(&self) -> ModuleContext<'_> {
+        ModuleContext {
             time: &self.time,
             battery: &self.battery,
             media: &self.media,
@@ -106,11 +107,16 @@ impl AppState {
             is_dnd: self.is_dnd,
             alert_kind: self.alert_kind,
             prayer_panel_open: self.prayer_panel_open,
+            source_selector_open: self.show_source_selector,
         }
     }
 
+    pub fn slot_context(&self) -> ModuleContext<'_> {
+        self.module_context()
+    }
+
     pub fn update_active_module(&mut self) {
-        let ctx = SlotContext {
+        let ctx = ModuleContext {
             time: &self.time,
             battery: &self.battery,
             media: &self.media,
@@ -119,6 +125,7 @@ impl AppState {
             is_dnd: self.is_dnd,
             alert_kind: self.alert_kind,
             prayer_panel_open: self.prayer_panel_open,
+            source_selector_open: self.show_source_selector,
         };
         self.engine.resolve_active_module(&ctx);
         self.sync_engine();

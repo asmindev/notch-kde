@@ -23,7 +23,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T2.1 — Tambah `ModuleContext` dan `ResolvedContent`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `T1.3`
 - **Trace:** `CONTENT-7`, `MOD-5`
@@ -37,6 +37,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Module tidak dapat memutasi state.
   - Context mudah dibangun dari snapshot.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `SlotContext` diganti menjadi `ModuleContext` read-only dengan tambahan `source_selector_open`; alias `SlotContext` dipertahankan untuk module existing. `ContentReason` dan `ResolvedContent` ditambahkan di `content_resolver.rs` dan diekspor dari core. Context dibangun dari snapshot `AppState`, bukan `&AppState`.
 
 ## T2.2 — Implementasikan `ContentResolver`
 

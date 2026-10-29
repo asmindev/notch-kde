@@ -1,3 +1,4 @@
+pub mod content_resolver;
 pub mod events;
 pub mod models;
 pub mod module;
@@ -10,10 +11,12 @@ pub mod state;
 pub mod transition_policy;
 pub mod view_engine;
 
+pub use content_resolver::{ContentReason, ResolvedContent};
 pub use events::{AppEvent, Effect};
 pub use models::{ActiveModule, AudioSpectrum, BatteryState, IslandMode, IslandView, MediaTrack, TimeInfo};
 pub use module::{
-    IslandModule, ModuleDescriptor, ModuleId, ModuleTiers, Priority, SlotContext, UnknownModuleId,
+    IslandModule, ModuleContext, ModuleDescriptor, ModuleId, ModuleTiers, Priority, SlotContext,
+    UnknownModuleId,
 };
 pub use module_registry::{DuplicateModuleId, ModuleRegistry};
 pub use prayer::{Prayer, PrayerAlert, PrayerSettings};

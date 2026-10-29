@@ -68,9 +68,9 @@ impl Priority {
     pub const CRITICAL: Self = Self(300);
 }
 
-/// Lightweight read-only snapshot passed into modules to evaluate priority.
+/// Lightweight read-only snapshot passed into modules and the content resolver.
 #[derive(Debug, Clone, PartialEq)]
-pub struct SlotContext<'a> {
+pub struct ModuleContext<'a> {
     pub time: &'a TimeInfo,
     pub battery: &'a BatteryState,
     pub media: &'a MediaTrack,
@@ -79,7 +79,11 @@ pub struct SlotContext<'a> {
     pub is_dnd: bool,
     pub alert_kind: AlertKind,
     pub prayer_panel_open: bool,
+    pub source_selector_open: bool,
 }
+
+/// Backwards-compatible name used by existing modules.
+pub type SlotContext<'a> = ModuleContext<'a>;
 
 /// Defines which view tiers a module can render into.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -131,7 +135,7 @@ pub struct ModuleDescriptor {
 /// Trait defining modular content behavior for Dynamic Island slots.
 pub trait IslandModule: fmt::Debug + Send + Sync {
     fn descriptor(&self) -> ModuleDescriptor;
-    fn priority(&self, ctx: &SlotContext<'_>) -> Priority;
+    fn priority(&self, ctx: &ModuleContext<'_>) -> Priority;
 }
 
 /// Concrete System Module (Clock, Battery, Controls - Supports all 3 tiers)
@@ -148,7 +152,7 @@ impl IslandModule for SystemModule {
         }
     }
 
-    fn priority(&self, ctx: &SlotContext<'_>) -> Priority {
+    fn priority(&self, ctx: &ModuleContext<'_>) -> Priority {
         if ctx.battery.percentage <= 10 && !ctx.battery.is_charging {
             Priority::CRITICAL
         } else {
@@ -171,7 +175,7 @@ impl IslandModule for MediaModule {
         }
     }
 
-    fn priority(&self, ctx: &SlotContext<'_>) -> Priority {
+    fn priority(&self, ctx: &ModuleContext<'_>) -> Priority {
         if ctx.media.is_playing {
             Priority::HIGH
         } else if ctx.view == IslandView::Compact && !ctx.media.title.is_empty() {
@@ -196,7 +200,7 @@ impl IslandModule for PrayerModule {
         }
     }
 
-    fn priority(&self, ctx: &SlotContext<'_>) -> Priority {
+    fn priority(&self, ctx: &ModuleContext<'_>) -> Priority {
         if ctx.prayer_panel_open {
             Priority::PANEL
         } else {
@@ -219,7 +223,7 @@ impl IslandModule for AlertModule {
         }
     }
 
-    fn priority(&self, ctx: &SlotContext<'_>) -> Priority {
+    fn priority(&self, ctx: &ModuleContext<'_>) -> Priority {
         if ctx.alert_kind != AlertKind::None {
             Priority::URGENT
         } else {
@@ -238,8 +242,8 @@ mod tests {
         media: &'a MediaTrack,
         alert_kind: AlertKind,
         prayer_panel_open: bool,
-    ) -> SlotContext<'a> {
-        SlotContext {
+    ) -> ModuleContext<'a> {
+        ModuleContext {
             time,
             battery,
             media,
@@ -248,6 +252,7 @@ mod tests {
             is_dnd: false,
             alert_kind,
             prayer_panel_open,
+            source_selector_open: false,
         }
     }
 
