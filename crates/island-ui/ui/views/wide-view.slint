@@ -14,20 +14,20 @@ import { SourceSelectorBar } from "../components/source-selector.slint";
 export component WideView inherits VerticalLayout {
     in property <bool> active: true;
 
+    property <bool> show-source: !IslandContext.is-welcome
+        && IslandContext.show-source-selector;
     property <bool> show-system: !IslandContext.is-welcome
-        && !IslandContext.show-source-selector
-        && (IslandContext.wide-module == 0
-            || (IslandContext.wide-module == 1 && !IslandContext.is-playing));
+        && !root.show-source
+        && IslandContext.wide-module == 0;
     property <bool> show-media: !IslandContext.is-welcome
-        && !IslandContext.show-source-selector
-        && IslandContext.wide-module == 1
-        && IslandContext.is-playing;
+        && !root.show-source
+        && IslandContext.wide-module == 1;
     property <bool> show-prayer: !IslandContext.is-welcome
-        && !IslandContext.show-source-selector
+        && !root.show-source
         && IslandContext.wide-module == 3;
 
     out property <bool> is-hovered: (!IslandContext.is-welcome && bottom-bar.is-hovered)
-        || IslandContext.show-source-selector
+        || root.show-source
         || (root.show-media && media-slot.is-hovered)
         || (root.show-prayer && prayer-slot.is-hovered)
         || (root.show-system && system-slot.is-hovered);
@@ -57,7 +57,7 @@ export component WideView inherits VerticalLayout {
         }
 
         // Slot: Source Selector View in Wide Mode
-        if !IslandContext.is-welcome && IslandContext.show-source-selector: Rectangle {
+        if root.show-source: Rectangle {
             width: 100%;
             height: 100%;
 
@@ -97,8 +97,8 @@ export component WideView inherits VerticalLayout {
         // Slot 2: Alert Module Wide Slot
         alert-slot := AlertWideSlot {
             active: root.active;
-            visible: !IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.wide-module == 2;
-            opacity: (!IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.wide-module == 2) ? 1.0 : 0.0;
+            visible: !IslandContext.is-welcome && !root.show-source && IslandContext.wide-module == 2;
+            opacity: (!IslandContext.is-welcome && !root.show-source && IslandContext.wide-module == 2) ? 1.0 : 0.0;
         }
 
         // Slot 3: Prayer Schedule Wide Slot
