@@ -32,6 +32,8 @@ global StarField {
 }
 
 component StarLayer inherits Rectangle {
+    in property <bool> active: true;
+
     // Shared sweep 0..1. Advanced by a single Timer (cheap) and eased so the
     // motion is continuous between ticks. Each star offsets this by its own
     // phase `p`, so they shimmer out of sync instead of breathing in unison.
@@ -41,7 +43,7 @@ component StarLayer inherits Rectangle {
 
     phase-timer := Timer {
         interval: 500ms;
-        running: IslandContext.prayer-star-opacity > 0.01;
+        running: root.active && IslandContext.render-animations && IslandContext.prayer-star-opacity > 0.01;
         triggered => { root.phase = mod(root.phase + 0.25, 1000.0); }
     }
 
@@ -63,6 +65,7 @@ component StarLayer inherits Rectangle {
 }
 
 export component PrayerBackdrop inherits Rectangle {
+    in property <bool> active: true;
     in property <bool> show-crescent: true;
 
     width: 100%;
@@ -110,6 +113,7 @@ export component PrayerBackdrop inherits Rectangle {
 
     // Star field — only visible when prayer-star-opacity > 0 (i.e. at night).
     if IslandContext.prayer-star-opacity > 0.01: StarLayer {
+        active: root.active;
         width: 100%;
         height: 100%;
     }

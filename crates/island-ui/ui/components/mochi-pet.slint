@@ -93,6 +93,7 @@ component MochiEye inherits Rectangle {
 }
 
 export component MochiPet inherits Rectangle {
+    in property <bool> active: true;
     in property <length> pet-size: 38px;
     out property <bool> is-hovered: touch.has-hover;
 
@@ -125,7 +126,7 @@ export component MochiPet inherits Rectangle {
     property <bool> is-blinking: false;
     blink-timer := Timer {
         interval: 3200ms;
-        running: root.mood == 0;
+        running: root.active && IslandContext.render-animations && root.mood == 0;
         triggered => {
             root.is-blinking = true;
             blink-close-timer.running = true;
@@ -144,7 +145,7 @@ export component MochiPet inherits Rectangle {
     property <bool> breath-phase: false;
     breath-timer := Timer {
         interval: 1800ms;
-        running: true;
+        running: root.active && IslandContext.render-animations;
         triggered => {
             root.breath-phase = !root.breath-phase;
         }
@@ -154,7 +155,7 @@ export component MochiPet inherits Rectangle {
     property <bool> dizzy-wobble: false;
     dizzy-timer := Timer {
         interval: 110ms;
-        running: root.mood == 3;
+        running: root.active && IslandContext.render-animations && root.mood == 3;
         triggered => {
             root.dizzy-wobble = !root.dizzy-wobble;
         }

@@ -55,6 +55,7 @@ export component MainWindow inherits Window {
 
             // View 0: Compact (Default Desktop State)
             CompactView {
+                active: IslandContext.render-main-visible && IslandContext.active-mode == 0;
                 x: 0px;
                 y: 0px;
                 width: 100%;
@@ -67,6 +68,7 @@ export component MainWindow inherits Window {
 
             // View 1: Wide (Hover State)
             wide-view := WideView {
+                active: IslandContext.render-main-visible && IslandContext.active-mode == 1;
                 width: 100%;
                 height: 100%;
                 opacity: IslandContext.active-mode == 1 ? 1.0 : 0.0;
@@ -79,6 +81,7 @@ export component MainWindow inherits Window {
 
             // View 2: Expand (Click State - Interactive Dashboard Card)
             expand-view := ExpandView {
+                active: IslandContext.render-main-visible && IslandContext.active-mode == 2;
                 width: 100%;
                 height: 100%;
                 opacity: IslandContext.active-mode == 2 ? 1.0 : 0.0;

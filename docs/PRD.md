@@ -3,7 +3,7 @@
 Status: Draft  
 Tanggal: 2026-10-29  
 Basis: audit source code aktual, bukan asumsi desain  
-Baseline verifikasi: `cargo test --workspace` lulus 129 test
+Baseline verifikasi: `cargo test --workspace` lulus 133 test
 
 ---
 
@@ -191,7 +191,7 @@ Platform -> Overlap/Geometry event -> Runtime -> Reducer
 | Duplikasi aturan konten | Rust + reducer + 3 Slint view | Hanya resolver |
 | Service dengan lifecycle seragam | 2 dari 9 | Semua |
 | Timer string ID | 13+ cabang | 0 |
-| Test workspace | 129 lulus | ≥ 129 dan bertambah untuk resolver/timer/service/config |
+| Test workspace | 133 lulus | ≥ 133 dan bertambah untuk resolver/timer/service/config |
 | Reload album art saat spectrum | Berpotensi setiap update | 0 kali jika `art_url` sama |
 | Tick pet 3D saat hidden | ~30 FPS | 0 |
 | Timer animasi saat hidden | Beberapa timer aktif | 0 timer non-input |

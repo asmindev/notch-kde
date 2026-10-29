@@ -4,6 +4,7 @@ import { Icons } from "../../theme/icons.slint";
 import { IslandContext } from "../../context.slint";
 
 component PrayerDomeLine inherits Rectangle {
+    in property <bool> active: true;
     in property <float> progress: 0.0;
     in property <bool> night: false;
     // True while the cursor is over the dome (used to gate the orb shimmer
@@ -21,7 +22,7 @@ component PrayerDomeLine inherits Rectangle {
     property <bool> pulse: true;
     pulse-timer := Timer {
         interval: 1000ms;
-        running: root.is-hovered || true;
+        running: root.active && IslandContext.render-animations;
         triggered => { root.pulse = !root.pulse; }
     }
 
@@ -307,6 +308,8 @@ component PrayerDomeLine inherits Rectangle {
 }
 
 export component PrayerExpandSlot inherits Rectangle {
+    in property <bool> active: true;
+
     // Report hover upward so the expand view keeps the panel open while the
     // cursor is over the dome/markers (same contract as Media/System slots).
     out property <bool> is-hovered: dome-line.is-hovered;
@@ -325,6 +328,7 @@ export component PrayerExpandSlot inherits Rectangle {
         // its central column (inside PrayerDomeLine). No bottom strip: the
         // dome grows taller with the space that used to hold the pill row.
         dome-line := PrayerDomeLine {
+            active: root.active;
             width: 100%;
             vertical-stretch: 1;
             progress: root.progress;

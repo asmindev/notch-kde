@@ -12,6 +12,8 @@ import { PrayerExpandSlot } from "../modules/prayer/prayer-expand-slot.slint";
 import { PrayerBackdrop } from "../modules/prayer/prayer-backdrop.slint";
 
 export component ExpandView inherits VerticalLayout {
+    in property <bool> active: true;
+
     property <bool> show-source: IslandContext.show-source-selector && IslandContext.active-module == 1;
     property <bool> show-system: IslandContext.active-module == 0
         || (IslandContext.active-module == 1 && !IslandContext.is-playing && !root.show-source);
@@ -39,6 +41,7 @@ export component ExpandView inherits VerticalLayout {
         height: root.content-h;
 
         if root.show-prayer: PrayerBackdrop {
+            active: root.active;
             width: 100%;
             height: 100%;
         }
@@ -105,18 +108,21 @@ export component ExpandView inherits VerticalLayout {
 
                 // Slot 0: System Module Expand Slot
                 system-slot := SystemExpandSlot {
+                    active: root.active;
                     visible: root.show-system;
                     opacity: root.show-system ? 1.0 : 0.0;
                 }
 
                 // Slot 1: Media Module Expand Slot
                 media-slot := MediaExpandSlot {
+                    active: root.active;
                     visible: root.show-media;
                     opacity: root.show-media ? 1.0 : 0.0;
                 }
 
                 // Slot 3: Prayer Schedule Expand Slot
                 prayer-slot := PrayerExpandSlot {
+                    active: root.active;
                     visible: root.show-prayer;
                     opacity: root.show-prayer ? 1.0 : 0.0;
                 }

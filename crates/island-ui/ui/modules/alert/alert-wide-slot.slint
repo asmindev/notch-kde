@@ -6,6 +6,7 @@ import { IslandContext } from "../../context.slint";
 import { PetView } from "../../components/pet-view.slint";
 
 export component AlertWideSlot inherits Rectangle {
+    in property <bool> active: true;
     property <bool> is-charging-alert: IslandContext.alert-kind == 1;
     property <bool> is-prayer-alert: IslandContext.alert-kind == 3;
     in property <string> alert-title: root.is-prayer-alert ? IslandContext.prayer-title
@@ -31,6 +32,7 @@ export component AlertWideSlot inherits Rectangle {
         VerticalLayout {
             alignment: center;
             if root.is-charging-alert: PetView {
+                active: root.active;
                 width: root.pet-dim;
                 height: root.pet-dim;
                 pet-size: root.pet-dim;

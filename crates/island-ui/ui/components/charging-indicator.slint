@@ -1,8 +1,10 @@
 import { ThemeColors } from "../theme/colors.slint";
 import { ThemeTypography } from "../theme/typography.slint";
 import { Icons } from "../theme/icons.slint";
+import { IslandContext } from "../context.slint";
 
 export component ChargingIndicator inherits HorizontalLayout {
+    in property <bool> active: true;
     in property <int> percentage: 85;
     in property <bool> is-charging: false;
     in property <bool> compact: false;
@@ -12,7 +14,7 @@ export component ChargingIndicator inherits HorizontalLayout {
 
     pulse-timer := Timer {
         interval: 900ms;
-        running: root.is-charging;
+        running: root.active && IslandContext.render-animations && root.is-charging;
         triggered => { root.pulse = !root.pulse; }
     }
 

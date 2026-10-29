@@ -3,6 +3,7 @@ import { FloatingNotes } from "floating-notes.slint";
 import { BlobatarPet } from "blobatar-pet.slint";
 
 export component PetView inherits Rectangle {
+    in property <bool> active: true;
     in property <length> pet-size: 24px;
     out property <bool> is-hovered <=> touch.has-hover;
 
@@ -28,6 +29,7 @@ export component PetView inherits Rectangle {
     if !IslandContext.pet-3d-ready : BlobatarPet {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
+        active: root.active;
         pet-size: root.pet-size;
     }
 

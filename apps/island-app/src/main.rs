@@ -1,6 +1,7 @@
 mod bootstrap;
 mod input_region;
 mod pet3d;
+mod render_stats;
 mod runtime;
 mod settings_store;
 

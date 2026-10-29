@@ -7,6 +7,7 @@ import { AlbumArt } from "../../components/album-art.slint";
 import { PlaybackControls } from "../../components/playback-controls.slint";
 
 export component MediaWideSlot inherits Rectangle {
+    in property <bool> active: true;
     out property <bool> is-hovered: music-controls.is-hovered || art-touch.has-hover;
 
     property <length> margin-x: max(12px, min(24px, ThemeMetrics.wide-width * 0.04));
@@ -68,6 +69,7 @@ export component MediaWideSlot inherits Rectangle {
                         VerticalLayout {
                             alignment: center;
                             PetView {
+                                active: root.active;
                                 pet-size: root.art-dim;
                             }
                         }

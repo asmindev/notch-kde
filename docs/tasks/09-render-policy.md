@@ -65,7 +65,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## TR3 — Gate pet 3D dan perbaiki `dirty`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `TR2`
 - **Trace:** `RENDER-2`, `RENDER-4`
@@ -82,10 +82,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Pet yang terlihat tetap ~30 FPS.
   - Test `hidden_does_not_tick` dan `visible_tick_is_dirty` lulus.
 - **Risiko:** Sedang; jangan sampai pet terlihat tetapi tidak update.
+- **Catatan verifikasi:** Status aktif pet disimpan sebagai `AtomicBool` di `Pet3dInner`; `tick()` mengembalikan `dirty: false` sebelum lock/sampling saat inactive, timer 30 FPS berhenti sebelum memanggil `tick()`, dan reaktivasi langsung menghasilkan tick dirty. Test `hidden_does_not_tick`, `visible_tick_is_dirty`, dan `reactivation_ticks_after_inactive_gap` ditambahkan; `cargo test --workspace` lulus 132 test. `cargo clippy --workspace --all-targets` hanya menampilkan warning pre-existing.
 
 ## TR4 — Gate timer Slint dan aktivasi view
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `TR2`
 - **Trace:** `RENDER-2`, `RENDER-3`, `RENDER-5`
@@ -102,10 +103,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Crossfade tetap terlihat.
   - Tidak ada regresi visual pada tiga tier.
 - **Risiko:** Tinggi; test per tier dan per state media/charging/prayer.
+- **Catatan verifikasi:** `active` diteruskan dari `MainWindow` ke ketiga view dan slot; timer pet, charging, alert, star field, dan orb prayer digate dengan `active && render-animations`. `running: root.is-hovered || true` dihapus. Crossfade dan durasi animasi tidak diubah. Kompilasi Slint dan `cargo test --workspace` lulus 133 test; validasi visual interaktif KDE belum dijalankan otomatis.
 
 ## TR5 — Gate spectrum dan update UI hidden
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `TR2`
 - **Trace:** `RENDER-6`, `RENDER-7`
@@ -121,10 +123,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Compact/Wide non-media tidak memperbarui spectrum.
   - Media playing di Compact/Expand tetap menampilkan spectrum.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `ViewModel` hanya menulis `b0..b7` saat `render_spectrum`; runtime memproses `SpectrumUpdated` lewat jalur khusus tanpa full state sync dan hanya mengirim update UI saat flag aktif. Bar di-zero satu kali saat awal non-spectrum dan saat transisi aktif → nonaktif. `CavaVisualizer` diberi `active` agar salinan visualizer di tier nonaktif tidak beranimasi. `cargo test --workspace` lulus 133 test.
 
 ## TR6 — Instrumentasi dan pengukuran render
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P2
 - **Dependency:** `TR3`, `TR4`, `TR5`
 - **Trace:** `RENDER-8`
@@ -139,3 +142,4 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Hidden menunjukkan tick/redraw mendekati nol.
   - Tidak ada logging berlebihan di level `info`.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** `render_stats.rs` menambahkan counter atomik untuk pet tick, pet redraw, dan UI sync; runtime mencatat rate setiap 30 detik di level `debug` sebagai `render activity`. Baseline audit PRD: tick/redraw pet hidden ~30 FPS dan beberapa timer Slint aktif. Hasil jalur kode setelah perubahan: timer pet hidden 0 tick/redraw, spectrum UI hidden 0 write, timer animasi tier nonaktif berhenti; pet visible tetap memakai `FRAME_INTERVAL` 33 ms (~30 FPS). Pengukuran interaktif KDE untuk semua state belum dijalankan otomatis; counter siap dibaca dari log `RUST_LOG=island_app=debug`. Test `rates_use_counter_deltas` lulus; total 133 test.

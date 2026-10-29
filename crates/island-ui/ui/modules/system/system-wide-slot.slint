@@ -6,6 +6,7 @@ import { Clock } from "../../components/clock.slint";
 import { ChargingIndicator } from "../../components/charging-indicator.slint";
 
 export component SystemWideSlot inherits Rectangle {
+    in property <bool> active: true;
     out property <bool> is-hovered: false;
 
     property <length> margin-x: max(12px, min(24px, ThemeMetrics.wide-width * 0.04));
@@ -25,6 +26,7 @@ export component SystemWideSlot inherits Rectangle {
         VerticalLayout {
             alignment: center;
             PetView {
+                active: root.active;
                 pet-size: root.content-h;
             }
         }
@@ -42,6 +44,7 @@ export component SystemWideSlot inherits Rectangle {
         VerticalLayout {
             alignment: center;
             ChargingIndicator {
+                active: root.active;
                 percentage: IslandContext.battery-percentage;
                 is-charging: IslandContext.is-charging;
                 compact: false;

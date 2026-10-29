@@ -96,15 +96,25 @@ impl ViewModel {
             .collect();
         ctx.set_player_sources(slint::ModelRc::new(slint::VecModel::from(items)));
 
-        // Spectrum bars
-        ctx.set_b0(state.spectrum.bars[0]);
-        ctx.set_b1(state.spectrum.bars[1]);
-        ctx.set_b2(state.spectrum.bars[2]);
-        ctx.set_b3(state.spectrum.bars[3]);
-        ctx.set_b4(state.spectrum.bars[4]);
-        ctx.set_b5(state.spectrum.bars[5]);
-        ctx.set_b6(state.spectrum.bars[6]);
-        ctx.set_b7(state.spectrum.bars[7]);
+        if policy.spectrum {
+            Self::sync_spectrum_to_ui(window, &state.spectrum.bars);
+        }
+    }
+
+    pub fn sync_spectrum_to_ui(window: &MainWindow, bars: &[f32; 8]) {
+        let ctx = window.global::<IslandContext>();
+        ctx.set_b0(bars[0]);
+        ctx.set_b1(bars[1]);
+        ctx.set_b2(bars[2]);
+        ctx.set_b3(bars[3]);
+        ctx.set_b4(bars[4]);
+        ctx.set_b5(bars[5]);
+        ctx.set_b6(bars[6]);
+        ctx.set_b7(bars[7]);
+    }
+
+    pub fn clear_spectrum_to_ui(window: &MainWindow) {
+        Self::sync_spectrum_to_ui(window, &[0.0; 8]);
     }
 
     pub fn sync_settings_to_ui(settings: &SettingsWindow, state: &AppState) {

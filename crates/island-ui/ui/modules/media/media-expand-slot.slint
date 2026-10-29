@@ -8,6 +8,7 @@ import { PlaybackControls } from "../../components/playback-controls.slint";
 import { CavaVisualizer } from "../../components/cava-visualizer.slint";
 
 export component MediaExpandSlot inherits Rectangle {
+    in property <bool> active: true;
     out property <bool> is-hovered: controls.is-hovered || art-touch.has-hover;
 
     // Available slot height inside expand container (excluding header and paddings)
@@ -52,6 +53,7 @@ export component MediaExpandSlot inherits Rectangle {
                     if IslandContext.music-visual-mode == 1: VerticalLayout {
                         alignment: center;
                         PetView {
+                            active: root.active;
                             pet-size: root.art-dim;
                         }
                     }
@@ -101,6 +103,7 @@ export component MediaExpandSlot inherits Rectangle {
                     height: max(10px, min(18px, root.slot-h * 0.22));
 
                     CavaVisualizer {
+                        active: root.active && IslandContext.render-spectrum;
                         b0: IslandContext.b0;
                         b1: IslandContext.b1;
                         b2: IslandContext.b2;

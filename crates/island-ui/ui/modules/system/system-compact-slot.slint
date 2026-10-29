@@ -4,6 +4,8 @@ import { Clock } from "../../components/clock.slint";
 import { ChargingIndicator } from "../../components/charging-indicator.slint";
 
 export component SystemCompactSlot inherits HorizontalLayout {
+    in property <bool> active: true;
+
     width: 100%;
     height: 100%;
     padding-left: 10px;
@@ -14,6 +16,7 @@ export component SystemCompactSlot inherits HorizontalLayout {
     VerticalLayout {
         alignment: center;
         PetView {
+            active: root.active;
             pet-size: 30px;
         }
     }
@@ -32,6 +35,7 @@ export component SystemCompactSlot inherits HorizontalLayout {
     VerticalLayout {
         alignment: center;
         ChargingIndicator {
+            active: root.active;
             percentage: IslandContext.battery-percentage;
             is-charging: IslandContext.is-charging;
             compact: true;

@@ -15,6 +15,7 @@ component CavaBar inherits Rectangle {
 }
 
 export component CavaVisualizer inherits HorizontalLayout {
+    in property <bool> active: true;
     in property <float> b0: 0.2;
     in property <float> b1: 0.5;
     in property <float> b2: 0.8;
@@ -29,12 +30,12 @@ export component CavaVisualizer inherits HorizontalLayout {
     alignment: center;
     height: root.viz-height;
 
-    CavaBar { val: root.b0; max-h: root.viz-height; }
-    CavaBar { val: root.b1; max-h: root.viz-height; }
-    CavaBar { val: root.b2; max-h: root.viz-height; }
-    CavaBar { val: root.b3; max-h: root.viz-height; }
-    CavaBar { val: root.b4; max-h: root.viz-height; }
-    CavaBar { val: root.b5; max-h: root.viz-height; }
-    CavaBar { val: root.b6; max-h: root.viz-height; }
-    CavaBar { val: root.b7; max-h: root.viz-height; }
+    CavaBar { val: root.active ? root.b0 : 0.0; max-h: root.viz-height; }
+    CavaBar { val: root.active ? root.b1 : 0.0; max-h: root.viz-height; }
+    CavaBar { val: root.active ? root.b2 : 0.0; max-h: root.viz-height; }
+    CavaBar { val: root.active ? root.b3 : 0.0; max-h: root.viz-height; }
+    CavaBar { val: root.active ? root.b4 : 0.0; max-h: root.viz-height; }
+    CavaBar { val: root.active ? root.b5 : 0.0; max-h: root.viz-height; }
+    CavaBar { val: root.active ? root.b6 : 0.0; max-h: root.viz-height; }
+    CavaBar { val: root.active ? root.b7 : 0.0; max-h: root.viz-height; }
 }

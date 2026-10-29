@@ -9,6 +9,7 @@ use island_pet3d::{
     BloubEngine, BloubFrame, BloubPalette, BloubRenderer, ExpressionId, ShapeId, StateId,
 };
 use island_ui::{IslandContext, MainWindow, SettingsWindow};
+use crate::render_stats::RenderStats;
 use slint::{ComponentHandle, GraphicsAPI, RenderingState};
 use tracing::{debug, info, warn};
 
@@ -175,6 +176,7 @@ pub struct Pet3dInner {
     timing: Mutex<Pet3dTiming>,
     engine: Mutex<BloubEngine>,
     renderer: Mutex<Option<BloubRenderer>>,
+    render_active: AtomicBool,
     preview: bool,
 }
 
@@ -210,8 +212,17 @@ impl Pet3dInner {
             }),
             engine: Mutex::new(BloubEngine::new()),
             renderer: Mutex::new(None),
+            render_active: AtomicBool::new(true),
             preview,
         }
+    }
+
+    pub fn set_render_active(&self, active: bool) {
+        self.render_active.store(active, Ordering::Relaxed);
+    }
+
+    pub fn is_render_active(&self) -> bool {
+        self.render_active.load(Ordering::Relaxed)
     }
 
     pub fn update_from_state(&self, app_state: &AppState) {
@@ -288,6 +299,10 @@ impl Pet3dInner {
     }
 
     pub fn tick(&self) -> TickResult {
+        if !self.is_render_active() {
+            return TickResult { dirty: false };
+        }
+
         let now = Instant::now();
         let mut input = *self.input.lock().unwrap();
         let mut timing = self.timing.lock().unwrap();
@@ -523,17 +538,19 @@ pub fn install_settings(window: &SettingsWindow) -> Arc<Pet3dInner> {
 pub fn start_timer(
     inner: Arc<Pet3dInner>,
     window: slint::Weak<MainWindow>,
-    render_active: Arc<AtomicBool>,
+    stats: Arc<RenderStats>,
 ) -> Rc<slint::Timer> {
     let timer = Rc::new(slint::Timer::default());
     timer.start(slint::TimerMode::Repeated, FRAME_INTERVAL, move || {
-        if !render_active.load(Ordering::Relaxed) {
+        if !inner.is_render_active() {
             return;
         }
+        stats.pet_tick();
         let result = inner.tick();
         if result.dirty
             && let Some(win) = window.upgrade()
         {
+            stats.pet_redraw();
             win.window().request_redraw();
         }
     });
@@ -620,6 +637,38 @@ mod tests {
             input.pet_happy_generation = generation as u64;
             assert_eq!(resolve_state(&input), state);
         }
+    }
+
+    #[test]
+    fn hidden_does_not_tick() {
+        let inner = Pet3dInner::new();
+        inner.set_render_active(false);
+
+        let result = inner.tick();
+
+        assert!(!result.dirty);
+        assert!(inner.shared.lock().unwrap().frame.is_none());
+    }
+
+    #[test]
+    fn visible_tick_is_dirty() {
+        let inner = Pet3dInner::new();
+
+        let result = inner.tick();
+
+        assert!(result.dirty);
+        assert!(inner.shared.lock().unwrap().frame.is_some());
+    }
+
+    #[test]
+    fn reactivation_ticks_after_inactive_gap() {
+        let inner = Pet3dInner::new();
+        inner.set_render_active(false);
+        assert!(!inner.tick().dirty);
+
+        inner.set_render_active(true);
+
+        assert!(inner.tick().dirty);
     }
 
     #[test]

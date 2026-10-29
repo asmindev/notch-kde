@@ -5,6 +5,7 @@ import { Icons } from "../../theme/icons.slint";
 import { IslandContext } from "../../context.slint";
 
 export component PrayerWideSlot inherits Rectangle {
+    in property <bool> active: true;
     out property <bool> is-hovered: false;
 
     property <length> margin-x: max(12px, min(24px, ThemeMetrics.wide-width * 0.04));

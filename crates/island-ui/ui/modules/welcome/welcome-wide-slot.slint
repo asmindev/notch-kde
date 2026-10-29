@@ -6,6 +6,8 @@ import { IslandContext } from "../../context.slint";
 import { PetView } from "../../components/pet-view.slint";
 
 export component WelcomeWideSlot inherits Rectangle {
+    in property <bool> active: true;
+
     width: 100%;
     height: 100%;
 
@@ -23,6 +25,7 @@ export component WelcomeWideSlot inherits Rectangle {
         VerticalLayout {
             alignment: center;
             PetView {
+                active: root.active;
                 pet-size: root.content-h;
             }
         }

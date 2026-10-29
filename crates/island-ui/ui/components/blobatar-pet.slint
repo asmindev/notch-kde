@@ -137,6 +137,7 @@ component BlobatarEye inherits Rectangle {
 }
 
 export component BlobatarPet inherits Rectangle {
+    in property <bool> active: true;
     in property <length> pet-size: 38px;
     out property <bool> is-hovered: touch.has-hover;
 
@@ -196,7 +197,7 @@ export component BlobatarPet inherits Rectangle {
     property <bool> is-blinking: false;
     blink-timer := Timer {
         interval: 3200ms;
-        running: root.active-expression == 0;
+        running: root.active && IslandContext.render-animations && root.active-expression == 0;
         triggered => {
             root.is-blinking = true;
             blink-close-timer.running = true;
@@ -215,7 +216,7 @@ export component BlobatarPet inherits Rectangle {
     property <bool> breath-phase: false;
     breath-timer := Timer {
         interval: root.is-sleepy ? 2800ms : 1800ms;
-        running: true;
+        running: root.active && IslandContext.render-animations;
         triggered => {
             root.breath-phase = !root.breath-phase;
         }
@@ -225,7 +226,7 @@ export component BlobatarPet inherits Rectangle {
     property <bool> shake-phase: false;
     shake-timer := Timer {
         interval: 95ms;
-        running: root.is-dizzy || root.active-expression == 4;
+        running: root.active && IslandContext.render-animations && (root.is-dizzy || root.active-expression == 4);
         triggered => {
             root.shake-phase = !root.shake-phase;
         }
