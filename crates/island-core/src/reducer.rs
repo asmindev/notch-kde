@@ -289,7 +289,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.show_source_selector = !state.show_source_selector;
             if state.show_source_selector {
                 state.prayer_panel_open = false;
-                state.active_module = crate::models::ActiveModule::Media;
+                state.active_module = crate::models::ActiveModule::Media.into();
             }
         }
 
@@ -533,7 +533,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
         }
 
         AppEvent::ModuleSwitchRequested(module) => {
-            state.engine.active_module = module;
+            state.engine.active_module = module.into();
             state.sync_engine();
         }
 

@@ -57,7 +57,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T1.3 — Migrasikan empat module ke descriptor
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `T1.2`
 - **Trace:** `MOD-2`
@@ -69,6 +69,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Perilaku priority identik dengan baseline.
   - `ModuleTiers` berasal dari descriptor.
 - **Risiko:** Sedang; jaga test priority.
+- **Catatan verifikasi:** Kontrak module sekarang memakai `descriptor()` + `priority()`. System, Media, Alert, dan Prayer memiliki descriptor lengkap; `ModuleTiers` dan `Priority` dipakai dari descriptor. `ViewEngine` dan `AppState` menyimpan `ModuleId` canonical, sementara enum `ActiveModule` dipertahankan untuk event dan kompatibilitas test lewat konversi/`PartialEq`. Test descriptor, priority per module, dan seluruh suite lulus 140 test.
 
 ## T1.4 — Buat `ModuleUiRegistry` di `island-ui`
 

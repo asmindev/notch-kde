@@ -1,4 +1,5 @@
-use crate::models::{ActiveModule, AlertKind, IslandView, MusicVisualMode};
+use crate::models::{AlertKind, IslandView, MusicVisualMode};
+use crate::module::ModuleId;
 use crate::state::AppState;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,10 +37,12 @@ fn active_slot_uses_pet(state: &AppState) -> bool {
 }
 
 fn compact_slot_uses_pet(state: &AppState) -> bool {
-    match state.active_module {
-        ActiveModule::System | ActiveModule::Media => true,
-        ActiveModule::Alert => state.alert_kind == AlertKind::Charging,
-        ActiveModule::Prayer => false,
+    if state.active_module == ModuleId::SYSTEM || state.active_module == ModuleId::MEDIA {
+        true
+    } else if state.active_module == ModuleId::ALERT {
+        state.alert_kind == AlertKind::Charging
+    } else {
+        false
     }
 }
 
@@ -51,25 +54,32 @@ fn wide_slot_uses_pet(state: &AppState) -> bool {
         return false;
     }
 
-    match state.active_module {
-        ActiveModule::System => true,
-        ActiveModule::Media if state.media.is_playing => {
+    if state.active_module == ModuleId::SYSTEM {
+        true
+    } else if state.active_module == ModuleId::MEDIA {
+        if state.media.is_playing {
             state.music_visual_mode == MusicVisualMode::PetPrimary
+        } else {
+            true
         }
-        ActiveModule::Media => true,
-        ActiveModule::Alert => state.alert_kind == AlertKind::Charging,
-        ActiveModule::Prayer => false,
+    } else if state.active_module == ModuleId::ALERT {
+        state.alert_kind == AlertKind::Charging
+    } else {
+        false
     }
 }
 
 fn expand_slot_uses_pet(state: &AppState) -> bool {
-    match state.active_module {
-        ActiveModule::System => true,
-        ActiveModule::Media if state.media.is_playing || state.show_source_selector => {
+    if state.active_module == ModuleId::SYSTEM {
+        true
+    } else if state.active_module == ModuleId::MEDIA {
+        if state.media.is_playing || state.show_source_selector {
             state.music_visual_mode == MusicVisualMode::PetPrimary
+        } else {
+            true
         }
-        ActiveModule::Media => true,
-        ActiveModule::Alert | ActiveModule::Prayer => false,
+    } else {
+        false
     }
 }
 
@@ -79,7 +89,7 @@ fn active_slot_uses_spectrum(state: &AppState) -> bool {
     }
 
     match state.mode {
-        IslandView::Compact | IslandView::Expand => state.active_module == ActiveModule::Media,
+        IslandView::Compact | IslandView::Expand => state.active_module == ModuleId::MEDIA,
         IslandView::Wide => false,
     }
 }
@@ -87,13 +97,14 @@ fn active_slot_uses_spectrum(state: &AppState) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::ActiveModule;
 
-    fn visible_state(mode: IslandView, module: ActiveModule) -> AppState {
+    fn visible_state(mode: IslandView, module: impl Into<ModuleId>) -> AppState {
         AppState {
             is_visible: true,
             is_welcome: false,
             mode,
-            active_module: module,
+            active_module: module.into(),
             ..AppState::default()
         }
     }
@@ -203,7 +214,7 @@ mod tests {
         assert_eq!(render_policy(&state), policy(true, false));
 
         state.is_welcome = false;
-        state.active_module = ActiveModule::Media;
+        state.active_module = ActiveModule::Media.into();
         state.media.is_playing = true;
         state.show_source_selector = true;
         assert_eq!(render_policy(&state), policy(false, false));

@@ -19,11 +19,11 @@ impl ViewModel {
         ctx.set_render_spectrum(policy.spectrum);
         ctx.set_render_animations(policy.animations);
         ctx.set_active_mode(ContentRouter::mode_to_index(state.mode));
-        ctx.set_active_module(match state.active_module {
-            ActiveModule::System => 0,
-            ActiveModule::Media => 1,
-            ActiveModule::Alert => 2,
-            ActiveModule::Prayer => 3,
+        ctx.set_active_module(match state.active_module.active_module() {
+            Some(ActiveModule::Media) => 1,
+            Some(ActiveModule::Alert) => 2,
+            Some(ActiveModule::Prayer) => 3,
+            Some(ActiveModule::System) | None => 0,
         });
         ctx.set_alert_kind(state.alert_kind as i32);
         ctx.set_is_visible_state(state.is_visible);

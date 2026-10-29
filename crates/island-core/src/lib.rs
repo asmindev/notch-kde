@@ -12,7 +12,9 @@ pub mod view_engine;
 
 pub use events::{AppEvent, Effect};
 pub use models::{ActiveModule, AudioSpectrum, BatteryState, IslandMode, IslandView, MediaTrack, TimeInfo};
-pub use module::{ModuleDescriptor, ModuleId, UnknownModuleId};
+pub use module::{
+    IslandModule, ModuleDescriptor, ModuleId, ModuleTiers, Priority, SlotContext, UnknownModuleId,
+};
 pub use module_registry::{DuplicateModuleId, ModuleRegistry};
 pub use prayer::{Prayer, PrayerAlert, PrayerSettings};
 pub use reducer::reduce;
@@ -22,4 +24,4 @@ pub use settings::{
 };
 pub use state::AppState;
 pub use transition_policy::TransitionPolicy;
-pub use view_engine::{IslandModule, ModuleTiers, ViewEngine};
+pub use view_engine::ViewEngine;

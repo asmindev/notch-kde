@@ -1,7 +1,8 @@
 use crate::models::{
-    ActiveModule, AlertKind, AudioSpectrum, BatteryState, IslandView, MediaSource, MediaTrack,
+    AlertKind, AudioSpectrum, BatteryState, IslandView, MediaSource, MediaTrack,
     MusicVisualMode, TimeInfo,
 };
+use crate::module::ModuleId;
 use crate::prayer::{PrayerAlert, PrayerSettings};
 use crate::settings::{PetBehaviorSettings, SettingsTab, ShadowSettings};
 use crate::view_engine::{SlotContext, ViewEngine};
@@ -23,7 +24,7 @@ pub struct AppState {
     pub engine: ViewEngine,
     pub mode: IslandView,
     pub previous_mode: IslandView,
-    pub active_module: ActiveModule,
+    pub active_module: ModuleId,
     pub is_visible: bool,
     pub is_overlapping: bool,
     pub is_hovered: bool,

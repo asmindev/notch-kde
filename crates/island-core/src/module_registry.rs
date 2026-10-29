@@ -1,7 +1,5 @@
 use crate::module::ModuleId;
-use crate::view_engine::{
-    AlertModule, IslandModule, MediaModule, PrayerModule, SystemModule,
-};
+use crate::module::{AlertModule, IslandModule, MediaModule, PrayerModule, SystemModule};
 use std::fmt;
 use std::sync::Arc;
 
@@ -35,11 +33,8 @@ impl ModuleRegistry {
         registry
     }
 
-    pub fn register(
-        &mut self,
-        module: Arc<dyn IslandModule>,
-    ) -> Result<(), DuplicateModuleId> {
-        let id = ModuleId::new(module.id());
+    pub fn register(&mut self, module: Arc<dyn IslandModule>) -> Result<(), DuplicateModuleId> {
+        let id = module.descriptor().id;
         if self.get(id).is_some() {
             return Err(DuplicateModuleId(id));
         }
@@ -50,7 +45,7 @@ impl ModuleRegistry {
     pub fn get(&self, id: ModuleId) -> Option<&Arc<dyn IslandModule>> {
         self.modules
             .iter()
-            .find(|module| module.id() == id.as_str())
+            .find(|module| module.descriptor().id == id)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &Arc<dyn IslandModule>> {
@@ -69,8 +64,7 @@ impl ModuleRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::ActiveModule;
-    use crate::view_engine::{ModuleTiers, Priority, SlotContext};
+    use crate::module::{ModuleTiers, Priority, SlotContext};
 
     #[derive(Debug)]
     struct DummyModule {
@@ -78,20 +72,13 @@ mod tests {
     }
 
     impl IslandModule for DummyModule {
-        fn id(&self) -> &'static str {
-            self.id
-        }
-
-        fn name(&self) -> &'static str {
-            "Dummy"
-        }
-
-        fn module_type(&self) -> ActiveModule {
-            ActiveModule::System
-        }
-
-        fn tiers(&self) -> ModuleTiers {
-            ModuleTiers::ALL
+        fn descriptor(&self) -> crate::module::ModuleDescriptor {
+            crate::module::ModuleDescriptor {
+                id: ModuleId::new(self.id),
+                name: "Dummy",
+                tiers: ModuleTiers::ALL,
+                default_priority: Priority::INACTIVE,
+            }
         }
 
         fn priority(&self, _ctx: &SlotContext) -> Priority {
@@ -124,15 +111,28 @@ mod tests {
             .register(Arc::new(DummyModule { id: "second" }))
             .expect("register second");
 
-        assert_eq!(registry.get(ModuleId::new("second")).map(|m| m.id()), Some("second"));
-        assert_eq!(registry.get(ModuleId::new("first")).map(|m| m.id()), Some("first"));
+        assert_eq!(
+            registry
+                .get(ModuleId::new("second"))
+                .map(|m| m.descriptor().id),
+            Some(ModuleId::new("second"))
+        );
+        assert_eq!(
+            registry
+                .get(ModuleId::new("first"))
+                .map(|m| m.descriptor().id),
+            Some(ModuleId::new("first"))
+        );
         assert!(registry.get(ModuleId::new("missing")).is_none());
     }
 
     #[test]
     fn default_registry_order_is_deterministic() {
         let registry = ModuleRegistry::with_defaults();
-        let ids: Vec<&str> = registry.iter().map(|module| module.id()).collect();
+        let ids: Vec<&str> = registry
+            .iter()
+            .map(|module| module.descriptor().id.as_str())
+            .collect();
 
         assert_eq!(ids, ["system", "media", "alert", "prayer"]);
     }

@@ -1,142 +1,10 @@
-use crate::models::{ActiveModule, AlertKind, BatteryState, IslandView, MediaTrack, TimeInfo};
+use crate::models::IslandView;
+use crate::module::ModuleId;
+pub use crate::module::{IslandModule, ModuleTiers, Priority, SlotContext};
 use crate::module_registry::{DuplicateModuleId, ModuleRegistry};
 use crate::transition_policy::TransitionPolicy;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// Priority representation for slot arbitration.
-/// Higher value = higher priority.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct Priority(pub u32);
-
-impl Priority {
-    pub const INACTIVE: Self = Self(0);
-    pub const LOW: Self = Self(10);       // System / Idle default
-    pub const NORMAL: Self = Self(50);    // Paused media / background status
-    pub const HIGH: Self = Self(100);     // Active media playback / running timer
-    pub const PANEL: Self = Self(150);    // User-selected panel such as prayer times
-    pub const URGENT: Self = Self(200);   // Important alerts / incoming notifications
-    pub const CRITICAL: Self = Self(300); // Critical battery (<10%) / emergency alerts
-}
-
-/// Lightweight snapshot of state passed into modules to evaluate priority.
-#[derive(Debug, Clone, PartialEq)]
-pub struct SlotContext<'a> {
-    pub time: &'a TimeInfo,
-    pub battery: &'a BatteryState,
-    pub media: &'a MediaTrack,
-    pub view: IslandView,
-    pub is_muted: bool,
-    pub is_dnd: bool,
-    pub alert_kind: AlertKind,
-    pub prayer_panel_open: bool,
-}
-
-/// Defines which view tiers a module can render into.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ModuleTiers {
-    pub compact: bool,
-    pub wide: bool,
-    pub expand: bool,
-}
-
-impl ModuleTiers {
-    pub const ALL: Self = Self { compact: true, wide: true, expand: true };
-    pub const COMPACT_WIDE: Self = Self { compact: true, wide: true, expand: false };
-    pub const WIDE_ONLY: Self = Self { compact: false, wide: true, expand: false };
-    pub const WIDE_EXPAND: Self = Self { compact: false, wide: true, expand: true };
-
-    pub fn supports(&self, view: IslandView) -> bool {
-        match view {
-            IslandView::Compact => self.compact,
-            IslandView::Wide => self.wide,
-            IslandView::Expand => self.expand,
-        }
-    }
-}
-
-/// Trait defining modular content behavior for Dynamic Island slots.
-pub trait IslandModule: std::fmt::Debug + Send + Sync {
-    fn id(&self) -> &'static str;
-    fn name(&self) -> &'static str;
-    fn module_type(&self) -> ActiveModule;
-    fn tiers(&self) -> ModuleTiers;
-    fn priority(&self, ctx: &SlotContext) -> Priority;
-}
-
-/// Concrete System Module (Clock, Battery, Controls - Supports all 3 tiers)
-#[derive(Debug, Default)]
-pub struct SystemModule;
-
-impl IslandModule for SystemModule {
-    fn id(&self) -> &'static str { "system" }
-    fn name(&self) -> &'static str { "System Overview" }
-    fn module_type(&self) -> ActiveModule { ActiveModule::System }
-    fn tiers(&self) -> ModuleTiers { ModuleTiers::ALL }
-    fn priority(&self, ctx: &SlotContext) -> Priority {
-        if ctx.battery.percentage <= 10 && !ctx.battery.is_charging {
-            Priority::CRITICAL
-        } else {
-            Priority::LOW
-        }
-    }
-}
-
-/// Concrete Media Module (Supports all 3 tiers: Compact, Wide, Expand)
-#[derive(Debug, Default)]
-pub struct MediaModule;
-
-impl IslandModule for MediaModule {
-    fn id(&self) -> &'static str { "media" }
-    fn name(&self) -> &'static str { "Now Playing" }
-    fn module_type(&self) -> ActiveModule { ActiveModule::Media }
-    fn tiers(&self) -> ModuleTiers { ModuleTiers::ALL }
-    fn priority(&self, ctx: &SlotContext) -> Priority {
-        if ctx.media.is_playing {
-            Priority::HIGH
-        } else if ctx.view == IslandView::Compact && !ctx.media.title.is_empty() {
-            Priority::NORMAL
-        } else {
-            Priority::INACTIVE
-        }
-    }
-}
-
-/// Concrete Prayer Module (User-selected schedule panel - Supports Wide/Expand)
-#[derive(Debug, Default)]
-pub struct PrayerModule;
-
-impl IslandModule for PrayerModule {
-    fn id(&self) -> &'static str { "prayer" }
-    fn name(&self) -> &'static str { "Jadwal Sholat" }
-    fn module_type(&self) -> ActiveModule { ActiveModule::Prayer }
-    fn tiers(&self) -> ModuleTiers { ModuleTiers::WIDE_EXPAND }
-    fn priority(&self, ctx: &SlotContext) -> Priority {
-        if ctx.prayer_panel_open {
-            Priority::PANEL
-        } else {
-            Priority::INACTIVE
-        }
-    }
-}
-
-/// Concrete Alert Module (Temporary notification - Supports Wide tier)
-#[derive(Debug, Default)]
-pub struct AlertModule;
-
-impl IslandModule for AlertModule {
-    fn id(&self) -> &'static str { "alert" }
-    fn name(&self) -> &'static str { "Notification" }
-    fn module_type(&self) -> ActiveModule { ActiveModule::Alert }
-    fn tiers(&self) -> ModuleTiers { ModuleTiers::ALL }
-    fn priority(&self, ctx: &SlotContext) -> Priority {
-        if ctx.alert_kind != AlertKind::None {
-            Priority::URGENT
-        } else {
-            Priority::INACTIVE
-        }
-    }
-}
 
 /// ViewEngine manages the 3-tier view state machine and dodge sequencing
 /// through clean composition of modules and priority resolution.
@@ -144,7 +12,7 @@ impl IslandModule for AlertModule {
 pub struct ViewEngine {
     pub current_view: IslandView,
     pub previous_view: IslandView,
-    pub active_module: ActiveModule,
+    pub active_module: ModuleId,
     pub is_visible: bool,
     pub is_overlapping: bool,
     pub is_hovered: bool,
@@ -183,7 +51,7 @@ impl ViewEngine {
         Self {
             current_view: IslandView::Wide,
             previous_view: IslandView::Wide,
-            active_module: ActiveModule::System,
+            active_module: ModuleId::SYSTEM,
             is_visible: true,
             is_overlapping: false,
             is_hovered: false,
@@ -211,15 +79,15 @@ impl ViewEngine {
         let best_module = self
             .modules
             .iter()
-            .filter(|m| m.tiers().supports(self.current_view))
+            .filter(|m| m.descriptor().tiers.supports(self.current_view))
             .max_by_key(|m| m.priority(ctx));
 
         if let Some(module) = best_module {
-            // Only switch if the best module has an active priority
+            let descriptor = module.descriptor();
             if module.priority(ctx) > Priority::INACTIVE {
-                self.active_module = module.module_type();
+                self.active_module = descriptor.id;
             } else {
-                self.active_module = ActiveModule::System;
+                self.active_module = ModuleId::SYSTEM;
             }
         }
     }
@@ -394,11 +262,11 @@ impl ViewEngine {
     }
 
     /// Returns tier capabilities for any given module
-    pub fn module_tiers(&self, module: ActiveModule) -> ModuleTiers {
+    pub fn module_tiers(&self, module: ModuleId) -> ModuleTiers {
         self.modules
             .iter()
-            .find(|m| m.module_type() == module)
-            .map(|m| m.tiers())
+            .find(|m| m.descriptor().id == module)
+            .map(|m| m.descriptor().tiers)
             .unwrap_or(ModuleTiers::ALL)
     }
 }
