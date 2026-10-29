@@ -23,7 +23,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## TR1 — Tambah `RenderPolicy` murni
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `T0.4`
 - **Trace:** `RENDER-1`
@@ -41,10 +41,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Hidden selalu menghasilkan `pet_3d = false`, `spectrum = false`, `animations = false`.
   - Compact/Wide/Expand menghasilkan policy yang berbeda sesuai slot.
 - **Risiko:** Sedang; jangan membuat aturan konten baru di policy. Policy hanya aktivitas render.
+- **Catatan verifikasi:** `RenderPolicy` dan `render_policy(&AppState)` ditambahkan di `crates/island-core/src/render_policy.rs` dan diekspor dari `lib.rs`. Delapan unit test mencakup hidden, Compact/Wide/Expand, media playing/paused, PetPrimary/ArtworkPrimary, alert charging, prayer, welcome, dan source selector. `cargo test --workspace` lulus 129 test; `cargo clippy -p island-core --all-targets` tidak menambah warning baru.
 
 ## TR2 — Wire `RenderPolicy` ke context dan runtime
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `TR1`
 - **Trace:** `RENDER-1`, `RENDER-2`, `RENDER-7`
@@ -60,6 +61,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Runtime dapat membaca policy untuk pet, spectrum, dan timer.
   - Wiring tidak mengubah perilaku visual.
 - **Risiko:** Rendah–sedang.
+- **Catatan verifikasi:** Empat flag read-only ditambahkan ke `IslandContext` dan diisi dari `ViewModel::sync_state_to_ui` memakai `RenderPolicy`. Runtime menghitung policy setelah reduksi, menyimpan status aktif pet di `AtomicBool`, menggate tick/redraw pet dan timer 30 FPS, serta memakai policy yang sama untuk sinkronisasi UI. Gate penulisan bar spectrum dan zero-once tetap menjadi scope `TR5`. `cargo test --workspace` lulus 129 test; `cargo clippy --workspace --all-targets` hanya menampilkan warning pre-existing.
 
 ## TR3 — Gate pet 3D dan perbaiki `dirty`
 

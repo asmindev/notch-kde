@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -522,9 +523,13 @@ pub fn install_settings(window: &SettingsWindow) -> Arc<Pet3dInner> {
 pub fn start_timer(
     inner: Arc<Pet3dInner>,
     window: slint::Weak<MainWindow>,
+    render_active: Arc<AtomicBool>,
 ) -> Rc<slint::Timer> {
     let timer = Rc::new(slint::Timer::default());
     timer.start(slint::TimerMode::Repeated, FRAME_INTERVAL, move || {
+        if !render_active.load(Ordering::Relaxed) {
+            return;
+        }
         let result = inner.tick();
         if result.dirty
             && let Some(win) = window.upgrade()

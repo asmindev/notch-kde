@@ -1,4 +1,6 @@
-use island_core::{reduce, AppEvent, AppState, Effect, PersistedSettings, SettingsTab};
+use island_core::{
+    AppEvent, AppState, Effect, PersistedSettings, SettingsTab, reduce, render_policy,
+};
 use island_platform::overlap::Rect;
 use island_platform::{KdeManager, OverlapDetector, PlatformWindow};
 use island_services::{
@@ -83,7 +85,8 @@ impl AppRuntime {
         let settings_window = SettingsWindow::new()?;
 
         // Sync initial state to UI
-        ViewModel::sync_state_to_ui(&self.window, &app_state);
+        let initial_policy = render_policy(&app_state);
+        ViewModel::sync_state_to_ui(&self.window, &app_state, initial_policy);
         ViewModel::sync_settings_to_ui(&settings_window, &app_state);
 
         let input_region = input_region::InputRegionHandle::spawn();
@@ -92,7 +95,10 @@ impl AppRuntime {
         // Install the offscreen Momo renderer before the window is shown.
         let pet3d = pet3d::install(&self.window);
         pet3d.update_from_state(&app_state);
-        pet3d.tick();
+        if initial_policy.pet_3d {
+            pet3d.tick();
+        }
+        let pet_render_active = Arc::new(std::sync::atomic::AtomicBool::new(initial_policy.pet_3d));
 
         // The Settings window has its own WGPU context, so it needs its own renderer.
         let settings_pet3d = pet3d::install_settings(&settings_window);
@@ -352,8 +358,12 @@ impl AppRuntime {
         });
 
         let pet3d_cursor = pet3d.clone();
+        let pet_render_active_cursor = pet_render_active.clone();
         let cursor_window = self.window.as_weak();
         ctx.on_cursor_moved(move |x, y| {
+            if !pet_render_active_cursor.load(std::sync::atomic::Ordering::Relaxed) {
+                return;
+            }
             pet3d_cursor.set_gaze(x, y);
             if pet3d_cursor.tick().dirty
                 && let Some(win) = cursor_window.upgrade()
@@ -545,6 +555,7 @@ impl AppRuntime {
         let window_weak_clone = window_weak.clone();
         let settings_weak_events = settings_window.as_weak();
         let pet3d_events = pet3d.clone();
+        let pet_render_active_events = pet_render_active.clone();
         let settings_pet3d_events = settings_pet3d.clone();
         let mut last_synced_state = app_state.clone();
         let mut last_settings_open = app_state.settings_open;
@@ -566,6 +577,9 @@ impl AppRuntime {
                     input_region_events.set_rect(input_rect);
                     last_input_rect = input_rect;
                 }
+
+                let policy = render_policy(&app_state);
+                pet_render_active_events.store(policy.pet_3d, std::sync::atomic::Ordering::Relaxed);
 
                 // Execute any side effects
                 for effect in effects {
@@ -690,9 +704,9 @@ impl AppRuntime {
                     let settings_pet3d = settings_pet3d_events.clone();
                     let _ = slint::invoke_from_event_loop(move || {
                         if let Some(win) = w.upgrade() {
-                            ViewModel::sync_state_to_ui(&win, &state_clone);
+                            ViewModel::sync_state_to_ui(&win, &state_clone, policy);
                             pet3d.update_from_state(&state_clone);
-                            if pet3d.tick().dirty {
+                            if policy.pet_3d && pet3d.tick().dirty {
                                 win.window().request_redraw();
                             }
                             if let Some(settings) = settings_w.upgrade() {
@@ -737,7 +751,8 @@ impl AppRuntime {
             initial_input_rect,
             20,
         );
-        let _pet3d_timer = pet3d::start_timer(pet3d.clone(), self.window.as_weak());
+        let _pet3d_timer =
+            pet3d::start_timer(pet3d.clone(), self.window.as_weak(), pet_render_active);
         let _settings_pet3d_timer =
             pet3d::start_settings_timer(settings_pet3d.clone(), settings_window.as_weak());
         self.window.run()

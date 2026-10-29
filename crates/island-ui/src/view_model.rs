@@ -4,15 +4,20 @@ use island_core::models::ActiveModule;
 use island_core::prayer::{
     moment_for, sky_for, times_for, Prayer, PrayerPhase, PrayerTimes, SkyState, CITIES,
 };
+use island_core::render_policy::RenderPolicy;
 use island_core::state::AppState;
 use slint::ComponentHandle;
 
 pub struct ViewModel;
 
 impl ViewModel {
-    pub fn sync_state_to_ui(window: &MainWindow, state: &AppState) {
+    pub fn sync_state_to_ui(window: &MainWindow, state: &AppState, policy: RenderPolicy) {
         let ctx = window.global::<IslandContext>();
 
+        ctx.set_render_main_visible(policy.main_visible);
+        ctx.set_render_pet(policy.pet_3d);
+        ctx.set_render_spectrum(policy.spectrum);
+        ctx.set_render_animations(policy.animations);
         ctx.set_active_mode(ContentRouter::mode_to_index(state.mode));
         ctx.set_active_module(match state.active_module {
             ActiveModule::System => 0,

@@ -180,6 +180,10 @@ export global IslandContext {
     in-out property <int> alert-kind: 0;           // 0=None, 1=Charging, 2=LowBattery, 3=Prayer
     in-out property <int> music-visual-mode: 0;    // 0=ArtworkPrimary (Art Left, Pet Right), 1=PetPrimary (Pet Left, Art Right)
     in-out property <bool> is-visible-state: true; // Shell docking visibility
+    in property <bool> render-main-visible: true;
+    in property <bool> render-pet: true;
+    in property <bool> render-spectrum: false;
+    in property <bool> render-animations: true;
     in-out property <int> mochi-mood: 0;           // 0=Idle, 1=Happy, 2=Annoyed, 3=Dizzy, 4=Dancing, 5=Sleeping
     in-out property <int> blob-character: 1;       // 0=Cercle, 1=Galet, 2=Squircle, 3=Capsule, 4=Triangle, 5=Hexagone, 6=Nuage, 7=Goutte
     in-out property <int> blob-palette: 0;         // 0=Clair, 1=Encre, 2..13=Bloub colors
