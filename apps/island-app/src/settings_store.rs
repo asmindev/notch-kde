@@ -1,31 +1,25 @@
-use island_core::PersistedSettings;
+use island_core::{PersistedSettings, migrate_settings_value};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub struct SettingsStore;
 
 impl SettingsStore {
-    pub fn config_path() -> Option<PathBuf> {
-        let base = std::env::var_os("XDG_CONFIG_HOME")
-            .filter(|value| !value.is_empty())
-            .map(PathBuf::from)
-            .or_else(|| {
-                std::env::var_os("HOME")
-                    .filter(|value| !value.is_empty())
-                    .map(|home| PathBuf::from(home).join(".config"))
-            })?;
-        Some(base.join("notchde").join("settings.json"))
-    }
-
-    pub fn load() -> PersistedSettings {
-        let Some(path) = Self::config_path() else {
-            return PersistedSettings::default();
-        };
+    pub fn load(path: &Path) -> PersistedSettings {
         if !path.exists() {
             return PersistedSettings::default();
         }
-        match Self::load_from(&path) {
-            Ok(settings) => settings,
+        match Self::load_versioned_from(path) {
+            Ok((settings, migrated)) => {
+                if migrated && let Err(error) = Self::save_to(path, &settings) {
+                    tracing::warn!(
+                        path = %path.display(),
+                        %error,
+                        "failed to persist migrated settings"
+                    );
+                }
+                settings
+            }
             Err(error) => {
                 tracing::warn!(path = %path.display(), %error, "using default settings");
                 PersistedSettings::default()
@@ -33,18 +27,21 @@ impl SettingsStore {
         }
     }
 
-    pub fn save(settings: &PersistedSettings) {
-        let Some(path) = Self::config_path() else {
-            return;
-        };
-        if let Err(error) = Self::save_to(&path, settings) {
+    pub fn save(path: &Path, settings: &PersistedSettings) {
+        if let Err(error) = Self::save_to(path, settings) {
             tracing::warn!(path = %path.display(), %error, "failed to save settings");
         }
     }
 
+    #[cfg(test)]
     pub fn load_from(path: &Path) -> Result<PersistedSettings, String> {
+        Self::load_versioned_from(path).map(|(settings, _)| settings)
+    }
+
+    pub fn load_versioned_from(path: &Path) -> Result<(PersistedSettings, bool), String> {
         let data = fs::read(path).map_err(|error| error.to_string())?;
-        serde_json::from_slice(&data).map_err(|error| error.to_string())
+        let value = serde_json::from_slice(&data).map_err(|error| error.to_string())?;
+        migrate_settings_value(value)
     }
 
     pub fn save_to(path: &Path, settings: &PersistedSettings) -> Result<(), String> {
@@ -62,7 +59,9 @@ impl SettingsStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use island_core::settings::SETTINGS_VERSION;
     use island_core::{AvatarSettings, PetBehaviorSettings, ShadowSettings};
+    use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT_ID: AtomicU64 = AtomicU64::new(0);
@@ -126,6 +125,35 @@ mod tests {
         fs::write(&path, br#"{"version":1}"#).expect("write partial settings");
 
         let loaded = SettingsStore::load_from(&path).expect("load partial settings");
+        assert_eq!(loaded, PersistedSettings::default());
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn load_persists_migrated_version() {
+        let path = temporary_path();
+        fs::write(&path, br#"{"shadow":{"intensity":80}}"#).expect("write legacy settings");
+
+        let (settings, migrated) =
+            SettingsStore::load_versioned_from(&path).expect("migrate settings");
+        assert!(migrated);
+        assert_eq!(settings.version, SETTINGS_VERSION);
+
+        SettingsStore::load(&path);
+        let data: serde_json::Value =
+            serde_json::from_slice(&fs::read(&path).expect("read migrated settings"))
+                .expect("parse migrated settings");
+        assert_eq!(data["version"], SETTINGS_VERSION);
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn unknown_future_version_falls_back() {
+        let path = temporary_path();
+        fs::write(&path, br#"{"version":999}"#).expect("write future settings");
+
+        let loaded = SettingsStore::load(&path);
+
         assert_eq!(loaded, PersistedSettings::default());
         let _ = fs::remove_file(path);
     }

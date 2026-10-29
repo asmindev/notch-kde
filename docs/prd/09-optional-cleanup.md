@@ -29,6 +29,16 @@ Kerjakan domain ini hanya jika salah satu kondisi berikut terpenuhi:
 - `is_welcome` muncul di lebih dari 3 tempat dengan logika berbeda.
 - Penambahan module keempat/kelima membutuhkan perubahan besar di luar registry.
 
+### 3.1 Hasil Evaluasi
+
+| Task | Keputusan | Alasan |
+|---|---|---|
+| `T8.1` | Diterapkan sebagai pemisahan terarah | Settings memakai settings, jadwal prayer, app version, dan preview pet. `sync_prayer_settings` hanya mengisi state prayer yang dipakai settings (tanpa panel/alert/orbit/sky); global terpisah tidak dibuat karena properti settings dipakai bersama main UI dan komponen. |
+| `T8.2` | Tidak dikerjakan | `DomainEvent` sudah terpisah di `island-services`; service hanya mengirim `DomainEvent` dan tidak mereferensikan `AppEvent`/`IslandContext`. Bridge app yang memetakan ke `AppEvent` sudah menjadi batas UI. |
+| `T8.3` | Dokumentasi keputusan | `Welcome` tetap `PresentationState`. Ini overlay Wide transien yang memengaruhi shell, slot, dan animasi pet; module baru akan menduplikasi `RenderPolicy` tanpa manfaat. |
+
+Hasil: satu perubahan kode terarah pada sinkronisasi settings; `T8.2` dan promosi Welcome tidak dikerjakan karena tidak ada manfaat bersih.
+
 ## 4. Acceptance Criteria
 
 - `OPT-1`: Settings window hanya menerima state yang dibutuhkan; tidak ada regresi settings.

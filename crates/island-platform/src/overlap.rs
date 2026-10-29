@@ -1,6 +1,6 @@
 use std::ffi::c_void;
-use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, error, info};
 
@@ -23,13 +23,7 @@ unsafe extern "C" {
     ) -> *mut c_void;
 
     fn dodge_run(ctx: *mut c_void);
-    fn dodge_update_notch(
-        ctx: *mut c_void,
-        notch_x: i32,
-        notch_y: i32,
-        notch_w: u32,
-        notch_h: u32,
-    );
+    fn dodge_update_notch(ctx: *mut c_void, notch_x: i32, notch_y: i32, notch_w: u32, notch_h: u32);
     fn dodge_stop(ctx: *mut c_void);
     fn dodge_destroy(ctx: *mut c_void);
 }
@@ -56,11 +50,9 @@ impl OverlapDetector {
         }
     }
 
-    pub fn start(&self, notch_rect: Rect, sender: UnboundedSender<bool>) {
-        if std::env::var("ISLAND_DODGE").as_deref() == Ok("0")
-            || std::env::var("PILL_DODGE").as_deref() == Ok("0")
-        {
-            info!("Dodge detection disabled via environment variable (ISLAND_DODGE=0)");
+    pub fn start(&self, notch_rect: Rect, sender: UnboundedSender<bool>, enabled: bool) {
+        if !enabled {
+            info!("Dodge detection disabled by configuration");
             return;
         }
 
@@ -115,13 +107,7 @@ impl OverlapDetector {
         let ptr = self.ctx_ptr.load(Ordering::SeqCst);
         if !ptr.is_null() {
             unsafe {
-                dodge_update_notch(
-                    ptr,
-                    notch_rect.x,
-                    notch_rect.y,
-                    notch_rect.w,
-                    notch_rect.h,
-                );
+                dodge_update_notch(ptr, notch_rect.x, notch_rect.y, notch_rect.w, notch_rect.h);
             }
         }
     }

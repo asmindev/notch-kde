@@ -14,7 +14,9 @@ Mengurangi pekerjaan UI yang tidak perlu tanpa mengubah perilaku visual. Fokus u
 
 Keputusan kapan render/pet/spectrum/timer boleh aktif dimiliki [`10-render-policy.md`](10-render-policy.md). Domain ini fokus pada cache, diff sync, dan validasi cakupan slot.
 
-## 2. Temuan Saat Ini
+## 2. Temuan dan Kondisi Setelah Implementasi
+
+Temuan sebelum implementasi:
 
 - `ViewModel::sync_state_to_ui` dipanggil pada setiap update runtime.
 - Album art dimuat ulang dari disk pada setiap sync, berpotensi setiap frame spectrum CAVA.
@@ -22,7 +24,17 @@ Keputusan kapan render/pet/spectrum/timer boleh aktif dimiliki [`10-render-polic
 - Model Slint dibangun ulang meskipun isinya sama.
 - Timer animasi di slot hidden dapat terus berjalan.
 
-Referensi: `crates/island-ui/src/view_model.rs:60-75`, `view_model.rs:168-223`, `apps/island-app/src/runtime.rs:684-709`, `crates/island-ui/ui/modules/alert/alert-compact-slot.slint:23-27`, `prayer-expand-slot.slint:24-28`.
+Kondisi setelah implementasi:
+
+- `UiSyncCache` menyimpan snapshot terakhir dan cache UI per window (main/settings).
+- `SyncGroups::between` hanya mengirim kelompok navigation/time/battery/media/prayer/settings/presentation yang berubah.
+- Album art di-cache berdasarkan path + mtime + length, kapasitas 8 entri; path kosong/hilang tidak diulang.
+- Jadwal prayer dan label kota memakai cache key kota + tanggal + menit; model dipakai ulang saat key sama.
+- Player sources hanya membangun `VecModel` baru jika daftar berubah.
+- Sinkronisasi settings window dilewati saat window hidden dan panel tidak terbuka.
+- Audit `Timer` Slint menunjukkan timer periodik sudah digate oleh `root.active && IslandContext.render-animations`; tidak ada perubahan timer yang diperlukan.
+
+Referensi: `crates/island-ui/src/view_model.rs`, `apps/island-app/src/runtime.rs`, `crates/island-ui/ui/modules/alert/alert-compact-slot.slint`, `crates/island-ui/ui/modules/prayer/*.slint`.
 
 ## 3. Requirement
 
@@ -38,7 +50,7 @@ Referensi: `crates/island-ui/src/view_model.rs:60-75`, `view_model.rs:168-223`, 
 
 ```text
 ViewSnapshot
-  -> UiSyncEngine
+  -> UiSyncCache
        -> cache key per kelompok
        -> update hanya kelompok yang berubah
        -> image cache untuk album art
@@ -50,10 +62,10 @@ Cache key minimal:
 | Kelompok | Key |
 |---|---|
 | Album art | path/URL + mtime opsional |
-| Prayer | tanggal + kota + method + settings terkait |
+| Prayer | kota + tanggal + menit |
 | Time | menit/format |
 | Media | title/artist/status/position bucket |
-| Settings | versi settings |
+| Settings | snapshot settings + settings open/tab |
 | Navigation | tier/visibility/overlap |
 
 ## 5. Acceptance Criteria
@@ -76,6 +88,14 @@ Cache key minimal:
 | Profiling update spectrum | `PERF-5` |
 
 Test unit dapat memakai cache key dan fake loader. Pengukuran runtime dilakukan manual pada session KDE.
+
+### 6.1 Hasil Observasi
+
+- Cache art: 100 request berulang pada URL/path yang sama hanya memicu satu load; sisanya `Unchanged`.
+- Cache prayer: 100 request pada menit yang sama hanya memicu satu refresh jadwal.
+- Jalur `SpectrumUpdated` hanya memperbarui bar dan pet; tidak memanggil full `UiSyncCache`.
+- Smoke run KDE Wayland 30 detik berhasil start dengan WGPU. `RenderStats` mencatat `ui_syncs_per_sec=0.27`, `pet_ticks_per_sec=1.33`, dan `pet_redraws_per_sec=1.33`.
+- Fallback vector pet tidak dipicu pada run ini; fallback tetap tersedia dan tidak diubah oleh optimasi cache.
 
 ## 7. Out of Scope
 

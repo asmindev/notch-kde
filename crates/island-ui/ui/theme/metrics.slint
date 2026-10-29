@@ -1,33 +1,34 @@
 export global ThemeMetrics {
+    // Geometry is supplied at startup from WindowSpec. These are fallbacks.
     // Window canvas (extra room for expand view and smooth spring overshoot)
-    in-out property <length> window-width: 480px;
-    in-out property <length> window-height: 208px;
+    in-out property <length> window-width: 0px;
+    in-out property <length> window-height: 0px;
 
     // Dynamic Island 3-Tier Morph dimensions
-    in-out property <length> compact-width: 156px;
-    in-out property <length> compact-alert-width: 228px;
-    in-out property <length> compact-height: 30px;
+    in-out property <length> compact-width: 0px;
+    in-out property <length> compact-alert-width: 0px;
+    in-out property <length> compact-height: 0px;
     in-out property <length> compact-radius: 15px;
 
-    in-out property <length> wide-width: 390px;
-    in-out property <length> wide-height: 56px;
+    in-out property <length> wide-width: 0px;
+    in-out property <length> wide-height: 0px;
     in-out property <length> wide-radius: 20px;
 
     // Welcome Greeting Dimensions (Special height for welcoming page)
-    in-out property <length> welcome-height: 78px;
+    in-out property <length> welcome-height: 0px;
     in-out property <length> welcome-radius: 24px;
 
-    in-out property <length> expand-width: 440px;
-    in-out property <length> expand-height: 152px;
+    in-out property <length> expand-width: 0px;
+    in-out property <length> expand-height: 0px;
     in-out property <length> expand-radius: 24px;
 
     // Bottom Bar Extension Height (Extends at bottom, does not occupy main content container)
-    in-out property <length> bottom-bar-height: 32px;
+    in-out property <length> bottom-bar-height: 0px;
 
     // Dynamic Concave Ear sizes
-    in-out property <length> ear-size: 10px;
-    in-out property <length> compact-ear-size: 5px;
-    in-out property <length> wide-ear-size: 10px;
+    in-out property <length> ear-size: 0px;
+    in-out property <length> compact-ear-size: 0px;
+    in-out property <length> wide-ear-size: 0px;
 
     // Animation Durations
     in-out property <duration> expand-duration: 380ms;

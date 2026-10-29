@@ -1,21 +1,18 @@
 use crate::service::{DomainEvent, Service, ServiceContext, ServiceError, ServiceHandle};
 use std::io::Read;
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use tracing::{debug, error, info, warn};
 
-pub struct CavaService;
-
-impl CavaService {
-    pub fn new() -> Self {
-        Self
-    }
+pub struct CavaService {
+    config_path: PathBuf,
 }
 
-impl Default for CavaService {
-    fn default() -> Self {
-        Self::new()
+impl CavaService {
+    pub fn new(config_path: PathBuf) -> Self {
+        Self { config_path }
     }
 }
 
@@ -28,24 +25,19 @@ impl Service for CavaService {
         let shutdown = ctx.shutdown_signal().clone();
         let task_shutdown = shutdown.clone();
         let task_ctx = ctx.clone();
+        let config_path = self.config_path.clone();
         let join = ctx.spawn_blocking(move || {
-            run_cava(task_shutdown.clone(), task_ctx);
+            run_cava(task_shutdown.clone(), task_ctx, config_path);
             info!("CavaService stopped");
         });
         Ok(ServiceHandle::new(self.name(), shutdown, join))
     }
 }
 
-fn run_cava(shutdown: crate::service::ShutdownSignal, ctx: ServiceContext) {
-    let config_dir = std::env::var("XDG_CONFIG_HOME")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| {
-            let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-            std::path::PathBuf::from(home).join(".config")
-        })
-        .join("island-cava");
-    let _ = std::fs::create_dir_all(&config_dir);
-    let config_path = config_dir.join("cava.conf");
+fn run_cava(shutdown: crate::service::ShutdownSignal, ctx: ServiceContext, config_path: PathBuf) {
+    if let Some(parent) = config_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
 
     let config_content = r#"
 [general]

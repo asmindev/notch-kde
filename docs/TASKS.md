@@ -49,10 +49,10 @@ Legenda status: `[ ]` belum, `[~]` dikerjakan, `[x]` selesai, `[-]` dibatalkan.
 | 2 | Content | `T2.1`–`T2.5` | `[x]` | Tidak ada aturan konten di Slint |
 | 3 | View/state | `T3.1`–`T3.4` | `[x]` | Tidak ada state navigasi divergen |
 | 4 | Timer/effect | `T4.1`–`T4.4` | `[x]` | Tidak ada string timer |
-| 5 | Services | `T5.1`–`T5.7` | `[ ]` | Semua service start/stop/health |
-| 6 | Config | `T6.1`–`T6.7` | `[ ]` | Tidak ada env di core; no panic config |
-| 7 | Performance | `T7.1`–`T7.5` | `[ ]` | Tidak ada reload berulang |
-| 8 | Optional | `T8.1`–`T8.3` | `[ ]` | Hanya jika dipicu kebutuhan |
+| 5 | Services | `T5.1`–`T5.7` | `[x]` | Semua service start/stop/health |
+| 6 | Config | `T6.1`–`T6.7` | `[x]` | Tidak ada env di core; no panic config |
+| 7 | Performance | `T7.1`–`T7.5` | `[x]` | Tidak ada reload berulang |
+| 8 | Optional | `T8.1`–`T8.3` | `[x]` | Dievaluasi; refactor opsional tidak diperlukan |
 
 ---
 

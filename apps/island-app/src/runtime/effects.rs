@@ -2,6 +2,7 @@ use crate::runtime::timers::TimerScheduler;
 use crate::settings_store::SettingsStore;
 use island_core::{AppEvent, AppState, Effect, PersistedSettings};
 use island_services::{AudioService, DndService, MediaService};
+use std::path::PathBuf;
 use std::time::Duration;
 use tokio::runtime::Handle;
 use tokio::sync::mpsc::UnboundedSender;
@@ -11,14 +12,21 @@ pub struct EffectExecutor {
     runtime: Handle,
     timers: TimerScheduler,
     media: MediaService,
+    settings_path: PathBuf,
 }
 
 impl EffectExecutor {
-    pub fn new(runtime: Handle, event_tx: UnboundedSender<AppEvent>, media: MediaService) -> Self {
+    pub fn new(
+        runtime: Handle,
+        event_tx: UnboundedSender<AppEvent>,
+        media: MediaService,
+        settings_path: PathBuf,
+    ) -> Self {
         Self {
             timers: TimerScheduler::new(runtime.clone(), event_tx),
             runtime,
             media,
+            settings_path,
         }
     }
 
@@ -55,7 +63,7 @@ impl EffectExecutor {
                 });
             }
             Effect::PersistSettings => {
-                SettingsStore::save(&PersistedSettings::from_state(state));
+                SettingsStore::save(&self.settings_path, &PersistedSettings::from_state(state));
             }
             Effect::SelectMediaSource(player_id) => {
                 debug!("Switching active media source to: {}", player_id);
@@ -90,7 +98,12 @@ mod tests {
     #[tokio::test]
     async fn timer_effects_are_forwarded_to_the_scheduler() {
         let (event_tx, mut event_rx) = mpsc::unbounded_channel();
-        let mut executor = EffectExecutor::new(Handle::current(), event_tx, MediaService::new());
+        let mut executor = EffectExecutor::new(
+            Handle::current(),
+            event_tx,
+            MediaService::new(),
+            std::env::temp_dir().join("notchde-effect-test.json"),
+        );
         let state = AppState::default();
         let ids = [
             TimerId::Alert,

@@ -31,6 +31,7 @@ fn assert_invariants(state: &AppState) {
         engine.overlap_reveal_hold,
         engine.overlap_dismiss_active,
         engine.current_view,
+        engine.dodge_enabled(),
     );
     assert_eq!(state.view.is_visible(), expected_visible);
     assert_eq!(state.view.is_overlapping(), engine.is_overlapping);

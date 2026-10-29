@@ -1,3 +1,4 @@
+use crate::config::WindowSpec;
 use island_core::AppState;
 use island_core::models::{AlertKind, IslandView};
 use island_platform::overlap::Rect;
@@ -14,38 +15,42 @@ use wayland_client::protocol::{
 };
 use wayland_client::{Connection, Dispatch, EventQueue, Proxy, QueueHandle};
 
-const WINDOW_WIDTH: i32 = 480;
-const COMPACT_WIDTH: i32 = 156;
-const COMPACT_ALERT_WIDTH: i32 = 228;
-const COMPACT_TOUCH_HEIGHT: i32 = 42;
-const WIDE_WIDTH: i32 = 390;
-const WIDE_TOUCH_HEIGHT: i32 = 98;
-const EXPAND_WIDTH: i32 = 440;
-const EXPAND_TOUCH_HEIGHT: i32 = 196;
-const HIDDEN_TOUCH_HEIGHT: i32 = 28;
-const COMPACT_EAR: i32 = 5;
-const WIDE_EAR: i32 = 10;
-
-pub fn rect_for_state(state: &AppState) -> Rect {
+pub fn rect_for_state(state: &AppState, spec: &WindowSpec) -> Rect {
     let (notch_w, touch_h, ear) = if !state.view.is_visible() {
-        (COMPACT_WIDTH, HIDDEN_TOUCH_HEIGHT, COMPACT_EAR)
+        (
+            spec.compact_width as i32,
+            spec.hidden_touch_height as i32,
+            spec.compact_ear_size as i32,
+        )
     } else {
         match state.view.mode() {
             IslandView::Compact => {
                 let width = if state.domain.alert_kind != AlertKind::None {
-                    COMPACT_ALERT_WIDTH
+                    spec.compact_alert_width
                 } else {
-                    COMPACT_WIDTH
+                    spec.compact_width
                 };
-                (width, COMPACT_TOUCH_HEIGHT, COMPACT_EAR)
+                (
+                    width as i32,
+                    spec.compact_touch_height as i32,
+                    spec.compact_ear_size as i32,
+                )
             }
-            IslandView::Wide => (WIDE_WIDTH, WIDE_TOUCH_HEIGHT, WIDE_EAR),
-            IslandView::Expand => (EXPAND_WIDTH, EXPAND_TOUCH_HEIGHT, WIDE_EAR),
+            IslandView::Wide => (
+                spec.wide_width as i32,
+                spec.wide_touch_height as i32,
+                spec.wide_ear_size as i32,
+            ),
+            IslandView::Expand => (
+                spec.expand_width as i32,
+                spec.expand_touch_height as i32,
+                spec.wide_ear_size as i32,
+            ),
         }
     };
 
     Rect {
-        x: (WINDOW_WIDTH - notch_w) / 2 - ear,
+        x: (spec.window_width as i32 - notch_w) / 2 - ear,
         y: 0,
         w: (notch_w + ear * 2) as u32,
         h: touch_h as u32,
@@ -251,7 +256,10 @@ mod tests {
     #[test]
     fn compact_region_matches_visible_touch_area() {
         assert_eq!(
-            rect_for_state(&state(IslandView::Compact, true, AlertKind::None)),
+            rect_for_state(
+                &state(IslandView::Compact, true, AlertKind::None),
+                &WindowSpec::default()
+            ),
             Rect {
                 x: 157,
                 y: 0,
@@ -264,7 +272,10 @@ mod tests {
     #[test]
     fn compact_alert_region_expands() {
         assert_eq!(
-            rect_for_state(&state(IslandView::Compact, true, AlertKind::Charging)),
+            rect_for_state(
+                &state(IslandView::Compact, true, AlertKind::Charging),
+                &WindowSpec::default()
+            ),
             Rect {
                 x: 121,
                 y: 0,
@@ -277,7 +288,10 @@ mod tests {
     #[test]
     fn wide_region_matches_visible_touch_area() {
         assert_eq!(
-            rect_for_state(&state(IslandView::Wide, true, AlertKind::None)),
+            rect_for_state(
+                &state(IslandView::Wide, true, AlertKind::None),
+                &WindowSpec::default()
+            ),
             Rect {
                 x: 35,
                 y: 0,
@@ -290,7 +304,10 @@ mod tests {
     #[test]
     fn expand_region_matches_visible_touch_area() {
         assert_eq!(
-            rect_for_state(&state(IslandView::Expand, true, AlertKind::None)),
+            rect_for_state(
+                &state(IslandView::Expand, true, AlertKind::None),
+                &WindowSpec::default()
+            ),
             Rect {
                 x: 10,
                 y: 0,
@@ -303,7 +320,10 @@ mod tests {
     #[test]
     fn hidden_region_keeps_reveal_hit_target() {
         assert_eq!(
-            rect_for_state(&state(IslandView::Wide, false, AlertKind::None)),
+            rect_for_state(
+                &state(IslandView::Wide, false, AlertKind::None),
+                &WindowSpec::default()
+            ),
             Rect {
                 x: 157,
                 y: 0,

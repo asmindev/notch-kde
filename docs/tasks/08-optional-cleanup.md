@@ -19,7 +19,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T8.1 — Pisahkan `SettingsContext` dari `IslandContext`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P2
 - **Dependency:** `T7.3`
 - **Trace:** `OPT-1`, `VIEW-4`
@@ -31,10 +31,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Settings window tidak membawa state domain yang tidak perlu.
   - Tidak ada regresi settings.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** Evaluasi menunjukkan global terpisah tidak sepadan: settings window memakai `IslandContext` untuk settings, jadwal prayer, app version, dan preview `PetView`, sementara navigation/time/battery/media tidak disinkronkan ke settings. Implementasi memakai pemisahan terarah: `sync_prayer_settings` hanya mengisi settings/prayer yang dipakai (enabled, kota, reminder, label, jadwal, subtitle) dan tidak mengirim panel/alert/orbit/sky domain ke settings window. Properti settings tetap di `IslandContext` karena dipakai bersama main UI dan komponen.
 
 ## T8.2 — Pisahkan `UiAction` dan `DomainEvent`
 
-- **Status:** `[ ]`
+- **Status:** `[-]`
 - **Prioritas:** P2
 - **Dependency:** `T5.6`
 - **Trace:** `OPT-2`
@@ -45,10 +46,11 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Service tidak mengetahui konsep UI.
 - **Risiko:** Sedang–tinggi; hanya jika dibutuhkan.
+- **Catatan verifikasi:** Evaluasi menunjukkan batas service sudah bersih: `DomainEvent` didefinisikan di `island-services`, `ServiceContext` hanya mengirim `DomainEvent`, dan tidak ada referensi `island_ui`, `AppEvent`, atau `IslandContext` di crate service. Bridge di `apps/island-app/src/runtime.rs` memetakan `DomainEvent` ke `AppEvent`. Tidak ada aksi UI dari service, sehingga `UiAction`/`TimerEvent` tambahan hanya menambah boilerplate.
 
 ## T8.3 — Promosikan Welcome menjadi module/overlay
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P2
 - **Dependency:** `T2.5`
 - **Trace:** `OPT-3`
@@ -59,3 +61,4 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Keputusan terdokumentasi dan tidak menambah kompleksitas tanpa manfaat.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** Keputusan: `Welcome` tetap state presentasi (`PresentationState`), bukan module. Welcome adalah overlay Wide transien yang mengubah tinggi/radius shell, menyembunyikan slot konten, dan memicu animasi pet; promosi menjadi module akan menduplikasi `RenderPolicy` dan menambah state machine tanpa manfaat. Kondisi `is-welcome` di Slint tetap satu turunan dari state presentasi.

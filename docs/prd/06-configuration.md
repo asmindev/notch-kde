@@ -12,16 +12,47 @@ Induk: [`../PRD.md`](../PRD.md)
 
 Memisahkan konfigurasi deployment/internal dari preferensi pengguna, memusatkan dimensi window, dan menghilangkan panic/konfigurasi tersebar. Semua konfigurasi harus tervalidasi dan memiliki fallback.
 
-## 2. Temuan Saat Ini
+## 2. Kondisi Setelah Implementasi
 
-- `PersistedSettings` mencampur preferensi user dengan beberapa nilai internal.
-- `ISLAND_DODGE` dibaca di `island-core/src/transition_policy.rs`.
-- Dimensi window/notch tersebar di `runtime.rs`, `bootstrap.rs`, `input_region.rs`, dan `metrics.slint`.
-- Path settings dan CAVA dikelola di tempat berbeda.
-- `KdeManager::get_primary_screen_geometry()` memakai `.expect(...)`.
-- `settings.version` ada, tetapi migration belum menjadi kontrak eksplisit.
+- `AppConfig` berada di layer app dan terpisah dari `PersistedSettings`.
+- `ConfigLoader` membaca `config.json`, memvalidasi nilai, dan fallback ke default dengan warning.
+- Override environment hanya ada di `ConfigLoader`: `NOTCHDE_CONFIG_DIR`, `NOTCHDE_CAVA_CONFIG`, `ISLAND_DODGE`, dan `PILL_DODGE`.
+- `WindowSpec` menjadi sumber dimensi window, notch, touch region, dan `ThemeMetrics`.
+- Path settings dan CAVA berasal dari `AppConfig`; default CAVA tetap `$XDG_CONFIG_HOME/island-cava/cava.conf`.
+- `settings.version` dimigrasikan eksplisit; versi masa depan ditolak dengan fallback default tanpa panic.
+- `KdeManager::get_primary_screen_geometry()` mengembalikan `Option`; bootstrap/runtime memakai fallback geometry.
 
-Referensi: `crates/island-core/src/settings.rs:6-178`, `crates/island-core/src/transition_policy.rs:25`, `apps/island-app/src/bootstrap.rs:19-26`, `runtime.rs:17-37`, `input_region.rs:17-53`, `crates/island-platform/src/kde/mod.rs:27-29`.
+Referensi: `apps/island-app/src/config.rs`, `apps/island-app/src/settings_store.rs`, `crates/island-core/src/settings.rs`, `crates/island-platform/src/kde/mod.rs`.
+
+## 2.1 Contoh Config
+
+```json
+{
+  "window": {
+    "window_width": 480,
+    "compact_width": 156,
+    "wide_width": 390,
+    "expand_width": 440
+  },
+  "dodge_enabled": true,
+  "cava": {
+    "enabled": true,
+    "config_path": "/home/user/.config/island-cava/cava.conf"
+  },
+  "services": {
+    "clock": true,
+    "battery": true,
+    "media": true,
+    "notifications": true,
+    "prayer": true,
+    "dnd": true,
+    "audio": true,
+    "screen_saver": true
+  }
+}
+```
+
+Field yang tidak ditulis memakai default. `config_dir` opsional dan default ke direktori config notchde.
 
 ## 3. Requirement
 

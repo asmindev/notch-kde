@@ -1,3 +1,5 @@
+use crate::config::WindowSpec;
+use island_platform::kde::ScreenGeometry;
 use island_platform::{KdeManager, PlatformWindow};
 use island_ui::MainWindow;
 use tracing::{info, warn};
@@ -15,14 +17,12 @@ impl Bootstrap {
         info!("KDE Dynamic Island initializing...");
     }
 
-    pub fn setup_window_rules() {
-        let geom = KdeManager::get_primary_screen_geometry();
-        let island_w = 480;
-        let window_x = geom.x + if geom.width > island_w {
-            ((geom.width - island_w) / 2) as i32
-        } else {
-            0
-        };
+    pub fn setup_window_rules(window_spec: &WindowSpec) {
+        let geom = KdeManager::get_primary_screen_geometry().unwrap_or_else(|| {
+            warn!("kscreen-doctor/qdbus unavailable; using fallback screen geometry");
+            ScreenGeometry::fallback()
+        });
+        let window_x = window_spec.window_x(&geom);
         let window_y = geom.y;
         match PlatformWindow::ensure_kwin_rules(window_x, window_y, geom.screen_index) {
             Ok(true) => {

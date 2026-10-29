@@ -19,6 +19,7 @@ pub struct ViewEngine {
     pub hover_suppressed: bool,
     pub overlap_reveal_hold: bool,
     pub overlap_dismiss_active: bool,
+    dodge_enabled: bool,
     modules: ModuleRegistry,
 }
 
@@ -33,6 +34,7 @@ impl PartialEq for ViewEngine {
             && self.hover_suppressed == other.hover_suppressed
             && self.overlap_reveal_hold == other.overlap_reveal_hold
             && self.overlap_dismiss_active == other.overlap_dismiss_active
+            && self.dodge_enabled == other.dodge_enabled
     }
 }
 
@@ -58,6 +60,7 @@ impl ViewEngine {
             hover_suppressed: false,
             overlap_reveal_hold: false,
             overlap_dismiss_active: false,
+            dodge_enabled: true,
             modules,
         }
     }
@@ -75,6 +78,15 @@ impl ViewEngine {
 
     pub fn active_module(&self) -> ModuleId {
         self.active_module
+    }
+
+    pub fn set_dodge_enabled(&mut self, enabled: bool) {
+        self.dodge_enabled = enabled;
+        self.recompute_visibility();
+    }
+
+    pub fn dodge_enabled(&self) -> bool {
+        self.dodge_enabled
     }
 
     pub(crate) fn apply_resolved(&mut self, resolved: ResolvedContent) {
@@ -97,6 +109,7 @@ impl ViewEngine {
             self.overlap_reveal_hold,
             self.overlap_dismiss_active,
             self.current_view,
+            self.dodge_enabled,
         );
     }
 

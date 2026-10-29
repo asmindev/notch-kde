@@ -1,6 +1,7 @@
 mod effects;
 mod timers;
 
+use crate::config::AppConfig;
 use crate::input_region;
 use crate::pet3d;
 use crate::render_stats::RenderStats;
@@ -9,7 +10,7 @@ use effects::EffectExecutor;
 use island_core::{
     AppEvent, AppState, Effect, PersistedSettings, SettingsTab, TimerId, reduce, render_policy,
 };
-use island_platform::overlap::Rect;
+use island_platform::kde::ScreenGeometry;
 use island_platform::{KdeManager, OverlapDetector, PlatformWindow};
 use island_services::{
     AudioService, BatteryService, CavaService, ClockService, DndService, DomainEvent, MediaService,
@@ -21,43 +22,29 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{debug, warn};
 
-const COMPACT_NOTCH_WIDTH: u32 = 156;
-const COMPACT_NOTCH_HEIGHT: u32 = 30;
-const ISLAND_WINDOW_WIDTH: u32 = 480;
-
-fn compact_notch_rect(geom: &island_platform::kde::ScreenGeometry) -> Rect {
-    Rect {
-        x: geom.x
-            + if geom.width > COMPACT_NOTCH_WIDTH {
-                ((geom.width - COMPACT_NOTCH_WIDTH) / 2) as i32
-            } else {
-                0
-            },
-        y: geom.y,
-        w: COMPACT_NOTCH_WIDTH,
-        h: COMPACT_NOTCH_HEIGHT,
-    }
-}
-
-fn window_x_for(geom: &island_platform::kde::ScreenGeometry) -> i32 {
-    geom.x + (geom.width.saturating_sub(ISLAND_WINDOW_WIDTH) / 2) as i32
-}
-
 pub struct AppRuntime {
     window: MainWindow,
+    config: AppConfig,
 }
 
 impl AppRuntime {
-    pub fn new(window: MainWindow) -> Self {
-        Self { window }
+    pub fn new(window: MainWindow, config: AppConfig) -> Self {
+        Self { window, config }
     }
 
     pub fn run(self) -> Result<(), slint::PlatformError> {
+        let config = self.config;
+        let window_spec = config.window;
+        let settings_path = config.settings_path();
         let (event_tx, mut event_rx) = mpsc::unbounded_channel::<AppEvent>();
 
         // 1. Initial State
         let mut app_state = AppState::default();
-        SettingsStore::load().apply_to_state(&mut app_state);
+        SettingsStore::load(&settings_path).apply_to_state(&mut app_state);
+        app_state
+            .view
+            .engine
+            .set_dodge_enabled(config.dodge_enabled);
         app_state.domain.time = ClockService::get_current_time();
         app_state.domain.battery = BatteryService::read_battery();
         app_state.domain.is_muted = AudioService::check_muted_sync();
@@ -106,7 +93,7 @@ impl AppRuntime {
         ViewModel::sync_settings_to_ui(&settings_window, &initial_snapshot);
 
         let input_region = input_region::InputRegionHandle::spawn();
-        let initial_input_rect = input_region::rect_for_state(&app_state);
+        let initial_input_rect = input_region::rect_for_state(&app_state, &window_spec);
 
         // Install the offscreen Momo renderer before the window is shown.
         let pet3d = pet3d::install(&self.window);
@@ -428,15 +415,34 @@ impl AppRuntime {
         let service_ctx =
             ServiceContext::new(tokio_rt.handle().clone(), domain_tx, service_shutdown);
 
-        supervisor.register(Box::new(ClockService));
-        supervisor.register(Box::new(BatteryService));
-        supervisor.register(Box::new(media_service.clone()));
-        supervisor.register(Box::new(NotificationService::new()));
-        supervisor.register(Box::new(PrayerService::new(prayer_rx)));
-        supervisor.register(Box::new(DndService));
-        supervisor.register(Box::new(AudioService));
-        supervisor.register(Box::new(ScreenSaverService));
-        supervisor.register(Box::new(CavaService::new()));
+        let services = config.services;
+        if services.clock {
+            supervisor.register(Box::new(ClockService));
+        }
+        if services.battery {
+            supervisor.register(Box::new(BatteryService));
+        }
+        if services.media {
+            supervisor.register(Box::new(media_service.clone()));
+        }
+        if services.notifications {
+            supervisor.register(Box::new(NotificationService::new()));
+        }
+        if services.prayer {
+            supervisor.register(Box::new(PrayerService::new(prayer_rx)));
+        }
+        if services.dnd {
+            supervisor.register(Box::new(DndService));
+        }
+        if services.audio {
+            supervisor.register(Box::new(AudioService));
+        }
+        if services.screen_saver {
+            supervisor.register(Box::new(ScreenSaverService));
+        }
+        if config.cava.enabled {
+            supervisor.register(Box::new(CavaService::new(config.cava.config_path.clone())));
+        }
         supervisor.start_all(&service_ctx);
 
         let tx_domain = event_tx.clone();
@@ -467,9 +473,12 @@ impl AppRuntime {
         // 5. Start Wayland Overlap Detector
         let overlap_detector = Arc::new(OverlapDetector::new());
         let (overlap_tx, mut overlap_rx) = mpsc::unbounded_channel();
-        let geom = KdeManager::get_primary_screen_geometry();
-        let notch_rect = compact_notch_rect(&geom);
-        overlap_detector.start(notch_rect, overlap_tx);
+        let geom = KdeManager::try_get_primary_screen_geometry().unwrap_or_else(|| {
+            warn!("kscreen-doctor/qdbus unavailable; using fallback screen geometry");
+            ScreenGeometry::fallback()
+        });
+        let notch_rect = window_spec.compact_notch_rect(&geom);
+        overlap_detector.start(notch_rect, overlap_tx, config.dodge_enabled);
 
         let screen_watcher = overlap_detector.clone();
         let output_config = std::env::var_os("HOME")
@@ -500,7 +509,7 @@ impl AppRuntime {
                     last_mtime = None;
                     continue;
                 };
-                let window_x = window_x_for(&geom);
+                let window_x = window_spec.window_x(&geom);
                 match PlatformWindow::ensure_kwin_rules(window_x, geom.y, geom.screen_index) {
                     Ok(true) => {
                         std::thread::sleep(std::time::Duration::from_millis(500));
@@ -508,7 +517,7 @@ impl AppRuntime {
                     Ok(false) => {}
                     Err(err) => warn!("Failed to update KWin rule after screen change: {err}"),
                 }
-                screen_watcher.update_rect(compact_notch_rect(&geom));
+                screen_watcher.update_rect(window_spec.compact_notch_rect(&geom));
             }
         });
 
@@ -550,6 +559,7 @@ impl AppRuntime {
                 timer_runtime.clone(),
                 event_tx_effects.clone(),
                 media_service,
+                settings_path.clone(),
             );
             effect_executor.execute(
                 Effect::ScheduleTimer {
@@ -595,7 +605,7 @@ impl AppRuntime {
                     let _ = prayer_tx.send(app_state.settings.prayer);
                 }
 
-                let input_rect = input_region::rect_for_state(&app_state);
+                let input_rect = input_region::rect_for_state(&app_state, &window_spec);
                 if input_rect != last_input_rect {
                     input_region_events.set_rect(input_rect);
                     last_input_rect = input_rect;
@@ -635,7 +645,10 @@ impl AppRuntime {
                                     win.window().request_redraw();
                                 }
                             }
-                            if let Some(settings) = settings_w.upgrade() {
+                            if let Some(settings) = settings_w.upgrade()
+                                && (snapshot.presentation.settings_open
+                                    || settings.window().is_visible())
+                            {
                                 ViewModel::sync_settings_to_ui(&settings, &snapshot);
                                 settings_pet3d.update_from_state(&snapshot);
                                 if settings.window().is_visible() {
@@ -670,7 +683,7 @@ impl AppRuntime {
             }
             effect_executor.shutdown();
             timer_runtime.block_on(supervisor.shutdown());
-            SettingsStore::save(&PersistedSettings::from_state(&app_state));
+            SettingsStore::save(&settings_path, &PersistedSettings::from_state(&app_state));
         });
 
         // 8. Show Window and Run Slint GUI event loop
@@ -683,45 +696,5 @@ impl AppRuntime {
         let _ = event_tx.send(AppEvent::Shutdown);
         let _ = event_thread.join();
         result
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use island_platform::kde::ScreenGeometry;
-
-    #[test]
-    fn compact_notch_rect_is_centered_and_compact() {
-        let geom = ScreenGeometry {
-            x: 100,
-            y: 20,
-            width: 1516,
-            height: 947,
-            screen_index: 0,
-        };
-
-        let rect = compact_notch_rect(&geom);
-
-        assert_eq!(rect.x, 780);
-        assert_eq!(rect.y, 20);
-        assert_eq!(rect.w, 156);
-        assert_eq!(rect.h, 30);
-    }
-
-    #[test]
-    fn compact_notch_rect_handles_narrow_screen() {
-        let geom = ScreenGeometry {
-            x: 0,
-            y: 0,
-            width: 120,
-            height: 800,
-            screen_index: 0,
-        };
-
-        let rect = compact_notch_rect(&geom);
-
-        assert_eq!(rect.x, 0);
-        assert_eq!(rect.w, 156);
     }
 }

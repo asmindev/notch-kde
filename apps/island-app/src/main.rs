@@ -1,4 +1,5 @@
 mod bootstrap;
+mod config;
 mod input_region;
 mod pet3d;
 mod render_stats;
@@ -6,19 +7,24 @@ mod runtime;
 mod settings_store;
 
 use bootstrap::Bootstrap;
+use config::ConfigLoader;
 use runtime::AppRuntime;
 
 fn main() -> Result<(), slint::PlatformError> {
     // 1. Initialize Tracing logger
     Bootstrap::init_logging();
 
-    // 2. Configure KWin placement and rules
-    Bootstrap::setup_window_rules();
+    // 2. Load deployment config before touching the UI or platform.
+    let config = ConfigLoader::load();
 
-    // 3. Create Slint Main Window
+    // 3. Configure KWin placement and rules
+    Bootstrap::setup_window_rules(&config.window);
+
+    // 4. Create Slint Main Window
     let window = Bootstrap::create_window()?;
+    config.window.apply_to_ui(&window);
 
-    // 4. Start Event-driven Runtime
-    let runtime = AppRuntime::new(window);
+    // 5. Start Event-driven Runtime
+    let runtime = AppRuntime::new(window, config);
     runtime.run()
 }

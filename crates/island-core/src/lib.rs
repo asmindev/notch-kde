@@ -27,6 +27,7 @@ pub use reducer::reduce;
 pub use render_policy::{RenderPolicy, render_policy};
 pub use settings::{
     AvatarSettings, PersistedSettings, PetBehaviorSettings, SettingsTab, ShadowSettings,
+    migrate_settings_value,
 };
 pub use snapshot::{
     DomainSnapshot, NavigationSnapshot, PresentationSnapshot, SettingsSnapshot, ViewSnapshot,

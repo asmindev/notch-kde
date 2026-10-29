@@ -25,7 +25,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T6.1 — Definisikan `AppConfig`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T5.6`
 - **Trace:** `CFG-1`, `CFG-2`, `CFG-3`
@@ -37,10 +37,11 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Config deployment dapat diubah tanpa menyentuh user settings.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `AppConfig`, `WindowSpec`, `CavaConfig`, dan `ServiceToggles` berada di `apps/island-app/src/config.rs`; `PersistedSettings` tetap hanya berisi preferensi user. Default mempertahankan 480x208, compact 156, wide 390, expand 440, dan CAVA aktif.
 
 ## T6.2 — Buat `ConfigLoader`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T6.1`
 - **Trace:** `CFG-2`, `CFG-5`, `CFG-8`
@@ -53,10 +54,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Config malformed tidak membuat panic.
   - Path yang tidak valid tercatat.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `ConfigLoader` membaca `$XDG_CONFIG_HOME/notchde/config.json` (fallback `$HOME/.config/notchde/config.json`), menerapkan `NOTCHDE_CONFIG_DIR`, `NOTCHDE_CAVA_CONFIG`, `ISLAND_DODGE`, dan `PILL_DODGE`, lalu memvalidasi config. JSON malformed, path gagal dibaca, atau nilai di luar batas menghasilkan default + warning tanpa panic.
 
 ## T6.3 — Pindahkan `ISLAND_DODGE` dari core
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T6.2`
 - **Trace:** `CFG-4`
@@ -68,10 +70,11 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - `island-core` tidak membaca environment.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** `transition_policy.rs` tidak lagi membaca environment; `dodge_enabled` diteruskan melalui `ViewEngine` dan `OverlapDetector::start`. `rg` memastikan `island-core` tidak memiliki pembacaan `std::env`.
 
 ## T6.4 — Sentralisasi `WindowSpec` dan geometry
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T6.1`
 - **Trace:** `CFG-7`
@@ -85,10 +88,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Tidak ada angka 480/156/390/440 yang terduplikasi tanpa alasan.
   - Tidak ada mismatch hit region dan tampilan.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `WindowSpec` menjadi sumber ukuran window/compact/alert/wide/expand/touch/ear. Nilai diterapkan ke `ThemeMetrics` sebelum window ditampilkan, dipakai `input_region::rect_for_state`, `Bootstrap`, dan watcher geometry. Nilai dimensi di `metrics.slint` dihapus agar tidak ada duplikasi 480/156/390/440.
 
 ## T6.5 — Implementasikan migration settings
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T6.2`
 - **Trace:** `CFG-6`, `CFG-8`
@@ -102,10 +106,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Settings lama tetap dapat dimuat.
   - Test migration lulus.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `migrate_settings_value` membaca `version`, memigrasikan settings tanpa versi ke versi saat ini, dan menolak versi masa depan tanpa panic. `SettingsStore::load` menyimpan ulang file setelah migrasi sukses.
 
 ## T6.6 — Hapus panic pada platform preflight
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T6.2`
 - **Trace:** `ERR-1`
@@ -117,10 +122,11 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Aplikasi tidak panic di lingkungan tanpa tool KDE.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** `KdeManager::get_primary_screen_geometry` mengembalikan `Option`; bootstrap/runtime memakai `ScreenGeometry::fallback()` dan mencatat warning bila `kscreen-doctor`/`qdbus` tidak tersedia.
 
 ## T6.7 — Test konfigurasi
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T6.5`
 - **Trace:** `TEST-6`
@@ -134,3 +140,4 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Cakupan config memadai.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** Test mencakup default, partial JSON, malformed JSON, nilai di luar batas, override env di loader, fallback geometry, migrasi versi lama, dan versi masa depan. `cargo test --workspace` lulus 187 test.

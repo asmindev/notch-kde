@@ -23,6 +23,7 @@ fn test_transition_policy_view_aware_visibility() {
         false,
         false,
         IslandView::Compact,
+        true,
     ));
     assert!(TransitionPolicy::evaluate_for_view(
         true,
@@ -30,6 +31,7 @@ fn test_transition_policy_view_aware_visibility() {
         true,
         false,
         IslandView::Compact,
+        true,
     ));
     assert!(TransitionPolicy::evaluate_for_view(
         true,
@@ -37,6 +39,7 @@ fn test_transition_policy_view_aware_visibility() {
         false,
         false,
         IslandView::Wide,
+        true,
     ));
     assert!(TransitionPolicy::evaluate_for_view(
         true,
@@ -44,5 +47,14 @@ fn test_transition_policy_view_aware_visibility() {
         false,
         true,
         IslandView::Compact,
+        true,
+    ));
+    assert!(TransitionPolicy::evaluate_for_view(
+        true,
+        false,
+        false,
+        false,
+        IslandView::Compact,
+        false,
     ));
 }

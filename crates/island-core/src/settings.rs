@@ -145,6 +145,50 @@ impl Default for PersistedSettings {
     }
 }
 
+/// Migrates persisted settings from an untrusted JSON value.
+///
+/// Returns the migrated settings and whether the stored version changed.
+pub fn migrate_settings_value(
+    mut value: serde_json::Value,
+) -> Result<(PersistedSettings, bool), String> {
+    let stored_version = match value.get("version") {
+        Some(version) => version
+            .as_u64()
+            .ok_or_else(|| "settings version must be an unsigned integer".to_string())?
+            as u32,
+        None => 0,
+    };
+
+    if stored_version > SETTINGS_VERSION {
+        return Err(format!(
+            "unsupported settings version {stored_version} (current {SETTINGS_VERSION})"
+        ));
+    }
+
+    let mut version = stored_version;
+    while version < SETTINGS_VERSION {
+        match version {
+            0 => {
+                let object = value
+                    .as_object_mut()
+                    .ok_or_else(|| "settings root must be an object".to_string())?;
+                object.insert("version".to_string(), serde_json::json!(1));
+                version = 1;
+            }
+            other => {
+                return Err(format!(
+                    "no migration path from settings version {other} to {SETTINGS_VERSION}"
+                ));
+            }
+        }
+    }
+
+    let mut settings: PersistedSettings =
+        serde_json::from_value(value).map_err(|error| format!("invalid settings: {error}"))?;
+    settings.version = SETTINGS_VERSION;
+    Ok((settings, stored_version < SETTINGS_VERSION))
+}
+
 impl PersistedSettings {
     pub fn from_state(state: &AppState) -> Self {
         Self {
@@ -267,5 +311,25 @@ mod tests {
         assert!(!restored.settings.prayer.enabled);
         assert_eq!(restored.settings.prayer.city, 8);
         assert_eq!(restored.settings.prayer.reminder_minutes, 15);
+    }
+
+    #[test]
+    fn migrates_unversioned_settings_to_current_version() {
+        let (settings, migrated) =
+            migrate_settings_value(serde_json::json!({"shadow": {"intensity": 80}}))
+                .expect("migrate settings");
+
+        assert!(migrated);
+        assert_eq!(settings.version, SETTINGS_VERSION);
+        assert_eq!(settings.shadow.intensity, 80);
+    }
+
+    #[test]
+    fn rejects_unknown_future_settings_version() {
+        let result = migrate_settings_value(serde_json::json!({
+            "version": SETTINGS_VERSION + 1
+        }));
+
+        assert!(result.is_err());
     }
 }

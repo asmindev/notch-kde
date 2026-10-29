@@ -23,7 +23,7 @@ Dokumen PRD adalah target arsitektur. Kode adalah sumber kebenaran perilaku saat
 - **Produk:** Dynamic Island untuk KDE Plasma 6 Wayland.
 - **Stack:** Rust edition 2024, Slint 1.18, Tokio, zbus, Wayland.
 - **Bentuk:** Modular monolith, 6 workspace member.
-- **Baseline test:** `cargo test --workspace` lulus 171 test.
+- **Baseline test:** `cargo test --workspace` lulus 187 test.
 - **Render policy:** Aktivitas render/pet/spectrum/timer ditentukan oleh `RenderPolicy`; hidden tidak boleh melakukan render kontinu.
 
 ### Struktur
@@ -116,7 +116,8 @@ island-app -> island-ui -> island-core
 ### 4.7 Konfigurasi
 
 - `AppConfig` untuk deployment/internal; `PersistedSettings` untuk user.
-- Jangan membaca environment di `island-core`.
+- `ConfigLoader` hanya berada di `island-app`; environment tidak dibaca di `island-core`.
+- File config default: `$XDG_CONFIG_HOME/notchde/config.json`.
 - Jangan panic pada config/platform yang hilang; gunakan fallback + warning.
 - Dimensi window/notch/input region harus berasal dari `WindowSpec`, bukan angka tersebar.
 

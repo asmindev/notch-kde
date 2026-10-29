@@ -10,6 +10,18 @@ pub struct ScreenGeometry {
     pub screen_index: u32,
 }
 
+impl ScreenGeometry {
+    pub fn fallback() -> Self {
+        Self {
+            x: 0,
+            y: 0,
+            width: 1920,
+            height: 1080,
+            screen_index: 0,
+        }
+    }
+}
+
 pub struct KdeManager;
 
 impl Default for KdeManager {
@@ -23,17 +35,16 @@ impl KdeManager {
         Self
     }
 
-    /// Queries the settled priority-1 screen geometry (global x, y, logical width, height, screen index)
-    pub fn get_primary_screen_geometry() -> ScreenGeometry {
-        let geom = Self::read_stable_kscreen_doctor()
-            .expect("kscreen-doctor did not report a screen with priority 1");
-
+    /// Queries the settled priority-1 screen geometry (global x, y, logical width, height, screen index).
+    ///
+    /// Returns `None` when KDE tools are unavailable or no primary output can be resolved.
+    pub fn get_primary_screen_geometry() -> Option<ScreenGeometry> {
+        let geometry = Self::read_stable_kscreen_doctor()?;
         info!(
             "Detected primary screen geometry via kscreen-doctor: pos=({},{}) size={}x{} (screen: {})",
-            geom.x, geom.y, geom.width, geom.height, geom.screen_index
+            geometry.x, geometry.y, geometry.width, geometry.height, geometry.screen_index
         );
-
-        geom
+        Some(geometry)
     }
 
     /// Non-panicking variant for runtime screen-layout watches.
@@ -41,10 +52,9 @@ impl KdeManager {
         Self::read_stable_kscreen_doctor()
     }
 
-    /// Backwards compatibility helper returning (logical width, logical height)
-    pub fn get_primary_screen_size() -> (u32, u32) {
-        let geom = Self::get_primary_screen_geometry();
-        (geom.width, geom.height)
+    /// Backwards compatibility helper returning (logical width, logical height).
+    pub fn get_primary_screen_size() -> Option<(u32, u32)> {
+        Self::get_primary_screen_geometry().map(|geometry| (geometry.width, geometry.height))
     }
 
     fn read_stable_kscreen_doctor() -> Option<ScreenGeometry> {
@@ -87,11 +97,19 @@ impl KdeManager {
 
         let enabled_outputs = outputs
             .iter()
-            .filter(|output| output.get("enabled").and_then(Value::as_bool).unwrap_or(false))
+            .filter(|output| {
+                output
+                    .get("enabled")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false)
+            })
             .count();
 
         let kwin_screens = read_kwin_screens()?;
-        let active_screens: Vec<_> = kwin_screens.iter().filter(|screen| screen.enabled).collect();
+        let active_screens: Vec<_> = kwin_screens
+            .iter()
+            .filter(|screen| screen.enabled)
+            .collect();
         if active_screens.len() != enabled_outputs {
             return None;
         }
@@ -155,7 +173,8 @@ fn parse_kwin_screens(text: &str) -> Vec<KWinScreen> {
             .strip_prefix("Screen ")
             .and_then(|rest| rest.strip_suffix(':'))
         {
-            if let Some((index, Some(name), Some((x, y, width, height)), enabled)) = current.take() {
+            if let Some((index, Some(name), Some((x, y, width, height)), enabled)) = current.take()
+            {
                 screens.push(KWinScreen {
                     index,
                     name,
@@ -281,13 +300,23 @@ Scale: 1.1
         assert_eq!(screens[0].index, 0);
         assert_eq!(screens[0].name, "eDP-1");
         assert_eq!(
-            (screens[0].x, screens[0].y, screens[0].width, screens[0].height),
+            (
+                screens[0].x,
+                screens[0].y,
+                screens[0].width,
+                screens[0].height
+            ),
             (1746, 34, 1516, 947)
         );
         assert_eq!(screens[1].index, 1);
         assert_eq!(screens[1].name, "HDMI-A-1");
         assert_eq!(
-            (screens[1].x, screens[1].y, screens[1].width, screens[1].height),
+            (
+                screens[1].x,
+                screens[1].y,
+                screens[1].width,
+                screens[1].height
+            ),
             (0, 0, 1745, 982)
         );
     }
