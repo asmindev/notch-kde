@@ -23,7 +23,7 @@ Dokumen PRD adalah target arsitektur. Kode adalah sumber kebenaran perilaku saat
 - **Produk:** Dynamic Island untuk KDE Plasma 6 Wayland.
 - **Stack:** Rust edition 2024, Slint 1.18, Tokio, zbus, Wayland.
 - **Bentuk:** Modular monolith, 6 workspace member.
-- **Baseline test:** `cargo test --workspace` lulus 143 test.
+- **Baseline test:** `cargo test --workspace` lulus 157 test.
 - **Render policy:** Aktivitas render/pet/spectrum/timer ditentukan oleh `RenderPolicy`; hidden tidak boleh melakukan render kontinu.
 
 ### Struktur

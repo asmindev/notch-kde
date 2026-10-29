@@ -11,7 +11,7 @@ pub mod state;
 pub mod transition_policy;
 pub mod view_engine;
 
-pub use content_resolver::{ContentReason, ResolvedContent};
+pub use content_resolver::{ContentReason, ContentResolver, ResolvedContent, resolve};
 pub use events::{AppEvent, Effect};
 pub use models::{ActiveModule, AudioSpectrum, BatteryState, IslandMode, IslandView, MediaTrack, TimeInfo};
 pub use module::{

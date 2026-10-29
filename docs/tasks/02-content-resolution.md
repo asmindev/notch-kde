@@ -60,7 +60,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T2.3 — Pindahkan aturan konten dari Slint
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `T2.2`
 - **Trace:** `CONTENT-6`
@@ -73,10 +73,11 @@ Index: [`../TASKS.md`](../TASKS.md)
   - View tidak lagi membandingkan `active-module` untuk menentukan konten.
   - Perilaku visual existing setara.
 - **Risiko:** Tinggi; lakukan smoke test per view.
+- **Catatan verifikasi:** `wide-view.slint` dan `expand-view.slint` hanya membaca `wide-module` / `expand-module` hasil resolver. `is-playing` tersisa hanya untuk animasi/ikon di dalam slot media. Source selector tetap overlay presentasi eksplisit; tidak ada fallback module di view.
 
 ## T2.4 — Hapus jalur override langsung di reducer
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P1
 - **Dependency:** `T2.2`
 - **Trace:** `CONTENT-1`, `STATE-2`
@@ -87,10 +88,11 @@ Index: [`../TASKS.md`](../TASKS.md)
 - **Acceptance:**
   - Tidak ada penulisan module aktif selain lewat resolver.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `ToggleSourceSelector` selalu memicu resolver, termasuk saat selector ditutup; menutup selector pada wide paused media kembali ke System. `ModuleSwitchRequested` hanya memvalidasi module/tier lalu memanggil resolver, sehingga request tidak dapat memaksa module yang kalah prioritas atau tidak mendukung tier. Tidak ada write langsung ke `engine.active_module`; field engine menjadi `pub(crate)`. Test characterization sumber selector diperbarui dan test request resolver ditambahkan.
 
 ## T2.5 — Test regresi konten
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `T2.3`
 - **Trace:** `TEST-3`, `CONTENT-1`–`CONTENT-7`
@@ -103,3 +105,4 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Semua kombinasi penting tercakup dan sesuai baseline/PRD.
   - Setiap test memeriksa module dan `ContentReason`.
 - **Risiko:** Rendah.
+- **Catatan verifikasi:** `crates/island-core/tests/content_resolution.rs` mencakup media playing/paused, media idle, alert, prayer panel, source selector, override tidak didukung tier, dan tie-break registrasi. Setiap test memeriksa module dan `ContentReason`. Fallback module tanpa slot tetap dites di `island-ui` (`missing_tier_and_unknown_module_fall_back_to_system`). `cargo test --workspace` lulus 157 test.

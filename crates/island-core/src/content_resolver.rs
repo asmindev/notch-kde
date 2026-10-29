@@ -40,7 +40,7 @@ impl<'a> ContentResolver<'a> {
             let (priority, reason) = effective_priority(module.as_ref(), ctx, descriptor.id);
             let wins = best
                 .as_ref()
-                .map_or(true, |(_, best_priority, _)| priority > *best_priority);
+                .is_none_or(|(_, best_priority, _)| priority > *best_priority);
             if wins {
                 best = Some((descriptor.id, priority, reason));
             }
@@ -51,8 +51,12 @@ impl<'a> ContentResolver<'a> {
         if let Some((module, priority, mut reason)) = best
             && priority > Priority::INACTIVE
         {
-            if module == ModuleId::SYSTEM && unsupported_override {
-                reason = ContentReason::UnsupportedTier;
+            if module == ModuleId::SYSTEM {
+                if unsupported_override {
+                    reason = ContentReason::UnsupportedTier;
+                } else if reason == ContentReason::Priority && priority <= Priority::LOW {
+                    reason = ContentReason::Fallback;
+                }
             }
             return ResolvedContent {
                 module,
