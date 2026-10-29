@@ -40,7 +40,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T1.2 — Tambah `ModuleRegistry`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `T1.1`
 - **Trace:** `MOD-3`, `MOD-4`
@@ -53,6 +53,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - `ViewEngine` menerima registry atau hasil resolver, bukan membuat module sendiri.
   - Test duplikasi ID lulus.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `ModuleRegistry` menyimpan `Vec<Arc<dyn IslandModule>>`, menolak ID duplikat lewat `DuplicateModuleId`, menyediakan `get`/`iter` deterministik, dan memindahkan registrasi default dari `ViewEngine::new`. `ViewEngine::with_registry` tersedia; `register_module` mengembalikan error duplikasi. Test duplikasi dan lookup lulus.
 
 ## T1.3 — Migrasikan empat module ke descriptor
 

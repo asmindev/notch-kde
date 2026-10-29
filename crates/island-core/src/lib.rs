@@ -1,6 +1,7 @@
 pub mod events;
 pub mod models;
 pub mod module;
+pub mod module_registry;
 pub mod prayer;
 pub mod reducer;
 pub mod render_policy;
@@ -12,6 +13,7 @@ pub mod view_engine;
 pub use events::{AppEvent, Effect};
 pub use models::{ActiveModule, AudioSpectrum, BatteryState, IslandMode, IslandView, MediaTrack, TimeInfo};
 pub use module::{ModuleDescriptor, ModuleId, UnknownModuleId};
+pub use module_registry::{DuplicateModuleId, ModuleRegistry};
 pub use prayer::{Prayer, PrayerAlert, PrayerSettings};
 pub use reducer::reduce;
 pub use render_policy::{RenderPolicy, render_policy};

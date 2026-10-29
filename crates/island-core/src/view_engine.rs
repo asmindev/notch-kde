@@ -1,4 +1,5 @@
 use crate::models::{ActiveModule, AlertKind, BatteryState, IslandView, MediaTrack, TimeInfo};
+use crate::module_registry::{DuplicateModuleId, ModuleRegistry};
 use crate::transition_policy::TransitionPolicy;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -150,7 +151,7 @@ pub struct ViewEngine {
     pub hover_suppressed: bool,
     pub overlap_reveal_hold: bool,
     pub overlap_dismiss_active: bool,
-    modules: Vec<Arc<dyn IslandModule>>,
+    modules: ModuleRegistry,
 }
 
 impl PartialEq for ViewEngine {
@@ -175,7 +176,11 @@ impl Default for ViewEngine {
 
 impl ViewEngine {
     pub fn new() -> Self {
-        let mut engine = Self {
+        Self::with_registry(ModuleRegistry::with_defaults())
+    }
+
+    pub fn with_registry(modules: ModuleRegistry) -> Self {
+        Self {
             current_view: IslandView::Wide,
             previous_view: IslandView::Wide,
             active_module: ActiveModule::System,
@@ -185,26 +190,26 @@ impl ViewEngine {
             hover_suppressed: false,
             overlap_reveal_hold: false,
             overlap_dismiss_active: false,
-            modules: Vec::new(),
-        };
-
-        // Register default modules
-        engine.register_module(Arc::new(SystemModule));
-        engine.register_module(Arc::new(MediaModule));
-        engine.register_module(Arc::new(AlertModule));
-        engine.register_module(Arc::new(PrayerModule));
-
-        engine
+            modules,
+        }
     }
 
-    pub fn register_module(&mut self, module: Arc<dyn IslandModule>) {
-        self.modules.push(module);
+    pub fn registry(&self) -> &ModuleRegistry {
+        &self.modules
+    }
+
+    pub fn register_module(
+        &mut self,
+        module: Arc<dyn IslandModule>,
+    ) -> Result<(), DuplicateModuleId> {
+        self.modules.register(module)
     }
 
     /// Resolves the active module based on highest priority among modules
     /// supporting the current view tier.
     pub fn resolve_active_module(&mut self, ctx: &SlotContext) {
-        let best_module = self.modules
+        let best_module = self
+            .modules
             .iter()
             .filter(|m| m.tiers().supports(self.current_view))
             .max_by_key(|m| m.priority(ctx));
