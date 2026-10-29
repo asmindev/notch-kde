@@ -10,11 +10,11 @@ export component CompactView inherits Rectangle {
     height: 100%;
 
     // Slot 0: System Module Content
-    if IslandContext.active-module == 0: SystemCompactSlot { active: root.active; }
+    if IslandContext.compact-module == 0: SystemCompactSlot { active: root.active; }
 
     // Slot 1: Media Module Content
-    if IslandContext.active-module == 1: MediaCompactSlot { active: root.active; }
+    if IslandContext.compact-module == 1: MediaCompactSlot { active: root.active; }
 
     // Slot 2: Alert Module Content
-    if IslandContext.active-module == 2: AlertCompactSlot { active: root.active; }
+    if IslandContext.compact-module == 2: AlertCompactSlot { active: root.active; }
 }

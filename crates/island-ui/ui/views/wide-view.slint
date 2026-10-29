@@ -16,15 +16,15 @@ export component WideView inherits VerticalLayout {
 
     property <bool> show-system: !IslandContext.is-welcome
         && !IslandContext.show-source-selector
-        && (IslandContext.active-module == 0
-            || (IslandContext.active-module == 1 && !IslandContext.is-playing));
+        && (IslandContext.wide-module == 0
+            || (IslandContext.wide-module == 1 && !IslandContext.is-playing));
     property <bool> show-media: !IslandContext.is-welcome
         && !IslandContext.show-source-selector
-        && IslandContext.active-module == 1
+        && IslandContext.wide-module == 1
         && IslandContext.is-playing;
     property <bool> show-prayer: !IslandContext.is-welcome
         && !IslandContext.show-source-selector
-        && IslandContext.active-module == 3;
+        && IslandContext.wide-module == 3;
 
     out property <bool> is-hovered: (!IslandContext.is-welcome && bottom-bar.is-hovered)
         || IslandContext.show-source-selector
@@ -97,8 +97,8 @@ export component WideView inherits VerticalLayout {
         // Slot 2: Alert Module Wide Slot
         alert-slot := AlertWideSlot {
             active: root.active;
-            visible: !IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.active-module == 2;
-            opacity: (!IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.active-module == 2) ? 1.0 : 0.0;
+            visible: !IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.wide-module == 2;
+            opacity: (!IslandContext.is-welcome && !IslandContext.show-source-selector && IslandContext.wide-module == 2) ? 1.0 : 0.0;
         }
 
         // Slot 3: Prayer Schedule Wide Slot

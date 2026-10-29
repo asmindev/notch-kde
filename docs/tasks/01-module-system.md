@@ -73,7 +73,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T1.4 — Buat `ModuleUiRegistry` di `island-ui`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `T1.3`
 - **Trace:** `MOD-6`, `MOD-7`
@@ -86,6 +86,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Mapping ID ke UI hanya ada di satu tempat.
   - Module tanpa slot tidak membuat tampilan blank.
 - **Risiko:** Sedang.
+- **Catatan verifikasi:** `ModuleUiRegistry` memetakan `ModuleId` ke `ModuleUiSlot` per tier, dengan fallback `System` + warning untuk ID/tier tanpa slot. `ViewModel` mengisi `compact-module`, `wide-module`, dan `expand-module` dari registry; view Slint memakai properti tier masing-masing. Validasi startup mencatat slot yang hilang (saat ini Alert/Expand) tanpa membuat tampilan blank. Test mapping, fallback, dan validasi lulus; total suite 143 test.
 
 ## T1.5 — Dokumentasikan kontrak penambahan module
 

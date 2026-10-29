@@ -33,7 +33,10 @@ export global IslandContext {
     // Menentukan bentuk island dan modul yang sedang aktif
     // ==========================================
     in-out property <int> active-mode: 0;   // 0=Compact, 1=Wide, 2=Expand
-    in-out property <int> active-module: 0; // 0=System, 1=Media, 2=Alert, 3=Prayer
+    // Module UI slot index per tier (0=System, 1=Media, 2=Alert, 3=Prayer).
+    in-out property <int> compact-module: 0;
+    in-out property <int> wide-module: 0;
+    in-out property <int> expand-module: 0;
 
     // ==========================================
     // 2. DOMAIN STATE

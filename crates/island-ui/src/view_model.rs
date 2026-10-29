@@ -1,6 +1,7 @@
+use crate::module_ui_registry::ModuleUiRegistry;
 use crate::{ContentRouter, IslandContext, MainWindow, SettingsWindow};
 use chrono::{Datelike, NaiveDate, Utc};
-use island_core::models::ActiveModule;
+use island_core::models::IslandView;
 use island_core::prayer::{
     moment_for, sky_for, times_for, Prayer, PrayerPhase, PrayerTimes, SkyState, CITIES,
 };
@@ -19,12 +20,22 @@ impl ViewModel {
         ctx.set_render_spectrum(policy.spectrum);
         ctx.set_render_animations(policy.animations);
         ctx.set_active_mode(ContentRouter::mode_to_index(state.mode));
-        ctx.set_active_module(match state.active_module.active_module() {
-            Some(ActiveModule::Media) => 1,
-            Some(ActiveModule::Alert) => 2,
-            Some(ActiveModule::Prayer) => 3,
-            Some(ActiveModule::System) | None => 0,
-        });
+        let module_ui = ModuleUiRegistry::default();
+        ctx.set_compact_module(
+            module_ui
+                .slot_for(state.active_module, IslandView::Compact)
+                .index(),
+        );
+        ctx.set_wide_module(
+            module_ui
+                .slot_for(state.active_module, IslandView::Wide)
+                .index(),
+        );
+        ctx.set_expand_module(
+            module_ui
+                .slot_for(state.active_module, IslandView::Expand)
+                .index(),
+        );
         ctx.set_alert_kind(state.alert_kind as i32);
         ctx.set_is_visible_state(state.is_visible);
 

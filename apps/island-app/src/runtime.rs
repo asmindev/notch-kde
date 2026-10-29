@@ -7,7 +7,7 @@ use island_services::{
     AudioService, BatteryService, CavaService, ClockService, DndService, MediaService,
     NotificationService, PrayerService, ScreenSaverService,
 };
-use island_ui::{IslandContext, MainWindow, SettingsWindow, ViewModel};
+use island_ui::{IslandContext, MainWindow, ModuleUiRegistry, SettingsWindow, ViewModel};
 use crate::input_region;
 use crate::pet3d;
 use crate::render_stats::RenderStats;
@@ -57,6 +57,10 @@ impl AppRuntime {
         app_state.time = ClockService::get_current_time();
         app_state.battery = BatteryService::read_battery();
         app_state.is_muted = AudioService::check_muted_sync();
+
+        for issue in ModuleUiRegistry::default().validate(app_state.engine.registry()) {
+            warn!("{issue}; falling back to system");
+        }
 
         // Personalized welcome greeting
         let username = std::env::var("USER").unwrap_or_else(|_| "User".to_string());

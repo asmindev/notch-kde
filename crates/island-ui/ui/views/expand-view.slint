@@ -14,12 +14,12 @@ import { PrayerBackdrop } from "../modules/prayer/prayer-backdrop.slint";
 export component ExpandView inherits VerticalLayout {
     in property <bool> active: true;
 
-    property <bool> show-source: IslandContext.show-source-selector && IslandContext.active-module == 1;
-    property <bool> show-system: IslandContext.active-module == 0
-        || (IslandContext.active-module == 1 && !IslandContext.is-playing && !root.show-source);
-    property <bool> show-media: IslandContext.active-module == 1
+    property <bool> show-source: IslandContext.show-source-selector && IslandContext.expand-module == 1;
+    property <bool> show-system: IslandContext.expand-module == 0
+        || (IslandContext.expand-module == 1 && !IslandContext.is-playing && !root.show-source);
+    property <bool> show-media: IslandContext.expand-module == 1
         && (IslandContext.is-playing || root.show-source);
-    property <bool> show-prayer: IslandContext.active-module == 3;
+    property <bool> show-prayer: IslandContext.expand-module == 3;
 
     out property <bool> is-hovered: collapse-btn.has-hover
         || bottom-bar.is-hovered
