@@ -41,7 +41,7 @@ Index: [`../TASKS.md`](../TASKS.md)
 
 ## T2.2 — Implementasikan `ContentResolver`
 
-- **Status:** `[ ]`
+- **Status:** `[x]`
 - **Prioritas:** P0
 - **Dependency:** `T2.1`, `T1.2`
 - **Trace:** `CONTENT-1`–`CONTENT-5`, `CONTENT-7`
@@ -56,6 +56,7 @@ Index: [`../TASKS.md`](../TASKS.md)
   - Resolver deterministik.
   - Test matrix module × tier × override lulus.
 - **Risiko:** Sedang–tinggi; gunakan characterization test.
+- **Catatan verifikasi:** `ContentResolver` memfilter descriptor berdasarkan tier, menerapkan override prayer/source sebagai priority efektif, memilih priority tertinggi dengan tie-break urutan registrasi (kandidat pertama menang), dan fallback ke System. `ContentReason` membedakan `Priority`, `UserPanel`, `UserSelector`, `Fallback`, dan `UnsupportedTier`. `ViewEngine` menulis module aktif hanya dari `ResolvedContent`; `update_active_module` memakai resolver. Test unit priority, override, fallback tier, dan alert-vs-override lulus.
 
 ## T2.3 — Pindahkan aturan konten dari Slint
 

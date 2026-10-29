@@ -1,6 +1,7 @@
 use crate::models::IslandView;
 use crate::module::ModuleId;
 pub use crate::module::{IslandModule, ModuleTiers, Priority, SlotContext};
+use crate::content_resolver::ResolvedContent;
 use crate::module_registry::{DuplicateModuleId, ModuleRegistry};
 use crate::transition_policy::TransitionPolicy;
 use std::sync::Arc;
@@ -12,7 +13,7 @@ use std::sync::Arc;
 pub struct ViewEngine {
     pub current_view: IslandView,
     pub previous_view: IslandView,
-    pub active_module: ModuleId,
+    pub(crate) active_module: ModuleId,
     pub is_visible: bool,
     pub is_overlapping: bool,
     pub is_hovered: bool,
@@ -73,23 +74,12 @@ impl ViewEngine {
         self.modules.register(module)
     }
 
-    /// Resolves the active module based on highest priority among modules
-    /// supporting the current view tier.
-    pub fn resolve_active_module(&mut self, ctx: &SlotContext) {
-        let best_module = self
-            .modules
-            .iter()
-            .filter(|m| m.descriptor().tiers.supports(self.current_view))
-            .max_by_key(|m| m.priority(ctx));
+    pub fn active_module(&self) -> ModuleId {
+        self.active_module
+    }
 
-        if let Some(module) = best_module {
-            let descriptor = module.descriptor();
-            if module.priority(ctx) > Priority::INACTIVE {
-                self.active_module = descriptor.id;
-            } else {
-                self.active_module = ModuleId::SYSTEM;
-            }
-        }
+    pub(crate) fn apply_resolved(&mut self, resolved: ResolvedContent) {
+        self.active_module = resolved.module;
     }
 
     /// Sets the active view tier

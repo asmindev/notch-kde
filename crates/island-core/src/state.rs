@@ -5,6 +5,7 @@ use crate::models::{
 use crate::module::ModuleId;
 use crate::prayer::{PrayerAlert, PrayerSettings};
 use crate::settings::{PetBehaviorSettings, SettingsTab, ShadowSettings};
+use crate::content_resolver::resolve;
 use crate::module::ModuleContext;
 use crate::view_engine::ViewEngine;
 
@@ -116,18 +117,12 @@ impl AppState {
     }
 
     pub fn update_active_module(&mut self) {
-        let ctx = ModuleContext {
-            time: &self.time,
-            battery: &self.battery,
-            media: &self.media,
-            view: self.engine.current_view,
-            is_muted: self.is_muted,
-            is_dnd: self.is_dnd,
-            alert_kind: self.alert_kind,
-            prayer_panel_open: self.prayer_panel_open,
-            source_selector_open: self.show_source_selector,
-        };
-        self.engine.resolve_active_module(&ctx);
+        let resolved = resolve(
+            self.engine.registry(),
+            &self.module_context(),
+            self.engine.current_view,
+        );
+        self.engine.apply_resolved(resolved);
         self.sync_engine();
     }
 }
