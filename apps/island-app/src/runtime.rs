@@ -263,6 +263,26 @@ impl AppRuntime {
             let _ = tx.send(AppEvent::SetSleepyOnLowBattery(enabled));
         });
         let tx = event_tx.clone();
+        settings_ctx.on_set_shadow_enabled(move |enabled| {
+            let _ = tx.send(AppEvent::SetShadowEnabled(enabled));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_shadow_intensity(move |intensity| {
+            let _ = tx.send(AppEvent::SetShadowIntensity(intensity.max(0) as u32));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_shadow_radius(move |radius| {
+            let _ = tx.send(AppEvent::SetShadowRadius(radius.max(0) as u32));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_shadow_offset_x(move |offset| {
+            let _ = tx.send(AppEvent::SetShadowOffsetX(offset));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_shadow_offset_y(move |offset| {
+            let _ = tx.send(AppEvent::SetShadowOffsetY(offset));
+        });
+        let tx = event_tx.clone();
         settings_ctx.on_set_prayer_enabled(move |enabled| {
             let _ = tx.send(AppEvent::SetPrayerEnabled(enabled));
         });

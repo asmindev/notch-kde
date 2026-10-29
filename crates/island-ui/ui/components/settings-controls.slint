@@ -213,6 +213,108 @@ export component SettingsSegmentButton inherits Rectangle {
     }
 }
 
+export component SettingsSliderRow inherits Rectangle {
+    in property <string> title: "";
+    in property <int> value: 0;
+    in property <int> minimum: 0;
+    in property <int> maximum: 100;
+    in property <string> suffix: "";
+    in property <bool> signed: false;
+    callback changed(int);
+
+    height: 42px;
+    property <float> fraction: (root.value - root.minimum) * 1.0 / max(1, root.maximum - root.minimum);
+    property <string> value-label: (root.signed && root.value > 0 ? "+" : "") + "\{root.value}" + root.suffix;
+
+    function value-at(x: length) -> int {
+        return round(root.minimum + (max(0.0, min(1.0, (x - 7px) / max(1px, slider.width - 14px))) * (root.maximum - root.minimum)));
+    }
+
+    VerticalLayout {
+        spacing: 4px;
+        padding-left: 2px;
+        padding-right: 2px;
+
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: space-between;
+
+            Text {
+                text: root.title;
+                color: ThemeColors.foreground;
+                font-family: ThemeTypography.font-family;
+                font-size: ThemeTypography.size-sm;
+                font-weight: ThemeTypography.weight-medium;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: root.value-label;
+                color: ThemeColors.muted;
+                font-family: ThemeTypography.font-family;
+                font-size: ThemeTypography.size-xs;
+                font-weight: ThemeTypography.weight-bold;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+        }
+
+        slider := Rectangle {
+            height: 18px;
+            background: transparent;
+
+            track := Rectangle {
+                y: (parent.height - self.height) / 2;
+                width: 100%;
+                height: 4px;
+                border-radius: 2px;
+                background: #27272a;
+            }
+
+            fill := Rectangle {
+                y: track.y;
+                width: root.fraction * parent.width;
+                height: track.height;
+                border-radius: 2px;
+                background: ThemeColors.accent;
+            }
+
+            handle := Rectangle {
+                x: root.fraction * (parent.width - self.width);
+                y: (parent.height - self.height) / 2;
+                width: 14px;
+                height: 14px;
+                border-radius: 7px;
+                background: #ffffff;
+                drop-shadow-color: #00000066;
+                drop-shadow-blur: 4px;
+                drop-shadow-offset-y: 1px;
+            }
+
+            touch := TouchArea {
+                width: 100%;
+                height: 100%;
+
+                pointer-event(event) => {
+                    if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
+                        root.changed(root.value-at(self.mouse-x));
+                    }
+                }
+
+                moved => {
+                    if (self.pressed) {
+                        root.changed(root.value-at(self.mouse-x));
+                    }
+                }
+
+                clicked => {
+                    root.changed(root.value-at(self.mouse-x));
+                }
+            }
+        }
+    }
+}
+
 export component SettingsCard inherits Rectangle {
     in property <string> title: "";
     in property <string> description: "";

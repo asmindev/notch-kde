@@ -11,7 +11,9 @@ pub use events::{AppEvent, Effect};
 pub use models::{ActiveModule, AudioSpectrum, BatteryState, IslandMode, IslandView, MediaTrack, TimeInfo};
 pub use prayer::{Prayer, PrayerAlert, PrayerSettings};
 pub use reducer::reduce;
-pub use settings::{AvatarSettings, PersistedSettings, PetBehaviorSettings, SettingsTab};
+pub use settings::{
+    AvatarSettings, PersistedSettings, PetBehaviorSettings, SettingsTab, ShadowSettings,
+};
 pub use state::AppState;
 pub use transition_policy::TransitionPolicy;
 pub use view_engine::{IslandModule, ModuleTiers, ViewEngine};

@@ -1,4 +1,5 @@
 import { IslandContext } from "context.slint";
+import { ScrollView } from "std-widgets.slint";
 import { ThemeColors } from "theme/colors.slint";
 import { ThemeTypography } from "theme/typography.slint";
 import { PetView } from "components/pet-view.slint";
@@ -9,6 +10,7 @@ import {
     SettingsDivider,
     SettingsNavItem,
     SettingsSegmentButton,
+    SettingsSliderRow,
     SettingsSwatch,
     SettingsToggleRow,
 } from "components/settings-controls.slint";
@@ -344,82 +346,150 @@ component PrayerSettingsPage inherits Rectangle {
 }
 
 component SystemSettingsPage inherits Rectangle {
-    VerticalLayout {
-        spacing: 10px;
+    ScrollView {
+        width: 100%;
+        height: 100%;
+        vertical-scrollbar-policy: ScrollBarPolicy.always-off;
+        horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+        mouse-drag-pan-enabled: true;
 
-        SettingsCard {
-            title: "Tampilan media";
-            description: "Pilih fokus utama saat musik diputar.";
+        VerticalLayout {
+            width: 100%;
+            spacing: 10px;
+            alignment: start;
 
-            Rectangle {
-                height: 32px;
-                border-radius: 9px;
-                background: #0f0f12;
-                border-width: 1px;
-                border-color: ThemeColors.divider;
+            SettingsCard {
+                title: "Bayangan notch";
+                description: "Atur efek shadow lembut di sekitar notch.";
 
-                HorizontalLayout {
-                    spacing: 4px;
-                    padding: 3px;
-                    alignment: start;
+                SettingsToggleRow {
+                    title: "Aktifkan shadow";
+                    subtitle: "Matikan untuk tampilan notch tanpa bayangan.";
+                    checked: IslandContext.shadow-enabled;
+                    toggled(value) => { IslandContext.set-shadow-enabled(value); }
+                }
 
-                    SettingsSegmentButton {
-                        label: "Artwork";
-                        active: IslandContext.music-visual-mode == 0;
-                        clicked => { IslandContext.set-media-visual-mode(0); }
-                    }
+                SettingsDivider {}
 
-                    SettingsSegmentButton {
-                        label: "Bloub";
-                        active: IslandContext.music-visual-mode == 1;
-                        clicked => { IslandContext.set-media-visual-mode(1); }
-                    }
+                SettingsSliderRow {
+                    title: "Intensitas";
+                    value: IslandContext.shadow-intensity;
+                    minimum: 0;
+                    maximum: 100;
+                    suffix: "%";
+                    changed(value) => { IslandContext.set-shadow-intensity(value); }
+                }
+
+                SettingsDivider {}
+
+                SettingsSliderRow {
+                    title: "Radius";
+                    value: IslandContext.shadow-radius;
+                    minimum: 0;
+                    maximum: 48;
+                    suffix: " px";
+                    changed(value) => { IslandContext.set-shadow-radius(value); }
+                }
+
+                SettingsDivider {}
+
+                SettingsSliderRow {
+                    title: "Offset X";
+                    value: IslandContext.shadow-offset-x;
+                    minimum: -24;
+                    maximum: 24;
+                    suffix: " px";
+                    signed: true;
+                    changed(value) => { IslandContext.set-shadow-offset-x(value); }
+                }
+
+                SettingsDivider {}
+
+                SettingsSliderRow {
+                    title: "Offset Y";
+                    value: IslandContext.shadow-offset-y;
+                    minimum: -24;
+                    maximum: 24;
+                    suffix: " px";
+                    signed: true;
+                    changed(value) => { IslandContext.set-shadow-offset-y(value); }
                 }
             }
-        }
 
-        SettingsCard {
-            title: "Notifikasi";
-            description: "Pemantau notifikasi desktop.";
-
-            HorizontalLayout {
-                spacing: 8px;
-                alignment: start;
+            SettingsCard {
+                title: "Tampilan media";
+                description: "Pilih fokus utama saat musik diputar.";
 
                 Rectangle {
-                    width: 8px;
-                    height: 8px;
-                    border-radius: 4px;
-                    background: ThemeColors.success;
-                    y: (parent.height - self.height) / 2;
-                }
+                    height: 32px;
+                    border-radius: 9px;
+                    background: #0f0f12;
+                    border-width: 1px;
+                    border-color: ThemeColors.divider;
 
-                Text {
-                    text: "Aktif · Bloub akan menoleh saat notifikasi masuk";
-                    color: ThemeColors.muted;
-                    font-family: ThemeTypography.font-family;
-                    font-size: ThemeTypography.size-sm;
-                    vertical-alignment: center;
+                    HorizontalLayout {
+                        spacing: 4px;
+                        padding: 3px;
+                        alignment: start;
+
+                        SettingsSegmentButton {
+                            label: "Artwork";
+                            active: IslandContext.music-visual-mode == 0;
+                            clicked => { IslandContext.set-media-visual-mode(0); }
+                        }
+
+                        SettingsSegmentButton {
+                            label: "Bloub";
+                            active: IslandContext.music-visual-mode == 1;
+                            clicked => { IslandContext.set-media-visual-mode(1); }
+                        }
+                    }
                 }
             }
-        }
 
-        SettingsCard {
-            title: "Reset";
-            description: "Kembalikan pengaturan ke kondisi awal.";
+            SettingsCard {
+                title: "Notifikasi";
+                description: "Pemantau notifikasi desktop.";
 
-            HorizontalLayout {
-                spacing: 8px;
-                alignment: start;
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
 
-                SettingsActionButton {
-                    label: "Reset avatar";
-                    clicked => { IslandContext.reset-avatar(); }
+                    Rectangle {
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 4px;
+                        background: ThemeColors.success;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: "Aktif · Bloub akan menoleh saat notifikasi masuk";
+                        color: ThemeColors.muted;
+                        font-family: ThemeTypography.font-family;
+                        font-size: ThemeTypography.size-sm;
+                        vertical-alignment: center;
+                    }
                 }
+            }
 
-                SettingsActionButton {
-                    label: "Reset semua";
-                    clicked => { IslandContext.reset-settings(); }
+            SettingsCard {
+                title: "Reset";
+                description: "Kembalikan pengaturan ke kondisi awal.";
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+
+                    SettingsActionButton {
+                        label: "Reset avatar";
+                        clicked => { IslandContext.reset-avatar(); }
+                    }
+
+                    SettingsActionButton {
+                        label: "Reset semua";
+                        clicked => { IslandContext.reset-settings(); }
+                    }
                 }
             }
         }

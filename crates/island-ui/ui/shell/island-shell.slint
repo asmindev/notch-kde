@@ -125,6 +125,10 @@ export component IslandShell inherits Rectangle {
         background: ThemeColors.background;
         border-bottom-left-radius: root.target-r;
         border-bottom-right-radius: root.target-r;
+        drop-shadow-color: IslandContext.shadow-color;
+        drop-shadow-blur: IslandContext.shadow-radius * 1px;
+        drop-shadow-offset-x: IslandContext.shadow-offset-x * 1px;
+        drop-shadow-offset-y: IslandContext.shadow-offset-y * 1px;
         opacity: root.is-visible-state ? 1.0 : 0.0;
 
         // Spring / Gooey Morphing Animations

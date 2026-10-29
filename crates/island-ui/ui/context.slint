@@ -73,6 +73,12 @@ export global IslandContext {
     in-out property <bool> notification-reactions-enabled: true;
     in-out property <bool> music-reactions-enabled: true;
     in-out property <bool> sleepy-on-low-battery: true;
+    in-out property <bool> shadow-enabled: true;
+    in-out property <int> shadow-intensity: 55;
+    in-out property <int> shadow-radius: 18;
+    in-out property <int> shadow-offset-x: 0;
+    in-out property <int> shadow-offset-y: 6;
+    in-out property <color> shadow-color: #00000070;
     in-out property <bool> prayer-enabled: true;
     in-out property <int> prayer-city-index: 0;
     in-out property <int> prayer-reminder-minutes: 10;
@@ -201,6 +207,11 @@ export global IslandContext {
     callback set-notification-reactions(bool);
     callback set-music-reactions(bool);
     callback set-sleepy-on-low-battery(bool);
+    callback set-shadow-enabled(bool);
+    callback set-shadow-intensity(int);
+    callback set-shadow-radius(int);
+    callback set-shadow-offset-x(int);
+    callback set-shadow-offset-y(int);
     callback set-prayer-enabled(bool);
     callback set-prayer-city(int);
     callback set-prayer-reminder-minutes(int);

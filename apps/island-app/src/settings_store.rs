@@ -62,7 +62,7 @@ impl SettingsStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use island_core::{AvatarSettings, PetBehaviorSettings};
+    use island_core::{AvatarSettings, PetBehaviorSettings, ShadowSettings};
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT_ID: AtomicU64 = AtomicU64::new(0);
@@ -93,6 +93,13 @@ mod tests {
                 notification_reactions: true,
                 music_reactions: false,
                 sleepy_on_low_battery: true,
+            },
+            shadow: ShadowSettings {
+                enabled: false,
+                intensity: 80,
+                radius: 34,
+                offset_x: -8,
+                offset_y: 12,
             },
             ..PersistedSettings::default()
         };

@@ -43,6 +43,7 @@ impl ViewModel {
         ctx.set_notification_reactions_enabled(state.behavior.notification_reactions);
         ctx.set_music_reactions_enabled(state.behavior.music_reactions);
         ctx.set_sleepy_on_low_battery(state.behavior.sleepy_on_low_battery);
+        sync_shadow_context(&ctx, state);
         sync_prayer_context(&ctx, state);
         ctx.set_pet_is_happy(state.pet_is_happy);
         ctx.set_pet_is_dizzy(state.pet_is_dizzy);
@@ -112,6 +113,7 @@ impl ViewModel {
         ctx.set_notification_reactions_enabled(state.behavior.notification_reactions);
         ctx.set_music_reactions_enabled(state.behavior.music_reactions);
         ctx.set_sleepy_on_low_battery(state.behavior.sleepy_on_low_battery);
+        sync_shadow_context(&ctx, state);
         sync_prayer_context(&ctx, state);
         ctx.set_music_visual_mode(state.music_visual_mode as i32);
         ctx.set_pet_is_happy(state.pet_is_happy);
@@ -120,6 +122,18 @@ impl ViewModel {
         ctx.set_is_playing(false);
         ctx.set_app_version(env!("CARGO_PKG_VERSION").into());
     }
+}
+
+fn sync_shadow_context(ctx: &IslandContext, state: &AppState) {
+    let shadow = state.shadow.normalized();
+    let intensity = shadow.intensity as f32 / 100.0;
+    let alpha = if shadow.enabled { intensity * 0.8 } else { 0.0 };
+    ctx.set_shadow_enabled(shadow.enabled);
+    ctx.set_shadow_intensity(shadow.intensity as i32);
+    ctx.set_shadow_radius(shadow.radius as i32);
+    ctx.set_shadow_offset_x(shadow.offset_x);
+    ctx.set_shadow_offset_y(shadow.offset_y);
+    ctx.set_shadow_color(slint::Color::from_argb_f32(alpha, 0.0, 0.0, 0.0));
 }
 
 fn sync_prayer_context(ctx: &IslandContext, state: &AppState) {

@@ -3,7 +3,7 @@ use crate::models::{
     MusicVisualMode, TimeInfo,
 };
 use crate::prayer::{PrayerAlert, PrayerSettings};
-use crate::settings::{PetBehaviorSettings, SettingsTab};
+use crate::settings::{PetBehaviorSettings, SettingsTab, ShadowSettings};
 use crate::view_engine::{SlotContext, ViewEngine};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -48,6 +48,7 @@ pub struct AppState {
     pub settings_open: bool,
     pub settings_tab: SettingsTab,
     pub behavior: PetBehaviorSettings,
+    pub shadow: ShadowSettings,
     pub prayer: PrayerSettings,
 
     // Presentation states
@@ -147,6 +148,7 @@ impl Default for AppState {
             settings_open: false,
             settings_tab: SettingsTab::Avatar,
             behavior: PetBehaviorSettings::default(),
+            shadow: ShadowSettings::default(),
             prayer: PrayerSettings::default(),
             alert_kind: AlertKind::None,
             alert_generation: 0,

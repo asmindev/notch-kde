@@ -1,7 +1,7 @@
 use crate::events::{AppEvent, Effect};
 use crate::models::IslandView;
 use crate::prayer::{PrayerAlertKind, PrayerSettings};
-use crate::settings::{AvatarSettings, PetBehaviorSettings};
+use crate::settings::{AvatarSettings, PetBehaviorSettings, ShadowSettings};
 use crate::state::AppState;
 
 fn begin_overlap_dismissal(state: &mut AppState, effects: &mut Vec<Effect>) {
@@ -334,6 +334,37 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             effects.push(Effect::PersistSettings);
         }
 
+        AppEvent::SetShadowEnabled(enabled) => {
+            state.shadow.enabled = enabled;
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetShadowIntensity(intensity) => {
+            state.shadow.intensity = intensity.min(crate::settings::SHADOW_INTENSITY_MAX);
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetShadowRadius(radius) => {
+            state.shadow.radius = radius.min(crate::settings::SHADOW_RADIUS_MAX);
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetShadowOffsetX(offset) => {
+            state.shadow.offset_x = offset.clamp(
+                -crate::settings::SHADOW_OFFSET_MAX,
+                crate::settings::SHADOW_OFFSET_MAX,
+            );
+            effects.push(Effect::PersistSettings);
+        }
+
+        AppEvent::SetShadowOffsetY(offset) => {
+            state.shadow.offset_y = offset.clamp(
+                -crate::settings::SHADOW_OFFSET_MAX,
+                crate::settings::SHADOW_OFFSET_MAX,
+            );
+            effects.push(Effect::PersistSettings);
+        }
+
         AppEvent::SetPrayerEnabled(enabled) => {
             state.prayer.enabled = enabled;
             state.prayer = state.prayer.normalized();
@@ -375,6 +406,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.blob_expression_custom = avatar.expression_custom;
             state.avatar_random = avatar.random;
             state.behavior = PetBehaviorSettings::default();
+            state.shadow = ShadowSettings::default();
             state.prayer = PrayerSettings::default();
             state.music_visual_mode = crate::models::MusicVisualMode::ArtworkPrimary;
             effects.push(Effect::PersistSettings);

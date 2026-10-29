@@ -325,6 +325,45 @@ fn test_settings_events_open_tab_toggle_and_persist() {
 }
 
 #[test]
+fn test_shadow_settings_events_are_persisted() {
+    let mut state = AppState::default();
+    assert!(state.shadow.enabled);
+    assert_eq!(state.shadow.intensity, 55);
+    assert_eq!(state.shadow.radius, 18);
+    assert_eq!(state.shadow.offset_x, 0);
+    assert_eq!(state.shadow.offset_y, 6);
+
+    let effects = reduce(&mut state, AppEvent::SetShadowEnabled(false));
+    assert!(!state.shadow.enabled);
+    assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
+
+    let effects = reduce(&mut state, AppEvent::SetShadowIntensity(80));
+    assert_eq!(state.shadow.intensity, 80);
+    assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
+
+    let effects = reduce(&mut state, AppEvent::SetShadowRadius(34));
+    assert_eq!(state.shadow.radius, 34);
+    assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
+
+    let effects = reduce(&mut state, AppEvent::SetShadowOffsetX(-8));
+    assert_eq!(state.shadow.offset_x, -8);
+    assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
+
+    let effects = reduce(&mut state, AppEvent::SetShadowOffsetY(12));
+    assert_eq!(state.shadow.offset_y, 12);
+    assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
+
+    reduce(&mut state, AppEvent::SetShadowIntensity(999));
+    assert_eq!(state.shadow.intensity, 100);
+    reduce(&mut state, AppEvent::SetShadowRadius(999));
+    assert_eq!(state.shadow.radius, 48);
+    reduce(&mut state, AppEvent::SetShadowOffsetX(-99));
+    assert_eq!(state.shadow.offset_x, -24);
+    reduce(&mut state, AppEvent::SetShadowOffsetY(99));
+    assert_eq!(state.shadow.offset_y, 24);
+}
+
+#[test]
 fn test_reset_settings_restores_defaults_and_persists() {
     let mut state = AppState::default();
     state.blob_character = 6;
@@ -334,6 +373,11 @@ fn test_reset_settings_restores_defaults_and_persists() {
     state.avatar_random = true;
     state.behavior.cursor_gaze = false;
     state.behavior.music_reactions = false;
+    state.shadow.enabled = false;
+    state.shadow.intensity = 80;
+    state.shadow.radius = 34;
+    state.shadow.offset_x = -8;
+    state.shadow.offset_y = 12;
     state.music_visual_mode = island_core::models::MusicVisualMode::PetPrimary;
 
     let effects = reduce(&mut state, AppEvent::ResetSettings);
@@ -345,6 +389,11 @@ fn test_reset_settings_restores_defaults_and_persists() {
     assert!(!state.avatar_random);
     assert!(state.behavior.cursor_gaze);
     assert!(state.behavior.music_reactions);
+    assert!(state.shadow.enabled);
+    assert_eq!(state.shadow.intensity, 55);
+    assert_eq!(state.shadow.radius, 18);
+    assert_eq!(state.shadow.offset_x, 0);
+    assert_eq!(state.shadow.offset_y, 6);
     assert_eq!(
         state.music_visual_mode,
         island_core::models::MusicVisualMode::ArtworkPrimary

@@ -7,6 +7,9 @@ pub const SETTINGS_VERSION: u32 = 1;
 pub const SHAPE_COUNT: u32 = 8;
 pub const PALETTE_COUNT: u32 = 14;
 pub const EXPRESSION_COUNT: u32 = 17;
+pub const SHADOW_INTENSITY_MAX: u32 = 100;
+pub const SHADOW_RADIUS_MAX: u32 = 48;
+pub const SHADOW_OFFSET_MAX: i32 = 24;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[repr(i32)]
@@ -86,12 +89,45 @@ impl Default for PetBehaviorSettings {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ShadowSettings {
+    pub enabled: bool,
+    pub intensity: u32,
+    pub radius: u32,
+    pub offset_x: i32,
+    pub offset_y: i32,
+}
+
+impl Default for ShadowSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            intensity: 55,
+            radius: 18,
+            offset_x: 0,
+            offset_y: 6,
+        }
+    }
+}
+
+impl ShadowSettings {
+    pub fn normalized(mut self) -> Self {
+        self.intensity = self.intensity.min(SHADOW_INTENSITY_MAX);
+        self.radius = self.radius.min(SHADOW_RADIUS_MAX);
+        self.offset_x = self.offset_x.clamp(-SHADOW_OFFSET_MAX, SHADOW_OFFSET_MAX);
+        self.offset_y = self.offset_y.clamp(-SHADOW_OFFSET_MAX, SHADOW_OFFSET_MAX);
+        self
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PersistedSettings {
     pub version: u32,
     pub avatar: AvatarSettings,
     pub behavior: PetBehaviorSettings,
+    pub shadow: ShadowSettings,
     pub media_visual_mode: MusicVisualMode,
     pub prayer: PrayerSettings,
 }
@@ -102,6 +138,7 @@ impl Default for PersistedSettings {
             version: SETTINGS_VERSION,
             avatar: AvatarSettings::default(),
             behavior: PetBehaviorSettings::default(),
+            shadow: ShadowSettings::default(),
             media_visual_mode: MusicVisualMode::ArtworkPrimary,
             prayer: PrayerSettings::default(),
         }
@@ -121,6 +158,7 @@ impl PersistedSettings {
             }
             .normalized(),
             behavior: state.behavior,
+            shadow: state.shadow.normalized(),
             media_visual_mode: state.music_visual_mode,
             prayer: state.prayer.normalized(),
         }
@@ -134,6 +172,7 @@ impl PersistedSettings {
         state.blob_expression_custom = avatar.expression_custom;
         state.avatar_random = avatar.random;
         state.behavior = self.behavior;
+        state.shadow = self.shadow.normalized();
         state.music_visual_mode = self.media_visual_mode;
         state.prayer = self.prayer.normalized();
     }
@@ -152,6 +191,11 @@ mod tests {
         assert_eq!(settings.avatar.expression, 0);
         assert!(settings.behavior.cursor_gaze);
         assert!(settings.behavior.idle_acting);
+        assert!(settings.shadow.enabled);
+        assert_eq!(settings.shadow.intensity, 55);
+        assert_eq!(settings.shadow.radius, 18);
+        assert_eq!(settings.shadow.offset_x, 0);
+        assert_eq!(settings.shadow.offset_y, 6);
         assert!(settings.prayer.enabled);
         assert_eq!(settings.prayer.city, 0);
         assert_eq!(settings.prayer.reminder_minutes, 10);
@@ -190,6 +234,11 @@ mod tests {
         state.avatar_random = true;
         state.behavior.cursor_gaze = false;
         state.behavior.music_reactions = false;
+        state.shadow.enabled = false;
+        state.shadow.intensity = 80;
+        state.shadow.radius = 34;
+        state.shadow.offset_x = -8;
+        state.shadow.offset_y = 12;
         state.music_visual_mode = MusicVisualMode::PetPrimary;
         state.prayer.enabled = false;
         state.prayer.city = 8;
@@ -206,6 +255,11 @@ mod tests {
         assert!(restored.avatar_random);
         assert!(!restored.behavior.cursor_gaze);
         assert!(!restored.behavior.music_reactions);
+        assert!(!restored.shadow.enabled);
+        assert_eq!(restored.shadow.intensity, 80);
+        assert_eq!(restored.shadow.radius, 34);
+        assert_eq!(restored.shadow.offset_x, -8);
+        assert_eq!(restored.shadow.offset_y, 12);
         assert_eq!(restored.music_visual_mode, MusicVisualMode::PetPrimary);
         assert!(!restored.prayer.enabled);
         assert_eq!(restored.prayer.city, 8);
