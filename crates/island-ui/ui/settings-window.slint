@@ -2,6 +2,7 @@ import { IslandContext } from "context.slint";
 import { ScrollView } from "std-widgets.slint";
 import { ThemeColors } from "theme/colors.slint";
 import { ThemeTypography } from "theme/typography.slint";
+import { Icons } from "theme/icons.slint";
 import { PetView } from "components/pet-view.slint";
 import {
     SettingsActionButton,
@@ -781,35 +782,40 @@ export component SettingsWindow inherits Window {
 
                 SettingsNavItem {
                     label: "Avatar";
-                    glyph: "◉";
+                    icon: Icons.smile;
+                    has-icon: true;
                     active: IslandContext.settings-tab == 0;
                     clicked => { IslandContext.select-settings-tab(0); }
                 }
 
                 SettingsNavItem {
                     label: "Perilaku";
-                    glyph: "✦";
+                    icon: Icons.activity;
+                    has-icon: true;
                     active: IslandContext.settings-tab == 1;
                     clicked => { IslandContext.select-settings-tab(1); }
                 }
 
                 SettingsNavItem {
                     label: "Sholat";
-                    glyph: "☾";
+                    icon: Icons.moon;
+                    has-icon: true;
                     active: IslandContext.settings-tab == 2;
                     clicked => { IslandContext.select-settings-tab(2); }
                 }
 
                 SettingsNavItem {
                     label: "Sistem";
-                    glyph: "⚙";
+                    icon: Icons.settings;
+                    has-icon: true;
                     active: IslandContext.settings-tab == 3;
                     clicked => { IslandContext.select-settings-tab(3); }
                 }
 
                 SettingsNavItem {
                     label: "Tentang";
-                    glyph: "ⓘ";
+                    icon: Icons.info;
+                    has-icon: true;
                     active: IslandContext.settings-tab == 4;
                     clicked => { IslandContext.select-settings-tab(4); }
                 }

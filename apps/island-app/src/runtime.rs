@@ -75,13 +75,13 @@ impl AppRuntime {
         let hour = now.format("%H").to_string().parse::<u32>().unwrap_or(12);
 
         let greeting_sub = if hour < 12 {
-            format!("Have a wonderful {} morning ✨", day_name)
+            format!("Have a wonderful {} morning", day_name)
         } else if hour < 17 {
-            format!("Have a wonderful {} afternoon ☀️", day_name)
+            format!("Have a wonderful {} afternoon", day_name)
         } else if hour < 21 {
-            format!("Good evening! Enjoy your {} 🌆", day_name)
+            format!("Good evening! Enjoy your {}", day_name)
         } else {
-            "Good night! Rest and recharge 🌙".to_string()
+            "Good night! Rest and recharge".to_string()
         };
         app_state.presentation.welcome_subtitle = greeting_sub;
 

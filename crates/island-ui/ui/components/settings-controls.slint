@@ -5,6 +5,8 @@ import { ThemeTypography } from "../theme/typography.slint";
 export component SettingsNavItem inherits Rectangle {
     in property <string> label: "";
     in property <string> glyph: "";
+    in property <image> icon;
+    in property <bool> has-icon: false;
     in property <bool> active: false;
     callback clicked();
 
@@ -20,7 +22,16 @@ export component SettingsNavItem inherits Rectangle {
         spacing: 10px;
         alignment: start;
 
-        Text {
+        if root.has-icon: Image {
+            width: 16px;
+            height: 16px;
+            y: (parent.height - self.height) / 2;
+            source: root.icon;
+            colorize: root.active ? ThemeColors.accent : ThemeColors.subtle;
+            image-fit: contain;
+        }
+
+        if !root.has-icon && root.glyph != "": Text {
             text: root.glyph;
             color: root.active ? ThemeColors.accent : ThemeColors.subtle;
             font-size: ThemeTypography.size-base;

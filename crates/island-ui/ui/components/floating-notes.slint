@@ -65,9 +65,10 @@ export component FloatingNotes inherits Rectangle {
     // ==========================================
     // 2. HAPPY / PETTING REACTION (Hearts & Stars)
     // ==========================================
-    // Burst Heart 💖
+    // Burst Heart
     Text {
-        text: "💖";
+        text: "♥";
+        color: #f43f5e;
         font-size: max(10px, min(18px, root.pet-size * 0.45));
         x: (parent.width - self.width) / 2 + (root.is-happy ? 8px : 0px);
         y: root.is-happy ? -6px : parent.height * 0.3;
@@ -77,9 +78,10 @@ export component FloatingNotes inherits Rectangle {
         animate opacity { duration: 380ms; easing: ease-out; }
     }
 
-    // Burst Sparkle ✨
+    // Burst Sparkle
     Text {
-        text: "✨";
+        text: "✦";
+        color: #facc15;
         font-size: max(9px, min(15px, root.pet-size * 0.38));
         x: (parent.width * 0.15) - (root.is-happy ? 6px : 0px);
         y: root.is-happy ? 0px : parent.height * 0.4;

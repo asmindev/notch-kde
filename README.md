@@ -4,7 +4,7 @@ A premium, native **Dynamic Island** for **KDE Plasma 6 (Wayland)** built from t
 
 ---
 
-## 🌟 Highlights & Features
+## Highlights & Features
 
 - **Pure Rust Architecture**: Clean, modular monolith with zero legacy C++ or QML dependencies.
 - **Hardware-Accelerated Slint UI**: Sub-millisecond rendering with WGPU/FemtoVG and ultra-low CPU/memory usage.
@@ -16,7 +16,7 @@ A premium, native **Dynamic Island** for **KDE Plasma 6 (Wayland)** built from t
 
 ---
 
-## 📱 Views & Tiers
+## Views & Tiers
 
 `notchde` features a multi-tiered adaptive presentation system:
 
@@ -42,7 +42,7 @@ A premium, native **Dynamic Island** for **KDE Plasma 6 (Wayland)** built from t
 
 ---
 
-## 🐾 Bloub Pet (Procedural Mascot)
+## Bloub Pet (Procedural Mascot)
 
 The interactive desktop companion is a procedural 3D WGPU body derived from **Bloub**:
 - **16 Animated States**: Idle acting, playful blinking, music dancing, dizzy spinning (from rapid poking), sleepy yawning (on low battery), and charging excitement.
@@ -53,7 +53,7 @@ The interactive desktop companion is a procedural 3D WGPU body derived from **Bl
 
 ---
 
-## ⚙️ Settings Window
+## Settings Window
 
 An intuitive multi-tab configuration interface:
 - **Avatar**: Choose shape, palette, and expressions; toggle auto-randomization or shuffle on demand.
@@ -71,7 +71,7 @@ Settings are saved atomically to `$XDG_CONFIG_HOME/notchde/settings.json` (falli
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 `notchde` is structured as a high-performance modular monolith across 6 crates:
 
@@ -86,7 +86,7 @@ crates/island-ui         Slint UI components, view models, themes, shell, and an
 
 ---
 
-## 🚀 Building & Running
+## Building & Running
 
 ### Prerequisites
 
@@ -111,7 +111,7 @@ cargo run -p island-app
 
 ---
 
-## 🧪 Testing
+## Testing
 
 The repository maintains strict test coverage with 226 unit and integration tests across all workspace crates:
 
@@ -128,7 +128,7 @@ cargo clippy --workspace --all-targets
 
 ---
 
-## 💖 Credits & Acknowledgements
+## Credits & Acknowledgements
 
 This project is made possible thanks to the following open-source projects and authors:
 
@@ -141,7 +141,7 @@ This project is made possible thanks to the following open-source projects and a
 
 ---
 
-## 📄 License
+## License
 
 - This project is licensed under the **GNU General Public License v3.0 (GPL-3.0-or-later)**. See [`LICENSE`](LICENSE) for details.
 - Third-party components and ports are covered by their respective licenses (see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)).

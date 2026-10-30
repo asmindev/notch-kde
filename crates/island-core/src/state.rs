@@ -186,7 +186,7 @@ impl Default for PresentationState {
             is_welcome: true,
             welcome_generation: 1,
             welcome_title: "Welcome back!".to_string(),
-            welcome_subtitle: "Have a wonderful day ✨".to_string(),
+            welcome_subtitle: "Have a wonderful day".to_string(),
         }
     }
 }
