@@ -7,7 +7,7 @@ import { ChargingIndicator } from "../../components/charging-indicator.slint";
 
 export component SystemExpandSlot inherits VerticalLayout {
     in property <bool> active: true;
-    out property <bool> is-hovered: false;
+    out property <bool> is-hovered: pet.is-hovered;
 
     property <length> slot-h: max(40px, ThemeMetrics.expand-height - 44px);
 
@@ -27,7 +27,7 @@ export component SystemExpandSlot inherits VerticalLayout {
 
             VerticalLayout {
                 alignment: center;
-                PetView {
+                pet := PetView {
                     active: root.active;
                     pet-size: parent.height;
                 }

@@ -15,13 +15,4 @@ export component CompactBlobEyes inherits Rectangle {
         source: IslandContext.pet-3d-image;
         image-fit: contain;
     }
-
-    touch := TouchArea {
-        width: 100%;
-        height: 100%;
-        clicked => {
-            IslandContext.mochi-clicked();
-            IslandContext.pet-clicked();
-        }
-    }
 }

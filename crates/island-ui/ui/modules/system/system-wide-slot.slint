@@ -7,7 +7,7 @@ import { ChargingIndicator } from "../../components/charging-indicator.slint";
 
 export component SystemWideSlot inherits Rectangle {
     in property <bool> active: true;
-    out property <bool> is-hovered: false;
+    out property <bool> is-hovered: pet.is-hovered;
 
     property <length> margin-x: max(12px, min(24px, ThemeMetrics.wide-width * 0.04));
     property <length> content-h: ThemeMetrics.wide-height * 0.86;
@@ -25,7 +25,7 @@ export component SystemWideSlot inherits Rectangle {
 
         VerticalLayout {
             alignment: center;
-            PetView {
+            pet := PetView {
                 active: root.active;
                 pet-size: root.content-h;
             }
