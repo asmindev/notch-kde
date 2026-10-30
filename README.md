@@ -1,59 +1,147 @@
-# KDE Dynamic Island
+# notchde — KDE Dynamic Island
 
-A premium, native Dynamic Island for **KDE Plasma 6 (Wayland)** built from the ground up in **Rust** and **Slint**.
+A premium, native **Dynamic Island** for **KDE Plasma 6 (Wayland)** built from the ground up in **Rust** and **Slint**.
 
-## Features & Highlights
+---
 
-- **Pure Rust Architecture**: Clean, modular monolith with zero legacy C++/QML baggage.
-- **Slint UI & Hardware Acceleration**: Sub-millisecond rendering with WGPU/FemtoVG.
-- **KDE Plasma 6 Native Wayland Integration**:
-  - Pinned directly to the top edge of the display with transparent borders and smooth concave corners.
-  - Active window overlap detection via native `org_kde_plasma_window_management` Wayland protocol.
-- **4 MVP Views**:
-  1. **Compact View**: Minimalist pill with a procedural 3D Bloub pet, digital clock, and real-time CAVA audio visualizer / charging status.
-  2. **Idle View**: Expanded dashboard with the 3D Bloub pet, clock, date, battery level, and a bottom bar. The gear opens Settings, where the Avatar tab handles shape, palette, eyes/expression, shuffle, and auto-random.
-  3. **Idle Music View**: Seamless MPRIS media player integration displaying track title, artist, playback status, and media control buttons.
-  4. **Welcome View**: Dynamic entrance greeting on system startup or unlock, automatically morphing to standard views after 3.5 seconds.
+## 🌟 Highlights & Features
 
-## Bloub Pet
+- **Pure Rust Architecture**: Clean, modular monolith with zero legacy C++ or QML dependencies.
+- **Hardware-Accelerated Slint UI**: Sub-millisecond rendering with WGPU/FemtoVG and ultra-low CPU/memory usage.
+- **Native KDE Plasma 6 Wayland Integration**:
+  - Anchored directly to the top edge of the display with smooth concave corners and custom drop shadows.
+  - Active window overlap detection via native `org_kde_plasma_window_management` Wayland protocol (auto-hides when maximized/tiled windows touch the top bar; smoothly reveals on hover).
+- **Strict Energy & Render Policy**:
+  - Zero-waste rendering engine (`RenderPolicy`): spectrum visualizers, 3D pet updates, and UI animation timers are completely suspended when hidden, docked, or paused.
 
-The pet is a procedural WGPU body derived from Bloub, with 16 animated states, 16 Bloub
-expressions plus a robot-eye variant, 8 shapes, and a configurable palette. Eyes blink more
-frequently (sometimes twice), perform idle micro-expressions, and track the cursor; compact
-mode uses larger eyes, faster blinks, and stronger gaze/acting. Clicking the pet cycles through
-wink, bounce, backflip, and X-rotation stunts; desktop notifications, music, charging,
-low-battery alerts, and dizzy states trigger their own animations. The avatar is static by default; the Avatar tab in Settings can shuffle
-once or enable continuous random shape/palette/expression changes.
-If the WGPU backend is unavailable, the original vector pet is used as a fallback.
+---
 
-See `THIRD_PARTY_NOTICES.md` for Bloub attribution.
+## 📱 Views & Tiers
 
-## Settings
+`notchde` features a multi-tiered adaptive presentation system:
 
-The bottom bar gear opens a separate Settings window with Avatar, Perilaku, Sistem, and
-Tentang tabs. It includes a live Bloub preview, shape/palette/expression controls, behavior
-toggles for cursor gaze, idle acting, click stunts, notification/music reactions, and sleepy
-low-battery behavior. Settings are saved atomically to
-`$XDG_CONFIG_HOME/notchde/settings.json` (falling back to `~/.config/notchde/settings.json`)
-and loaded on startup.
+### 1. Compact View (Pill Notch)
+- **Standard Mode**: Displays the animated Bloub pet, real-time digital clock, battery status/charging indicator, and CAVA audio visualizer bars.
+- **Eyes-Only Mode (*Hanya Mata*)**: A clean, expressive pair of Bloub eyes centered on the notch.
+- **CAVA Ambient Aura (*Aura CAVA Musik*)**: A soft, mirrored Gaussian-blurred soundscape bloom rendered behind the eyes in Eyes-Only mode (adjustable from 0% to 100% opacity in Settings).
 
-## Architecture
+### 2. Wide View (Quick Status & Media)
+- **Media Player**: Live MPRIS player integration featuring track title, artist, playback controls, album art, interactive audio spectrum, and a compact app-source selector with icons (Spotify, Firefox, Chrome, VLC, Cider, Amberol, etc.).
+- **Prayer Alert & Schedule**: Upcoming prayer information, time countdown, and city indicators.
+- **System Dashboard**: Bloub pet avatar, digital clock, date, and battery level.
+- **Welcome Entrance**: Smooth greeting animation on system startup or screen unlock.
 
-- `apps/island-app`: Bootstrap, wiring, runtime loop, and shutdown lifecycle.
-- `crates/island-core`: UI-independent, deterministic state machine, reducer, and transition policy.
-- `crates/island-platform`: KDE Plasma 6 Wayland integration (window rules, overlap detection, geometry tracking).
-- `crates/island-services`: Background asynchronous services (Clock, Battery, CAVA spectrum, MPRIS media, Notifications).
-- `crates/island-ui`: Slint components, themes, animations, shell, and views.
+### 3. Expand View (Full Interactive Dashboard)
+- **Expanded Media**: Detailed media controls, seekbar, and full audio spectrum.
+- **Astronomical Prayer Dome (*Kubah Sholat*)**:
+  - Visual daytime and nighttime arcs tracking real-time solar and lunar orbits.
+  - **Dynamic Day/Night Horizon Timeline**:
+    - **Night Phase (*Malam*)**: Maghrib (left/sunset) → Isya (early night) → Subuh (right/dawn) following the moon's trajectory.
+    - **Day Phase (*Siang*)**: Subuh (left/dawn) → Dzuhur (zenith/noon) → Ashar (afternoon) → Maghrib (right/sunset) following the sun's trajectory.
+  - Real-time sky twilight and astral night gradient calculation with star field opacity.
 
-## Building and Running
+---
+
+## 🐾 Bloub Pet (Procedural Mascot)
+
+The interactive desktop companion is a procedural 3D WGPU body derived from **Bloub**:
+- **16 Animated States**: Idle acting, playful blinking, music dancing, dizzy spinning (from rapid poking), sleepy yawning (on low battery), and charging excitement.
+- **Interactive Stunts**: Clicking the pet cycles through playful animations (wink, bounce, backflip, and X-axis rotation).
+- **Cursor Gaze Tracking**: Pet smoothly follows your mouse cursor across the screen.
+- **Customizable Avatar**: 8 morphing 3D shapes (Cercle, Galet, Squircle, Capsule, Triangle, Hexagone, Nuage, Goutte), 16 expressions (plus robot-eyes), and 14 color palettes.
+- **2D CPU Fallback**: Automatically falls back to a clean flat vector renderer if hardware WGPU acceleration is unavailable.
+
+---
+
+## ⚙️ Settings Window
+
+An intuitive multi-tab configuration interface:
+- **Avatar**: Choose shape, palette, and expressions; toggle auto-randomization or shuffle on demand.
+- **Perilaku (Behavior)**: Enable/disable cursor gaze, idle acting, click stunts, notification reactions, music reactions, and sleepy low-battery behavior.
+- **Tampilan (Appearance & System)**:
+  - Toggle between Standard and Eyes-Only compact styles.
+  - Adjust CAVA background aura intensity slider (0%–100%).
+  - Configure floating island drop shadow (intensity, radius, offset X/Y).
+  - Select media visual focus (Artwork-primary vs. Pet-primary).
+  - Choose between 3D (WGPU) and 2D (Flat CPU) mascot renderers.
+- **Sholat (Prayer Schedule)**: Configure Indonesian city presets (Jakarta, Kendari, Bau-Bau, etc.), reminder windows, and adhan alerts.
+- **Tentang (About)**: Version information and open-source acknowledgements.
+
+Settings are saved atomically to `$XDG_CONFIG_HOME/notchde/settings.json` (falling back to `~/.config/notchde/settings.json`).
+
+---
+
+## 🏗️ Architecture
+
+`notchde` is structured as a high-performance modular monolith across 6 crates:
+
+```text
+apps/island-app          Entry point, runtime loop, bootstrap, settings store
+crates/island-core       Deterministic state machine, reducer, view engine, prayer domain, render policy
+crates/island-pet3d      Procedural 3D WGPU renderer & 2D flat mascot fallback
+crates/island-platform   KDE Plasma 6 Wayland window integration, overlap detection, geometry
+crates/island-services   Async background workers (Clock, Battery, CAVA, MPRIS media, Notifications)
+crates/island-ui         Slint UI components, view models, themes, shell, and animations
+```
+
+---
+
+## 🚀 Building & Running
+
+### Prerequisites
+
+- **Linux** with **KDE Plasma 6 (Wayland session)**
+- **Rust toolchain** (Edition 2024, Rust 1.85+)
+- **CAVA** (`cava`) installed and available in `$PATH` (for audio spectrum visualizer)
+- Development libraries for Wayland and Vulkan/OpenGL
+
+### Build & Run
 
 ```bash
+# Clone the repository
+git clone https://github.com/asmindev/notchde.git
+cd notchde
+
+# Build in release mode
 cargo build --release
+
+# Run island-app
 cargo run -p island-app
 ```
 
-## Running Tests
+---
+
+## 🧪 Testing
+
+The repository maintains strict test coverage with 226 unit and integration tests across all workspace crates:
 
 ```bash
-cargo test
+# Run all workspace tests
+cargo test --workspace --tests
+
+# Check formatting
+cargo fmt --all -- --check
+
+# Run linter
+cargo clippy --workspace --all-targets
 ```
+
+---
+
+## 💖 Credits & Acknowledgements
+
+This project is made possible thanks to the following open-source projects and authors:
+
+- **[Bloub](https://github.com/jeremy-prt/bloub)** by **Jérémy Perret** — The original procedural 3D SVG bot avatar and expressions ported to Rust/WGPU (licensed under MIT).
+- **[Slint UI](https://slint.dev/)** — The next-generation declarative GUI framework providing smooth, memory-efficient, hardware-accelerated rendering.
+- **[KDE Community](https://kde.org/)** — For KDE Plasma 6 and KWin Wayland protocols enabling seamless desktop window management.
+- **[CAVA](https://github.com/karlstav/cava)** by **Karl Stavestrand** — Console-based Audio Visualizer for real-time audio spectrum capture via PulseAudio/PipeWire.
+- **Dynamic Island Concept** — Originally designed by Apple, reimagined and extended natively for the Linux Wayland desktop.
+- **Kemenag RI / Astronomical Calculations** — Reference formulas and solar algorithms for accurate Indonesian prayer times and atmospheric twilight gradients.
+
+---
+
+## 📄 License
+
+- This project is licensed under the **GNU General Public License v3.0 (GPL-3.0-or-later)**. See [`LICENSE`](LICENSE) for details.
+- Third-party components and ports are covered by their respective licenses (see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)).
