@@ -6,15 +6,18 @@ import { IslandContext } from "../context.slint";
 export component SourceChip inherits Rectangle {
     in property <string> source-id: "";
     in property <string> source-name: "Player";
+    in property <image> source-icon;
+    in property <bool> has-icon: false;
     in property <bool> is-active: false;
     in property <bool> is-playing: false;
-    in property <length> chip-height: 20px;
+    in property <length> chip-height: 24px;
     out property <bool> has-hover <=> touch.has-hover;
 
     callback clicked();
 
+    width: root.chip-height;
     height: root.chip-height;
-    border-radius: root.chip-height / 2;
+    border-radius: root.chip-height * 0.28;
     background: root.is-active 
         ? #3b82f633 
         : (touch.has-hover ? #ffffff20 : #ffffff0e);
@@ -30,34 +33,41 @@ export component SourceChip inherits Rectangle {
         clicked => { root.clicked(); }
     }
 
-    HorizontalLayout {
-        padding-left: 8px;
-        padding-right: 8px;
-        spacing: 5px;
-        alignment: center;
+    // App Icon (or fallback music icon)
+    if root.has-icon: Image {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: root.chip-height * 0.68;
+        height: root.chip-height * 0.68;
+        source: root.source-icon;
+        image-fit: contain;
+    }
 
-        // Playing status dot (Green pulse dot if currently playing)
-        if root.is-playing: Rectangle {
-            width: 5px;
-            height: 5px;
-            border-radius: 2.5px;
-            background: ThemeColors.success;
-            y: (parent.height - self.height) / 2;
-        }
+    if !root.has-icon: Image {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: root.chip-height * 0.62;
+        height: root.chip-height * 0.62;
+        source: Icons.music;
+        colorize: root.is-active ? ThemeColors.accent : ThemeColors.foreground;
+        image-fit: contain;
+    }
 
-        Text {
-            text: root.source-name;
-            color: root.is-active ? ThemeColors.foreground : ThemeColors.muted;
-            font-family: ThemeTypography.font-family;
-            font-size: max(9px, min(12px, root.chip-height * 0.52));
-            font-weight: root.is-active ? ThemeTypography.weight-bold : ThemeTypography.weight-medium;
-            vertical-alignment: center;
-        }
+    // Playing status dot indicator (Green dot in top-right corner if currently playing)
+    if root.is-playing: Rectangle {
+        x: parent.width - self.width - 1.5px;
+        y: 1.5px;
+        width: 5px;
+        height: 5px;
+        border-radius: 2.5px;
+        background: ThemeColors.success;
+        border-width: 1px;
+        border-color: #000000aa;
     }
 }
 
 export component SourceSelectorBar inherits HorizontalLayout {
-    in property <length> bar-height: 22px;
+    in property <length> bar-height: 24px;
     out property <bool> is-hovered: false;
 
     alignment: start;
@@ -67,6 +77,8 @@ export component SourceSelectorBar inherits HorizontalLayout {
     for source in IslandContext.player-sources: SourceChip {
         source-id: source.id;
         source-name: source.name;
+        source-icon: source.icon;
+        has-icon: source.has-icon;
         is-active: source.is-active;
         is-playing: source.is-playing;
         chip-height: root.bar-height;

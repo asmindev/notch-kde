@@ -9,7 +9,7 @@ use island_core::render_policy::RenderPolicy;
 use island_core::snapshot::ViewSnapshot;
 use slint::ComponentHandle;
 use std::cell::RefCell;
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::time::SystemTime;
 
@@ -184,6 +184,7 @@ struct UiSyncCache {
     version_set: bool,
     art: ArtCache,
     sources: SourceCache,
+    player_icons: PlayerIconCache,
     prayer: PrayerCache,
 }
 
@@ -277,11 +278,16 @@ impl UiSyncCache {
                 .domain
                 .media_sources
                 .iter()
-                .map(|source| crate::PlayerSourceItem {
-                    id: source.id.clone().into(),
-                    name: source.name.clone().into(),
-                    is_active: source.is_active,
-                    is_playing: source.is_playing,
+                .map(|source| {
+                    let (icon, has_icon) = self.player_icons.resolve(&source.id, &source.name);
+                    crate::PlayerSourceItem {
+                        id: source.id.clone().into(),
+                        name: source.name.clone().into(),
+                        icon,
+                        has_icon,
+                        is_active: source.is_active,
+                        is_playing: source.is_playing,
+                    }
                 })
                 .collect();
             ctx.set_player_sources(slint::ModelRc::new(slint::VecModel::from(items)));
@@ -422,6 +428,148 @@ impl SourceCache {
         self.last = Some(sources.to_vec());
         true
     }
+}
+
+#[derive(Default)]
+struct PlayerIconCache {
+    entries: HashMap<String, (slint::Image, bool)>,
+}
+
+impl PlayerIconCache {
+    fn resolve(&mut self, id: &str, name: &str) -> (slint::Image, bool) {
+        if let Some(cached) = self.entries.get(id) {
+            return cached.clone();
+        }
+
+        let candidates = player_icon_candidates(id, name);
+        for candidate in candidates {
+            if let Some(path) = find_icon_path(&candidate)
+                && let Ok(image) = slint::Image::load_from_path(&path)
+            {
+                let result = (image, true);
+                self.entries.insert(id.to_string(), result.clone());
+                return result;
+            }
+        }
+
+        let result = (slint::Image::default(), false);
+        self.entries.insert(id.to_string(), result.clone());
+        result
+    }
+}
+
+fn player_icon_candidates(id: &str, name: &str) -> Vec<String> {
+    let mut candidates = Vec::new();
+
+    let id_clean = id
+        .trim_start_matches("org.mpris.MediaPlayer2.")
+        .split('.')
+        .next()
+        .unwrap_or("")
+        .to_lowercase();
+
+    let name_lower = name.to_lowercase();
+
+    if id_clean.contains("spotify") || name_lower.contains("spotify") {
+        candidates.push("spotify".to_string());
+        candidates.push("spotify-client".to_string());
+    } else if id_clean.contains("firefox") || name_lower.contains("firefox") {
+        candidates.push("firefox".to_string());
+        candidates.push("firefox-developer-edition".to_string());
+        candidates.push("firefox-esr".to_string());
+    } else if id_clean.contains("chrome") || name_lower.contains("chrome") {
+        candidates.push("google-chrome".to_string());
+        candidates.push("google-chrome-stable".to_string());
+        candidates.push("chrome".to_string());
+    } else if id_clean.contains("chromium") || name_lower.contains("chromium") {
+        candidates.push("chromium".to_string());
+        candidates.push("chromium-browser".to_string());
+    } else if id_clean.contains("brave") || name_lower.contains("brave") {
+        candidates.push("brave-browser".to_string());
+        candidates.push("brave-desktop".to_string());
+        candidates.push("brave".to_string());
+    } else if id_clean.contains("vlc") || name_lower.contains("vlc") {
+        candidates.push("vlc".to_string());
+    } else if id_clean.contains("cider")
+        || name_lower.contains("cider")
+        || name_lower.contains("apple music")
+    {
+        candidates.push("cider".to_string());
+        candidates.push("apple-music".to_string());
+    } else if id_clean.contains("amberol") || name_lower.contains("amberol") {
+        candidates.push("io.bassi.Amberol".to_string());
+        candidates.push("amberol".to_string());
+    } else if id_clean.contains("elisa") || name_lower.contains("elisa") {
+        candidates.push("org.kde.elisa".to_string());
+        candidates.push("elisa".to_string());
+    } else if id_clean.contains("spotube") || name_lower.contains("spotube") {
+        candidates.push("com.github.KRTirtho.Spotube".to_string());
+        candidates.push("spotube".to_string());
+    } else if id_clean.contains("mpv") || name_lower.contains("mpv") {
+        candidates.push("mpv".to_string());
+    } else if id_clean.contains("rhythmbox") || name_lower.contains("rhythmbox") {
+        candidates.push("rhythmbox".to_string());
+    } else if id_clean.contains("audacious") || name_lower.contains("audacious") {
+        candidates.push("audacious".to_string());
+    } else if id_clean.contains("strawberry") || name_lower.contains("strawberry") {
+        candidates.push("strawberry".to_string());
+    }
+
+    if !id_clean.is_empty() && !candidates.contains(&id_clean) {
+        candidates.push(id_clean);
+    }
+
+    let name_kebab = name_lower.replace(' ', "-");
+    if !name_kebab.is_empty() && !candidates.contains(&name_kebab) {
+        candidates.push(name_kebab);
+    }
+
+    candidates
+}
+
+fn find_icon_path(candidate: &str) -> Option<PathBuf> {
+    let mut search_dirs = vec![
+        PathBuf::from("/usr/share/icons/hicolor/scalable/apps"),
+        PathBuf::from("/usr/share/icons/hicolor/48x48/apps"),
+        PathBuf::from("/usr/share/icons/hicolor/64x64/apps"),
+        PathBuf::from("/usr/share/icons/hicolor/128x128/apps"),
+        PathBuf::from("/usr/share/icons/hicolor/32x32/apps"),
+        PathBuf::from("/usr/share/icons/hicolor/256x256/apps"),
+        PathBuf::from("/usr/share/icons/breeze/apps/48"),
+        PathBuf::from("/usr/share/icons/breeze/apps/32"),
+        PathBuf::from("/usr/share/icons/breeze-dark/apps/48"),
+        PathBuf::from("/usr/share/icons/breeze-dark/apps/32"),
+        PathBuf::from("/usr/share/pixmaps"),
+        PathBuf::from("/var/lib/flatpak/exports/share/icons/hicolor/scalable/apps"),
+        PathBuf::from("/var/lib/flatpak/exports/share/icons/hicolor/128x128/apps"),
+        PathBuf::from("/var/lib/flatpak/exports/share/icons/hicolor/64x64/apps"),
+        PathBuf::from("/var/lib/flatpak/exports/share/icons/hicolor/48x48/apps"),
+    ];
+
+    if let Ok(home) = std::env::var("HOME") {
+        let home = PathBuf::from(home);
+        search_dirs.insert(0, home.join(".local/share/icons/hicolor/scalable/apps"));
+        search_dirs.insert(1, home.join(".local/share/icons/hicolor/48x48/apps"));
+        search_dirs.insert(
+            2,
+            home.join(".local/share/flatpak/exports/share/icons/hicolor/scalable/apps"),
+        );
+        search_dirs.insert(
+            3,
+            home.join(".local/share/flatpak/exports/share/icons/hicolor/128x128/apps"),
+        );
+    }
+
+    let extensions = &["svg", "png"];
+    for dir in &search_dirs {
+        for ext in extensions {
+            let path = dir.join(format!("{candidate}.{ext}"));
+            if path.is_file() {
+                return Some(path);
+            }
+        }
+    }
+    None
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -811,5 +959,47 @@ mod tests {
 
         assert!(cache.changed(&sources));
         assert!(!cache.changed(&sources));
+    }
+
+    #[test]
+    fn player_icon_candidates_extracts_expected_names() {
+        let spotify = super::player_icon_candidates("org.mpris.MediaPlayer2.spotify", "Spotify");
+        assert!(spotify.contains(&"spotify".to_string()));
+        assert!(spotify.contains(&"spotify-client".to_string()));
+
+        let firefox = super::player_icon_candidates(
+            "org.mpris.MediaPlayer2.firefox.instance_1_42",
+            "Firefox",
+        );
+        assert!(firefox.contains(&"firefox".to_string()));
+
+        let vlc = super::player_icon_candidates("org.mpris.MediaPlayer2.vlc", "VLC media player");
+        assert!(vlc.contains(&"vlc".to_string()));
+
+        let unknown = super::player_icon_candidates(
+            "org.mpris.MediaPlayer2.mycustomplayer",
+            "My Custom Player",
+        );
+        assert!(unknown.contains(&"mycustomplayer".to_string()));
+        assert!(unknown.contains(&"my-custom-player".to_string()));
+    }
+
+    #[test]
+    fn player_icon_cache_returns_fallback_for_nonexistent() {
+        let mut cache = super::PlayerIconCache::default();
+        let (img, has_icon) = cache.resolve(
+            "org.mpris.MediaPlayer2.nonexistent12345",
+            "Nonexistent 12345",
+        );
+        assert!(!has_icon);
+        assert_eq!(img.size().width, 0);
+
+        // Repeated call uses cache
+        let (img2, has_icon2) = cache.resolve(
+            "org.mpris.MediaPlayer2.nonexistent12345",
+            "Nonexistent 12345",
+        );
+        assert!(!has_icon2);
+        assert_eq!(img2.size().width, 0);
     }
 }
