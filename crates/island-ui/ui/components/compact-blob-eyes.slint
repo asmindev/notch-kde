@@ -1,4 +1,5 @@
 import { IslandContext } from "../context.slint";
+import { CompactCavaGlow } from "compact-cava-glow.slint";
 
 export component CompactBlobEyes inherits Rectangle {
     in property <bool> active: true;
@@ -6,6 +7,11 @@ export component CompactBlobEyes inherits Rectangle {
     width: 100%;
     height: 100%;
     background: transparent;
+
+    // Ambient CAVA Glow Background (Gaya A: Mirrored soundscape bloom behind eyes)
+    if IslandContext.is-playing && IslandContext.render-spectrum: CompactCavaGlow {
+        active: root.active;
+    }
 
     if IslandContext.pet-3d-ready: Image {
         x: (parent.width - self.width) / 2;

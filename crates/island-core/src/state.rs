@@ -125,6 +125,7 @@ pub struct UserSettings {
     pub avatar_random: bool,
     pub avatar_seed: u64,
     pub compact_mode_style: CompactModeStyle,
+    pub cava_bg_opacity: u32,
 }
 
 impl Default for UserSettings {
@@ -142,6 +143,7 @@ impl Default for UserSettings {
             avatar_random: false,
             avatar_seed: 0x5eed_1234_abcd_9876,
             compact_mode_style: CompactModeStyle::default(),
+            cava_bg_opacity: 20,
         }
     }
 }

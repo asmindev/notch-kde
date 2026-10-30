@@ -75,6 +75,7 @@ pub enum AppEvent {
     SetMediaVisualMode(MusicVisualMode),
     SetPetRenderer(PetRenderer),
     SetCompactModeStyle(CompactModeStyle),
+    SetCavaBgOpacity(u32),
     ResetAvatar,
     ResetSettings,
     SelectMediaSource(String),

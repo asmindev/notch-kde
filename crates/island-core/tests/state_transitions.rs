@@ -445,6 +445,14 @@ fn test_settings_events_open_tab_toggle_and_persist() {
     );
     assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
 
+    let effects = reduce(&mut state, AppEvent::SetCavaBgOpacity(50));
+    assert_eq!(state.settings.cava_bg_opacity, 50);
+    assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
+
+    let effects = reduce(&mut state, AppEvent::SetCavaBgOpacity(150));
+    assert_eq!(state.settings.cava_bg_opacity, 100);
+    assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
+
     reduce(&mut state, AppEvent::CloseSettings);
     assert!(!state.presentation.settings_open);
 }
@@ -506,6 +514,7 @@ fn test_reset_settings_restores_defaults_and_persists() {
     state.settings.music_visual_mode = island_core::models::MusicVisualMode::PetPrimary;
     state.settings.pet_renderer = island_core::PetRenderer::TwoD;
     state.settings.compact_mode_style = island_core::CompactModeStyle::EyesOnly;
+    state.settings.cava_bg_opacity = 80;
 
     let effects = reduce(&mut state, AppEvent::ResetSettings);
 
@@ -533,6 +542,7 @@ fn test_reset_settings_restores_defaults_and_persists() {
         state.settings.compact_mode_style,
         island_core::CompactModeStyle::Standard
     );
+    assert_eq!(state.settings.cava_bg_opacity, 20);
     assert_eq!(effects, vec![island_core::Effect::PersistSettings]);
 }
 

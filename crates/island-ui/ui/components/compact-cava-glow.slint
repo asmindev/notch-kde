@@ -1,0 +1,63 @@
+import { ThemeColors } from "../theme/colors.slint";
+import { ThemeMetrics } from "../theme/metrics.slint";
+import { IslandContext } from "../context.slint";
+
+component GlowBar inherits Rectangle {
+    in property <float> val: 0.0;
+    in property <color> bar-color: #3b82f6;
+    in property <length> max-h: 24px;
+
+    width: 6px;
+    height: max(3px, root.val * root.max-h + 3px);
+    y: (root.max-h - self.height) / 2;
+    border-radius: 3px;
+    background: root.bar-color;
+    opacity: 0.60 + (root.val * 0.40);
+
+    drop-shadow-blur: 10px + (root.val * 8px);
+    drop-shadow-color: root.bar-color;
+    drop-shadow-offset-x: 0px;
+    drop-shadow-offset-y: 0px;
+}
+
+export component CompactCavaGlow inherits Rectangle {
+    in property <bool> active: true;
+
+    width: 100%;
+    height: 100%;
+    clip: true;
+    opacity: IslandContext.cava-bg-opacity / 100.0;
+    visible: IslandContext.cava-bg-opacity > 0;
+
+    property <length> viz-h: min(26px, root.height * 0.85);
+
+    // Mirrored 16-bar ambient soundscape across the compact notch:
+    // Left: Treble -> Bass (b7 -> b0)
+    // Right: Bass -> Treble (b0 -> b7)
+    HorizontalLayout {
+        alignment: center;
+        spacing: 5px;
+        height: root.viz-h;
+        y: (root.height - self.height) / 2;
+
+        // Left Wing (Treble to Bass)
+        GlowBar { val: root.active ? IslandContext.b7 : 0.0; bar-color: #38bdf8; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b6 : 0.0; bar-color: #38bdf8; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b5 : 0.0; bar-color: #60a5fa; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b4 : 0.0; bar-color: #6366f1; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b3 : 0.0; bar-color: #818cf8; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b2 : 0.0; bar-color: #8b5cf6; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b1 : 0.0; bar-color: #a855f7; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b0 : 0.0; bar-color: #ec4899; max-h: root.viz-h; }
+
+        // Right Wing (Bass to Treble)
+        GlowBar { val: root.active ? IslandContext.b0 : 0.0; bar-color: #ec4899; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b1 : 0.0; bar-color: #a855f7; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b2 : 0.0; bar-color: #8b5cf6; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b3 : 0.0; bar-color: #818cf8; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b4 : 0.0; bar-color: #6366f1; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b5 : 0.0; bar-color: #60a5fa; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b6 : 0.0; bar-color: #38bdf8; max-h: root.viz-h; }
+        GlowBar { val: root.active ? IslandContext.b7 : 0.0; bar-color: #38bdf8; max-h: root.viz-h; }
+    }
+}

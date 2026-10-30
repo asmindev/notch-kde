@@ -3,7 +3,8 @@ use crate::{ContentRouter, IslandContext, MainWindow, SettingsWindow};
 use chrono::{Datelike, NaiveDate, Timelike, Utc};
 use island_core::models::{IslandView, MediaSource};
 use island_core::prayer::{
-    CITIES, Prayer, PrayerPhase, PrayerTimes, SkyState, moment_for, sky_for, times_for,
+    CITIES, Prayer, PrayerMoment, PrayerPhase, PrayerTimes, SkyState, moment_for, sky_for,
+    times_for,
 };
 use island_core::render_policy::RenderPolicy;
 use island_core::snapshot::ViewSnapshot;
@@ -118,6 +119,7 @@ impl ViewModel {
             1
         });
         ctx.set_compact_mode_style(state.settings.compact_mode_style as i32);
+        ctx.set_cava_bg_opacity(state.settings.cava_bg_opacity as i32);
         sync_shadow_context(ctx, state);
     }
 
@@ -681,7 +683,9 @@ fn sync_prayer_schedule(
     ctx.set_prayer_countdown(format_countdown(countdown).into());
     ctx.set_prayer_orbit_progress(moment.orbit_progress);
     ctx.set_prayer_orbit_night(moment.phase == PrayerPhase::Night);
-    let markers = line_markers(&times, moment.next_prayer);
+    let tomorrow = date.succ_opt().and_then(|d| times_for(city, d));
+    let yesterday = date.pred_opt().and_then(|d| times_for(city, d));
+    let markers = line_markers(&moment, &times, yesterday.as_ref(), tomorrow.as_ref(), now);
     ctx.set_prayer_orbit_markers(slint::ModelRc::new(slint::VecModel::from(markers)));
 
     push_sky(ctx, city, now);
@@ -737,17 +741,120 @@ fn rgb(c: [f32; 3]) -> slint::Color {
     )
 }
 
-fn line_markers(times: &PrayerTimes, next: Prayer) -> Vec<crate::PrayerOrbitMarker> {
-    times
-        .iter()
-        .enumerate()
-        .map(|(index, (prayer, time))| crate::PrayerOrbitMarker {
-            name: prayer.name_id().into(),
-            time: time.format("%H:%M").to_string().into(),
-            x: 0.02 + index as f32 * 0.24,
-            is_next: prayer == next,
-        })
-        .collect()
+fn line_markers(
+    moment: &PrayerMoment,
+    today: &PrayerTimes,
+    yesterday: Option<&PrayerTimes>,
+    tomorrow: Option<&PrayerTimes>,
+    now: chrono::DateTime<chrono::FixedOffset>,
+) -> Vec<crate::PrayerOrbitMarker> {
+    const MIN_X: f32 = 0.06;
+    const MAX_X: f32 = 0.94;
+    const SPAN_X: f32 = MAX_X - MIN_X;
+
+    match moment.phase {
+        PrayerPhase::Day => {
+            let total_sec = (today.sunset - today.sunrise).num_seconds().max(1) as f32;
+            let dhuhr_time = today.times[Prayer::Dhuhr as usize];
+            let asr_time = today.times[Prayer::Asr as usize];
+
+            let dhuhr_frac =
+                ((dhuhr_time - today.sunrise).num_seconds() as f32 / total_sec).clamp(0.0, 1.0);
+            let asr_frac =
+                ((asr_time - today.sunrise).num_seconds() as f32 / total_sec).clamp(0.0, 1.0);
+
+            let dhuhr_x = (MIN_X + dhuhr_frac * SPAN_X).clamp(0.35, 0.55);
+            let asr_x = (MIN_X + asr_frac * SPAN_X).clamp(dhuhr_x + 0.16, 0.82);
+
+            vec![
+                crate::PrayerOrbitMarker {
+                    name: Prayer::Fajr.name_id().into(),
+                    time: today.times[Prayer::Fajr as usize]
+                        .format("%H:%M")
+                        .to_string()
+                        .into(),
+                    x: MIN_X,
+                    is_next: moment.next_prayer == Prayer::Fajr,
+                },
+                crate::PrayerOrbitMarker {
+                    name: Prayer::Dhuhr.name_id().into(),
+                    time: dhuhr_time.format("%H:%M").to_string().into(),
+                    x: dhuhr_x,
+                    is_next: moment.next_prayer == Prayer::Dhuhr,
+                },
+                crate::PrayerOrbitMarker {
+                    name: Prayer::Asr.name_id().into(),
+                    time: asr_time.format("%H:%M").to_string().into(),
+                    x: asr_x,
+                    is_next: moment.next_prayer == Prayer::Asr,
+                },
+                crate::PrayerOrbitMarker {
+                    name: Prayer::Maghrib.name_id().into(),
+                    time: today.times[Prayer::Maghrib as usize]
+                        .format("%H:%M")
+                        .to_string()
+                        .into(),
+                    x: MAX_X,
+                    is_next: moment.next_prayer == Prayer::Maghrib,
+                },
+            ]
+        }
+        PrayerPhase::Night => {
+            let total_sec = (moment.arc_end - moment.arc_start).num_seconds().max(1) as f32;
+
+            let (maghrib_time, isha_time) = if now >= today.sunset {
+                (
+                    today.times[Prayer::Maghrib as usize],
+                    today.times[Prayer::Isha as usize],
+                )
+            } else if let Some(yes) = yesterday {
+                (
+                    yes.times[Prayer::Maghrib as usize],
+                    yes.times[Prayer::Isha as usize],
+                )
+            } else {
+                (
+                    today.times[Prayer::Maghrib as usize] - chrono::Duration::days(1),
+                    today.times[Prayer::Isha as usize] - chrono::Duration::days(1),
+                )
+            };
+
+            let fajr_time = if now >= today.sunset {
+                if let Some(tom) = tomorrow {
+                    tom.times[Prayer::Fajr as usize]
+                } else {
+                    today.times[Prayer::Fajr as usize] + chrono::Duration::days(1)
+                }
+            } else {
+                today.times[Prayer::Fajr as usize]
+            };
+
+            let isha_frac =
+                ((isha_time - moment.arc_start).num_seconds() as f32 / total_sec).clamp(0.0, 1.0);
+            let isha_x = (MIN_X + isha_frac * SPAN_X).clamp(0.18, 0.30);
+
+            vec![
+                crate::PrayerOrbitMarker {
+                    name: Prayer::Maghrib.name_id().into(),
+                    time: maghrib_time.format("%H:%M").to_string().into(),
+                    x: MIN_X,
+                    is_next: moment.next_prayer == Prayer::Maghrib,
+                },
+                crate::PrayerOrbitMarker {
+                    name: Prayer::Isha.name_id().into(),
+                    time: isha_time.format("%H:%M").to_string().into(),
+                    x: isha_x,
+                    is_next: moment.next_prayer == Prayer::Isha,
+                },
+                crate::PrayerOrbitMarker {
+                    name: Prayer::Fajr.name_id().into(),
+                    time: fajr_time.format("%H:%M").to_string().into(),
+                    x: MAX_X,
+                    is_next: moment.next_prayer == Prayer::Fajr,
+                },
+            ]
+        }
+    }
 }
 
 fn format_countdown(minutes: i64) -> String {
@@ -805,33 +912,57 @@ mod tests {
     }
 
     #[test]
-    fn line_markers_are_evenly_spaced_and_highlight_next() {
+    fn line_markers_follow_day_and_night_cycles() {
         let city = &CITIES[0];
         let date = NaiveDate::from_ymd_opt(2026, 10, 28).unwrap();
-        let now = city
+        let tomorrow = date.succ_opt().and_then(|d| times_for(city, d));
+        let yesterday = date.pred_opt().and_then(|d| times_for(city, d));
+        let times = times_for(city, date).expect("valid times");
+
+        // Night test (23:00): Maghrib (kiri), Isya (kiri-tengah), Subuh (kanan)
+        let night_now = city
             .offset()
             .with_ymd_and_hms(2026, 10, 28, 23, 0, 0)
             .unwrap();
-        let moment = moment_for(city, now).expect("valid moment");
-        let times = times_for(city, date).expect("valid times");
+        let night_moment = moment_for(city, night_now).expect("valid night moment");
+        let night_markers = line_markers(
+            &night_moment,
+            &times,
+            yesterday.as_ref(),
+            tomorrow.as_ref(),
+            night_now,
+        );
+        assert_eq!(night_markers.len(), 3);
+        assert_eq!(night_markers[0].name, "Maghrib");
+        assert_eq!(night_markers[1].name, "Isya");
+        assert_eq!(night_markers[2].name, "Subuh");
+        assert!((night_markers[0].x - 0.06).abs() < 0.01);
+        assert!(night_markers[1].x > 0.15 && night_markers[1].x < 0.35);
+        assert!((night_markers[2].x - 0.94).abs() < 0.01);
+        assert!(night_markers[2].is_next); // Subuh is next prayer at 23:00
 
-        let markers = line_markers(&times, moment.next_prayer);
-        assert_eq!(markers.len(), 5);
-        for (index, marker) in markers.iter().enumerate() {
-            let expected = 0.02 + index as f32 * 0.24;
-            assert!((marker.x - expected).abs() < f32::EPSILON);
-        }
-
-        let subuh = markers
-            .iter()
-            .find(|marker| marker.name == "Subuh")
-            .expect("Subuh marker");
-        let isya = markers
-            .iter()
-            .find(|marker| marker.name == "Isya")
-            .expect("Isya marker");
-        assert!(subuh.is_next);
-        assert!(!isya.is_next);
+        // Day test (12:00): Subuh (kiri), Dzuhur, Ashar, Maghrib (kanan)
+        let day_now = city
+            .offset()
+            .with_ymd_and_hms(2026, 10, 28, 12, 0, 0)
+            .unwrap();
+        let day_moment = moment_for(city, day_now).expect("valid day moment");
+        let day_markers = line_markers(
+            &day_moment,
+            &times,
+            yesterday.as_ref(),
+            tomorrow.as_ref(),
+            day_now,
+        );
+        assert_eq!(day_markers.len(), 4);
+        assert_eq!(day_markers[0].name, "Subuh");
+        assert_eq!(day_markers[1].name, "Dzuhur");
+        assert_eq!(day_markers[2].name, "Ashar");
+        assert_eq!(day_markers[3].name, "Maghrib");
+        assert!((day_markers[0].x - 0.06).abs() < 0.01);
+        assert!(day_markers[1].x > 0.35 && day_markers[1].x < 0.60);
+        assert!(day_markers[2].x > day_markers[1].x && day_markers[2].x < 0.85);
+        assert!((day_markers[3].x - 0.94).abs() < 0.01);
     }
 
     #[test]

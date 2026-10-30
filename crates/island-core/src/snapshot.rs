@@ -67,6 +67,7 @@ pub struct SettingsSnapshot {
     pub avatar_random: bool,
     pub avatar_seed: u64,
     pub compact_mode_style: CompactModeStyle,
+    pub cava_bg_opacity: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -132,6 +133,7 @@ impl ViewSnapshot {
                 avatar_random: state.settings.avatar_random,
                 avatar_seed: state.settings.avatar_seed,
                 compact_mode_style: state.settings.compact_mode_style,
+                cava_bg_opacity: state.settings.cava_bg_opacity,
             },
         }
     }

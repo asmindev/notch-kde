@@ -169,6 +169,7 @@ pub struct PersistedSettings {
     pub pet_renderer: Option<PetRenderer>,
     pub prayer: PrayerSettings,
     pub compact_mode_style: CompactModeStyle,
+    pub cava_bg_opacity: u32,
 }
 
 impl Default for PersistedSettings {
@@ -182,6 +183,7 @@ impl Default for PersistedSettings {
             pet_renderer: None,
             prayer: PrayerSettings::default(),
             compact_mode_style: CompactModeStyle::default(),
+            cava_bg_opacity: 20,
         }
     }
 }
@@ -248,6 +250,7 @@ impl PersistedSettings {
             pet_renderer: Some(state.settings.pet_renderer),
             prayer: state.settings.prayer.normalized(),
             compact_mode_style: state.settings.compact_mode_style,
+            cava_bg_opacity: state.settings.cava_bg_opacity,
         }
     }
 
@@ -266,6 +269,7 @@ impl PersistedSettings {
         }
         state.settings.prayer = self.prayer.normalized();
         state.settings.compact_mode_style = self.compact_mode_style;
+        state.settings.cava_bg_opacity = self.cava_bg_opacity.min(100);
     }
 }
 
@@ -347,6 +351,7 @@ mod tests {
         state.settings.prayer.city = 8;
         state.settings.prayer.reminder_minutes = 15;
         state.settings.compact_mode_style = CompactModeStyle::EyesOnly;
+        state.settings.cava_bg_opacity = 45;
 
         let snapshot = PersistedSettings::from_state(&state);
         let mut restored = AppState::default();
@@ -376,6 +381,7 @@ mod tests {
             restored.settings.compact_mode_style,
             CompactModeStyle::EyesOnly
         );
+        assert_eq!(restored.settings.cava_bg_opacity, 45);
     }
 
     #[test]

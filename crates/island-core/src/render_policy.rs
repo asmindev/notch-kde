@@ -92,8 +92,11 @@ fn active_slot_uses_spectrum(state: &AppState) -> bool {
 
     match state.view.mode() {
         IslandView::Compact => {
-            !state.settings.compact_mode_style.is_eyes_only()
-                && state.view.active_module() == ModuleId::MEDIA
+            if state.settings.compact_mode_style.is_eyes_only() {
+                state.settings.cava_bg_opacity > 0 && state.view.active_module() == ModuleId::MEDIA
+            } else {
+                state.view.active_module() == ModuleId::MEDIA
+            }
         }
         IslandView::Expand => state.view.active_module() == ModuleId::MEDIA,
         IslandView::Wide => false,
@@ -152,13 +155,19 @@ mod tests {
     }
 
     #[test]
-    fn compact_eyes_only_mode_keeps_pet_and_disables_spectrum() {
+    fn compact_eyes_only_mode_keeps_pet_and_uses_spectrum_when_playing() {
         let mut state = visible_state(IslandView::Compact, ActiveModule::Media);
         state.settings.compact_mode_style = crate::settings::CompactModeStyle::EyesOnly;
+        state.settings.cava_bg_opacity = 20;
         state.domain.media.is_playing = true;
 
+        assert_eq!(render_policy(&state), policy(true, true));
+
+        // When cava_bg_opacity is 0%, spectrum rendering is disabled
+        state.settings.cava_bg_opacity = 0;
         assert_eq!(render_policy(&state), policy(true, false));
 
+        state.settings.cava_bg_opacity = 20;
         state.domain.media.is_playing = false;
         assert_eq!(render_policy(&state), policy(true, false));
 

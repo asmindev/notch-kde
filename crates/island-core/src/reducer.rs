@@ -443,6 +443,11 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             effects.push(Effect::PersistSettings);
         }
 
+        AppEvent::SetCavaBgOpacity(opacity) => {
+            state.settings.cava_bg_opacity = opacity.min(100);
+            effects.push(Effect::PersistSettings);
+        }
+
         AppEvent::ResetAvatar => {
             let avatar = AvatarSettings::default();
             state.settings.blob_character = avatar.character;
@@ -466,6 +471,7 @@ pub fn reduce(state: &mut AppState, event: AppEvent) -> Vec<Effect> {
             state.settings.music_visual_mode = crate::models::MusicVisualMode::ArtworkPrimary;
             state.settings.pet_renderer = crate::settings::PetRenderer::default();
             state.settings.compact_mode_style = crate::settings::CompactModeStyle::default();
+            state.settings.cava_bg_opacity = 20;
             effects.push(Effect::PersistSettings);
         }
 

@@ -563,6 +563,17 @@ component SystemSettingsPage inherits Rectangle {
                     font-size: ThemeTypography.size-xs;
                     wrap: word-wrap;
                 }
+
+                if IslandContext.compact-mode-style == 1: SettingsDivider {}
+
+                if IslandContext.compact-mode-style == 1: SettingsSliderRow {
+                    title: "Aura CAVA Musik";
+                    value: IslandContext.cava-bg-opacity;
+                    minimum: 0;
+                    maximum: 100;
+                    suffix: "%";
+                    changed(value) => { IslandContext.set-cava-bg-opacity(value); }
+                }
             }
 
             SettingsCard {

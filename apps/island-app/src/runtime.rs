@@ -350,6 +350,10 @@ impl AppRuntime {
             let _ = tx.send(AppEvent::SetCompactModeStyle(style));
         });
         let tx = event_tx.clone();
+        settings_ctx.on_set_cava_bg_opacity(move |val| {
+            let _ = tx.send(AppEvent::SetCavaBgOpacity(val.clamp(0, 100) as u32));
+        });
+        let tx = event_tx.clone();
         settings_ctx.on_reset_avatar(move || {
             let _ = tx.send(AppEvent::ResetAvatar);
         });
