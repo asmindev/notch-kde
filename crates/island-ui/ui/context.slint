@@ -183,6 +183,7 @@ export global IslandContext {
     in-out property <int> alert-kind: 0;           // 0=None, 1=Charging, 2=LowBattery, 3=Prayer
     in-out property <int> music-visual-mode: 0;    // 0=ArtworkPrimary (Art Left, Pet Right), 1=PetPrimary (Pet Left, Art Right)
     in-out property <int> pet-renderer: 0;         // 0=3D/WGPU, 1=2D/CPU flat
+    in-out property <int> compact-mode-style: 0;   // 0=Standard (Pet-Jam-Status), 1=EyesOnly (Hanya Mata)
     in-out property <bool> is-visible-state: true; // Shell docking visibility
     in property <bool> render-main-visible: true;
     in property <bool> render-pet: true;
@@ -249,6 +250,7 @@ export global IslandContext {
     callback set-prayer-reminder-minutes(int);
     callback set-media-visual-mode(int);
     callback set-pet-renderer(int);
+    callback set-compact-mode-style(int);
     callback reset-avatar();
     callback reset-settings();
 }

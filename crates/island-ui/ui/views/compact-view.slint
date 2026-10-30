@@ -2,6 +2,7 @@ import { IslandContext } from "../context.slint";
 import { SystemCompactSlot } from "../modules/system/system-compact-slot.slint";
 import { MediaCompactSlot } from "../modules/media/media-compact-slot.slint";
 import { AlertCompactSlot } from "../modules/alert/alert-compact-slot.slint";
+import { CompactBlobEyes } from "../components/compact-blob-eyes.slint";
 
 export component CompactView inherits Rectangle {
     in property <bool> active: true;
@@ -9,12 +10,18 @@ export component CompactView inherits Rectangle {
     width: 100%;
     height: 100%;
 
+    // Slot 2: Alert Module Content (Alert takes priority in Compact)
+    if IslandContext.compact-module == 2: AlertCompactSlot { active: root.active; }
+
+    // Eyes Only Mode (compact-mode-style == 1) for normal content (System/Media)
+    if IslandContext.compact-module != 2 && IslandContext.compact-mode-style == 1: CompactBlobEyes {
+        active: root.active;
+    }
+
+    // Standard Mode (compact-mode-style == 0):
     // Slot 0: System Module Content
-    if IslandContext.compact-module == 0: SystemCompactSlot { active: root.active; }
+    if IslandContext.compact-module == 0 && IslandContext.compact-mode-style == 0: SystemCompactSlot { active: root.active; }
 
     // Slot 1: Media Module Content
-    if IslandContext.compact-module == 1: MediaCompactSlot { active: root.active; }
-
-    // Slot 2: Alert Module Content
-    if IslandContext.compact-module == 2: AlertCompactSlot { active: root.active; }
+    if IslandContext.compact-module == 1 && IslandContext.compact-mode-style == 0: MediaCompactSlot { active: root.active; }
 }

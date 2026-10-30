@@ -19,6 +19,7 @@ pub struct BloubFrame {
     pub state: StateId,
     pub expression: ExpressionId,
     pub shape: ShapeId,
+    pub eyes_only: bool,
 }
 
 pub struct BloubEngine {
@@ -41,6 +42,7 @@ pub struct BloubEngine {
     time: f32,
     energy: f32,
     compact: bool,
+    eyes_only: bool,
     idle_acting: bool,
     transition_from: Option<Pose>,
     transition_started: f32,
@@ -71,6 +73,7 @@ impl Default for BloubEngine {
             time: 0.0,
             energy: 0.0,
             compact: false,
+            eyes_only: false,
             idle_acting: false,
             transition_from: None,
             transition_started: 0.0,
@@ -165,6 +168,10 @@ impl BloubEngine {
         self.compact = compact;
     }
 
+    pub fn set_eyes_only(&mut self, eyes_only: bool) {
+        self.eyes_only = eyes_only;
+    }
+
     pub fn set_idle_acting(&mut self, active: bool) {
         self.idle_acting = active;
     }
@@ -241,7 +248,15 @@ impl BloubEngine {
         self.expression_visual = Some(visual);
 
         let mut eye_cfgs = visual.eyes;
-        let mut gaze = visual.gaze;
+        let mut gaze = if self.eyes_only {
+            HeadGaze {
+                yaw: 0.0,
+                pitch: 0.0,
+                roll: 0.0,
+            }
+        } else {
+            visual.gaze
+        };
         p.split = visual.split;
         p.lift += visual.lift;
 
@@ -266,8 +281,9 @@ impl BloubEngine {
         let wander_v = wander(t, self.seed);
         let wander_scale = if self.compact { 1.35 } else { 1.0 };
         if !self.look.active {
-            gaze.yaw += wander_v[0] * 12.0 * wander_scale;
-            gaze.pitch += wander_v[1] * 10.0 * wander_scale;
+            let scale = if self.eyes_only { 0.7 } else { wander_scale };
+            gaze.yaw += wander_v[0] * 12.0 * scale;
+            gaze.pitch += wander_v[1] * 10.0 * scale;
         }
         let blink_t = if self.compact { t * 1.35 } else { t };
         let blink = if self.state == StateId::Sleep {
@@ -289,13 +305,19 @@ impl BloubEngine {
         sil.cy += p.off_y + breathe + p.lift;
 
         let mut decor = DecorRender::default();
-        decor.arcs = p.arcs;
-        decor.dots = p.dots;
-        decor.notif = p.notif;
-        let extent = decor
-            .extent()
-            .max(1.08)
-            .max(sil.radii.iter().copied().fold(0.0f32, f32::max) * 1.08);
+        if !self.eyes_only {
+            decor.arcs = p.arcs;
+            decor.dots = p.dots;
+            decor.notif = p.notif;
+        }
+        let extent = if self.eyes_only {
+            0.92
+        } else {
+            decor
+                .extent()
+                .max(1.08)
+                .max(sil.radii.iter().copied().fold(0.0f32, f32::max) * 1.08)
+        };
 
         let actual = Pose {
             sil: Some(sil.clone()),
@@ -321,12 +343,13 @@ impl BloubEngine {
             silhouette: sil,
             eyes,
             eye_alpha: p.eye_alpha,
-            body_alpha: p.body_alpha,
+            body_alpha: if self.eyes_only { 0.0 } else { p.body_alpha },
             decor,
             extent,
             state: self.state,
             expression: expr_id,
             shape: self.shape,
+            eyes_only: self.eyes_only,
         }
     }
 }

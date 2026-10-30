@@ -91,7 +91,11 @@ fn active_slot_uses_spectrum(state: &AppState) -> bool {
     }
 
     match state.view.mode() {
-        IslandView::Compact | IslandView::Expand => state.view.active_module() == ModuleId::MEDIA,
+        IslandView::Compact => {
+            !state.settings.compact_mode_style.is_eyes_only()
+                && state.view.active_module() == ModuleId::MEDIA
+        }
+        IslandView::Expand => state.view.active_module() == ModuleId::MEDIA,
         IslandView::Wide => false,
     }
 }
@@ -145,6 +149,22 @@ mod tests {
 
         state.domain.media.is_playing = false;
         assert_eq!(render_policy(&state), policy(true, false));
+    }
+
+    #[test]
+    fn compact_eyes_only_mode_keeps_pet_and_disables_spectrum() {
+        let mut state = visible_state(IslandView::Compact, ActiveModule::Media);
+        state.settings.compact_mode_style = crate::settings::CompactModeStyle::EyesOnly;
+        state.domain.media.is_playing = true;
+
+        assert_eq!(render_policy(&state), policy(true, false));
+
+        state.domain.media.is_playing = false;
+        assert_eq!(render_policy(&state), policy(true, false));
+
+        let mut sys_state = visible_state(IslandView::Compact, ActiveModule::System);
+        sys_state.settings.compact_mode_style = crate::settings::CompactModeStyle::EyesOnly;
+        assert_eq!(render_policy(&sys_state), policy(true, false));
     }
 
     #[test]

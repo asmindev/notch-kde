@@ -5,7 +5,9 @@ use crate::models::{
 };
 use crate::module::{ModuleContext, ModuleId};
 use crate::prayer::{PrayerAlert, PrayerSettings};
-use crate::settings::{PetBehaviorSettings, PetRenderer, SettingsTab, ShadowSettings};
+use crate::settings::{
+    CompactModeStyle, PetBehaviorSettings, PetRenderer, SettingsTab, ShadowSettings,
+};
 use crate::view_engine::ViewEngine;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -122,6 +124,7 @@ pub struct UserSettings {
     pub blob_expression_custom: bool,
     pub avatar_random: bool,
     pub avatar_seed: u64,
+    pub compact_mode_style: CompactModeStyle,
 }
 
 impl Default for UserSettings {
@@ -138,6 +141,7 @@ impl Default for UserSettings {
             blob_expression_custom: false,
             avatar_random: false,
             avatar_seed: 0x5eed_1234_abcd_9876,
+            compact_mode_style: CompactModeStyle::default(),
         }
     }
 }

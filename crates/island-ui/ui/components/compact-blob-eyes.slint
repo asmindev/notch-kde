@@ -1,0 +1,27 @@
+import { IslandContext } from "../context.slint";
+
+export component CompactBlobEyes inherits Rectangle {
+    in property <bool> active: true;
+
+    width: 100%;
+    height: 100%;
+    background: transparent;
+
+    if IslandContext.pet-3d-ready: Image {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: 72px;
+        height: 72px;
+        source: IslandContext.pet-3d-image;
+        image-fit: contain;
+    }
+
+    touch := TouchArea {
+        width: 100%;
+        height: 100%;
+        clicked => {
+            IslandContext.mochi-clicked();
+            IslandContext.pet-clicked();
+        }
+    }
+}

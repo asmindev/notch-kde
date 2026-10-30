@@ -72,6 +72,12 @@ fn fs_body(input: BodyVertexOutput, @builtin(front_facing) front_facing: bool) -
     }
 
     let mask = max(eye_mask(p, 0), eye_mask(p, 1)) * u.params.y;
+    if (u.params.z > 0.5) {
+        if (mask < 0.01) {
+            discard;
+        }
+        return vec4<f32>(1.0, 1.0, 1.0, mask);
+    }
     var base = mix(u.body_color.rgb, u.eye_color.rgb, mask);
     let view_dir = normalize(u.camera_pos.xyz - input.world);
 

@@ -117,6 +117,7 @@ impl ViewModel {
         } else {
             1
         });
+        ctx.set_compact_mode_style(state.settings.compact_mode_style as i32);
         sync_shadow_context(ctx, state);
     }
 

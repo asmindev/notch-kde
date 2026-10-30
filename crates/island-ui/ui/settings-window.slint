@@ -525,6 +525,47 @@ component SystemSettingsPage inherits Rectangle {
             }
 
             SettingsCard {
+                title: "Mode compact";
+                description: "Pilih elemen yang tampil saat island berada dalam mode compact.";
+
+                Rectangle {
+                    height: 32px;
+                    border-radius: 9px;
+                    background: #0f0f12;
+                    border-width: 1px;
+                    border-color: ThemeColors.divider;
+
+                    HorizontalLayout {
+                        spacing: 4px;
+                        padding: 3px;
+                        alignment: start;
+
+                        SettingsSegmentButton {
+                            label: "Lengkap";
+                            active: IslandContext.compact-mode-style == 0;
+                            clicked => { IslandContext.set-compact-mode-style(0); }
+                        }
+
+                        SettingsSegmentButton {
+                            label: "Hanya Mata";
+                            active: IslandContext.compact-mode-style == 1;
+                            clicked => { IslandContext.set-compact-mode-style(1); }
+                        }
+                    }
+                }
+
+                Text {
+                    text: IslandContext.compact-mode-style == 0
+                        ? "Lengkap: menampilkan pet, jam digital, dan status baterai/CAVA."
+                        : "Hanya Mata: menampilkan sepasang mata animasi di tengah notch.";
+                    color: ThemeColors.subtle;
+                    font-family: ThemeTypography.font-family;
+                    font-size: ThemeTypography.size-xs;
+                    wrap: word-wrap;
+                }
+            }
+
+            SettingsCard {
                 title: "Tampilan media";
                 description: "Pilih fokus utama saat musik diputar.";
 

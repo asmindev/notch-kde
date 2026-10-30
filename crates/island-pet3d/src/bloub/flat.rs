@@ -32,14 +32,42 @@ impl BloubFlatRenderer {
 
     pub fn render(&self, frame: &BloubFrame, palette: BloubPalette) -> Vec<u8> {
         let width = self.size * self.supersample;
-        let extent = frame.extent.max(1.08);
+        let extent = frame.extent.max(if frame.eyes_only { 0.85 } else { 1.08 });
         let mut buffer = vec![[0.0f32; 4]; (width * width) as usize];
+
+        if frame.eyes_only {
+            draw_eyes_only(&mut buffer, width, extent, frame);
+            return downsample(&buffer, width, self.size, self.supersample);
+        }
 
         draw_decor(&mut buffer, width, extent, frame, palette, true);
         draw_body(&mut buffer, width, extent, frame, palette);
         draw_decor(&mut buffer, width, extent, frame, palette, false);
 
         downsample(&buffer, width, self.size, self.supersample)
+    }
+}
+
+fn draw_eyes_only(buffer: &mut [[f32; 4]], width: u32, extent: f32, frame: &BloubFrame) {
+    if frame.eye_alpha <= 0.001 {
+        return;
+    }
+    let eyes = [
+        EyeSample::new(&frame.silhouette, &frame.eyes[0]),
+        EyeSample::new(&frame.silhouette, &frame.eyes[1]),
+    ];
+
+    for y in 0..width {
+        for x in 0..width {
+            let (ox, oy) = pixel_world(x, y, width, extent);
+            let body_point = [ox, -oy];
+            let eye_mask = eyes[0].mask(body_point).max(eyes[1].mask(body_point)) * frame.eye_alpha;
+            if eye_mask > 0.001 {
+                let index = (y * width + x) as usize;
+                let color = [1.0, 1.0, 1.0, 1.0];
+                blend(&mut buffer[index], color, eye_mask);
+            }
+        }
     }
 }
 
@@ -491,5 +519,36 @@ mod tests {
             renderer.render(&frame, BloubPalette::LIGHT),
             renderer.render(&frame, BloubPalette::LIGHT)
         );
+    }
+
+    #[test]
+    fn renders_eyes_only_without_body() {
+        let renderer = BloubFlatRenderer::new();
+        let size = renderer.size();
+        let mut engine = BloubEngine::new();
+        engine.set_eyes_only(true);
+        let frame = engine.sample(0.0);
+        assert!(frame.eyes_only);
+        assert_eq!(frame.body_alpha, 0.0);
+
+        let rgba = renderer.render(&frame, BloubPalette::DARK);
+        assert_eq!(rgba.len(), (size * size * 4) as usize);
+
+        let eye_pixels = rgba.chunks_exact(4).filter(|pixel| pixel[3] > 0).count();
+        assert!(eye_pixels > 0);
+
+        for pixel in rgba.chunks_exact(4).filter(|pixel| pixel[3] > 0) {
+            assert_eq!(pixel[0], 255);
+            assert_eq!(pixel[1], 255);
+            assert_eq!(pixel[2], 255);
+        }
+
+        let full_frame = BloubEngine::new().sample(0.0);
+        let full_rgba = renderer.render(&full_frame, BloubPalette::DARK);
+        let full_opaque = full_rgba
+            .chunks_exact(4)
+            .filter(|pixel| pixel[3] > 0)
+            .count();
+        assert!(eye_pixels < full_opaque / 2);
     }
 }

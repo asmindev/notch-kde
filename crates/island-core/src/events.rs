@@ -2,7 +2,7 @@ use crate::models::{
     ActiveModule, BatteryState, IslandView, MediaSource, MediaTrack, MusicVisualMode, TimeInfo,
 };
 use crate::prayer::PrayerAlert;
-use crate::settings::{PetRenderer, SettingsTab};
+use crate::settings::{CompactModeStyle, PetRenderer, SettingsTab};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TimerId {
@@ -74,6 +74,7 @@ pub enum AppEvent {
     SetPrayerReminderMinutes(u32),
     SetMediaVisualMode(MusicVisualMode),
     SetPetRenderer(PetRenderer),
+    SetCompactModeStyle(CompactModeStyle),
     ResetAvatar,
     ResetSettings,
     SelectMediaSource(String),

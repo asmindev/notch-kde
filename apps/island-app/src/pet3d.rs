@@ -4,10 +4,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::render_stats::RenderStats;
-use island_core::PetRenderer;
 use island_core::models::{AlertKind, IslandView};
 use island_core::snapshot::ViewSnapshot;
 use island_core::state::MochiMoodState;
+use island_core::{CompactModeStyle, PetRenderer};
 use island_pet3d::{
     BloubEngine, BloubFlatRenderer, BloubFrame, BloubPalette, BloubRenderer, ExpressionId, ShapeId,
     StateId,
@@ -38,6 +38,7 @@ struct Pet3dInput {
     notification_generation: u64,
     notification_active: bool,
     is_compact: bool,
+    compact_mode_style: CompactModeStyle,
     mochi_mood: MochiMoodState,
     blob_character: u32,
     blob_palette: u32,
@@ -69,6 +70,7 @@ impl Default for Pet3dInput {
             notification_generation: 0,
             notification_active: false,
             is_compact: false,
+            compact_mode_style: CompactModeStyle::Standard,
             mochi_mood: MochiMoodState::Idle,
             blob_character: 1,
             blob_palette: 0,
@@ -378,6 +380,7 @@ impl Pet3dInner {
         };
         input.is_compact =
             !preview && matches!(snapshot.navigation.current_view, IslandView::Compact);
+        input.compact_mode_style = snapshot.settings.compact_mode_style;
         input.mochi_mood = if preview {
             MochiMoodState::Idle
         } else {
@@ -512,8 +515,10 @@ impl Pet3dInner {
         } else {
             engine.set_look(0.0, 0.0, false);
         }
+        let eyes_only = input.is_compact && input.compact_mode_style.is_eyes_only();
         engine.set_energy(input.bass);
         engine.set_compact(input.is_compact);
+        engine.set_eyes_only(eyes_only);
         engine.set_idle_acting(
             target_state == StateId::Idle
                 && !input.blob_expression_custom

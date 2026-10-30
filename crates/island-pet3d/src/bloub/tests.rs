@@ -1,7 +1,11 @@
 use super::*;
 
 fn assert_frame_finite(frame: &BloubFrame) {
-    assert!(frame.extent.is_finite() && frame.extent >= 1.08);
+    if frame.eyes_only {
+        assert!(frame.extent.is_finite() && frame.extent > 0.0);
+    } else {
+        assert!(frame.extent.is_finite() && frame.extent >= 1.08);
+    }
     assert!(frame.eye_alpha.is_finite() && frame.body_alpha.is_finite());
     for r in &frame.silhouette.radii {
         assert!(r.is_finite() && *r >= 0.0);
@@ -259,4 +263,31 @@ fn compact_mode_enlarges_the_eyes() {
 
     assert!(compact_frame.eyes[0].w > normal_frame.eyes[0].w);
     assert!(compact_frame.eyes[0].h > normal_frame.eyes[0].h);
+}
+
+#[test]
+fn eyes_only_mode_disables_body_alpha_and_decor_and_zooms_extent() {
+    let mut engine = BloubEngine::new();
+    engine.set_eyes_only(true);
+    let frame = engine.sample(1.0);
+
+    assert!(frame.eyes_only);
+    assert_eq!(frame.body_alpha, 0.0);
+    assert!(frame.decor.arcs.is_empty());
+    assert!(frame.decor.dots.is_empty());
+    assert!(frame.extent <= 0.95);
+    assert_frame_finite(&frame);
+
+    let t0 = face::eye_transform(&frame.silhouette, &frame.eyes[0]);
+    let t1 = face::eye_transform(&frame.silhouette, &frame.eyes[1]);
+
+    // Both eyes must be strictly within the camera extent horizontally and vertically
+    assert!(t0.0[0] - t0.2 > -frame.extent && t0.0[0] + t0.2 < frame.extent);
+    assert!(t1.0[0] - t1.2 > -frame.extent && t1.0[0] + t1.2 < frame.extent);
+    assert!(t0.0[1] - t0.3 > -frame.extent && t0.0[1] + t0.3 < frame.extent);
+    assert!(t1.0[1] - t1.3 > -frame.extent && t1.0[1] + t1.3 < frame.extent);
+
+    // Eyes are centered symmetrically around x = 0.0
+    let mid_x = (t0.0[0] + t1.0[0]) / 2.0;
+    assert!(mid_x.abs() < 0.05);
 }

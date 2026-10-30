@@ -496,7 +496,7 @@ impl BloubRenderer {
     }
 
     pub fn update(&mut self, frame: &BloubFrame, palette: BloubPalette) {
-        let extent = frame.extent.max(1.08);
+        let extent = frame.extent.max(if frame.eyes_only { 0.85 } else { 1.08 });
         let (vertices, indices) = build_body(&frame.silhouette);
         self.body_vertices
             .write(&self.device, &self.queue, &vertices);
@@ -507,11 +507,16 @@ impl BloubRenderer {
         self.queue
             .write_buffer(&self.body_uniform, 0, bytemuck::bytes_of(&uniform));
 
-        let (back, front) = build_overlay(frame, palette, extent);
-        self.back_vertices.write(&self.device, &self.queue, &back);
-        self.front_vertices.write(&self.device, &self.queue, &front);
-        self.back_vertex_count = back.len() as u32;
-        self.front_vertex_count = front.len() as u32;
+        if frame.eyes_only {
+            self.back_vertex_count = 0;
+            self.front_vertex_count = 0;
+        } else {
+            let (back, front) = build_overlay(frame, palette, extent);
+            self.back_vertices.write(&self.device, &self.queue, &back);
+            self.front_vertices.write(&self.device, &self.queue, &front);
+            self.back_vertex_count = back.len() as u32;
+            self.front_vertex_count = front.len() as u32;
+        }
     }
 
     pub fn render(&self) {
@@ -710,7 +715,12 @@ fn build_uniform(frame: &BloubFrame, palette: BloubPalette, extent: f32) -> Body
     uniform.camera_pos = camera_pos.extend(1.0).to_array();
     uniform.body_color = palette.body;
     uniform.eye_color = palette.eye;
-    uniform.params = [frame.body_alpha, frame.eye_alpha, 0.0, 0.0];
+    uniform.params = [
+        frame.body_alpha,
+        frame.eye_alpha,
+        if frame.eyes_only { 1.0 } else { 0.0 },
+        0.0,
+    ];
     uniform.light_dirs = [
         Vec3::new(-0.45, 0.80, 0.65)
             .normalize()

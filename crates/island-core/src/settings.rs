@@ -49,6 +49,28 @@ impl PetRenderer {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum CompactModeStyle {
+    #[default]
+    #[serde(rename = "standard")]
+    Standard = 0,
+    #[serde(rename = "eyes_only")]
+    EyesOnly = 1,
+}
+
+impl CompactModeStyle {
+    pub fn from_index(index: i32) -> Self {
+        match index {
+            1 => Self::EyesOnly,
+            _ => Self::Standard,
+        }
+    }
+
+    pub fn is_eyes_only(self) -> bool {
+        matches!(self, Self::EyesOnly)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AvatarSettings {
@@ -146,6 +168,7 @@ pub struct PersistedSettings {
     pub media_visual_mode: MusicVisualMode,
     pub pet_renderer: Option<PetRenderer>,
     pub prayer: PrayerSettings,
+    pub compact_mode_style: CompactModeStyle,
 }
 
 impl Default for PersistedSettings {
@@ -158,6 +181,7 @@ impl Default for PersistedSettings {
             media_visual_mode: MusicVisualMode::ArtworkPrimary,
             pet_renderer: None,
             prayer: PrayerSettings::default(),
+            compact_mode_style: CompactModeStyle::default(),
         }
     }
 }
@@ -223,6 +247,7 @@ impl PersistedSettings {
             media_visual_mode: state.settings.music_visual_mode,
             pet_renderer: Some(state.settings.pet_renderer),
             prayer: state.settings.prayer.normalized(),
+            compact_mode_style: state.settings.compact_mode_style,
         }
     }
 
@@ -240,6 +265,7 @@ impl PersistedSettings {
             state.settings.pet_renderer = renderer;
         }
         state.settings.prayer = self.prayer.normalized();
+        state.settings.compact_mode_style = self.compact_mode_style;
     }
 }
 
@@ -320,6 +346,7 @@ mod tests {
         state.settings.prayer.enabled = false;
         state.settings.prayer.city = 8;
         state.settings.prayer.reminder_minutes = 15;
+        state.settings.compact_mode_style = CompactModeStyle::EyesOnly;
 
         let snapshot = PersistedSettings::from_state(&state);
         let mut restored = AppState::default();
@@ -345,6 +372,25 @@ mod tests {
         assert!(!restored.settings.prayer.enabled);
         assert_eq!(restored.settings.prayer.city, 8);
         assert_eq!(restored.settings.prayer.reminder_minutes, 15);
+        assert_eq!(
+            restored.settings.compact_mode_style,
+            CompactModeStyle::EyesOnly
+        );
+    }
+
+    #[test]
+    fn compact_mode_style_index_mapping_and_serialization() {
+        assert_eq!(CompactModeStyle::from_index(0), CompactModeStyle::Standard);
+        assert_eq!(CompactModeStyle::from_index(1), CompactModeStyle::EyesOnly);
+        assert_eq!(CompactModeStyle::from_index(99), CompactModeStyle::Standard);
+
+        assert!(!CompactModeStyle::Standard.is_eyes_only());
+        assert!(CompactModeStyle::EyesOnly.is_eyes_only());
+
+        let json = serde_json::to_string(&CompactModeStyle::EyesOnly).unwrap();
+        assert_eq!(json, "\"eyes_only\"");
+        let deserialized: CompactModeStyle = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized, CompactModeStyle::EyesOnly);
     }
 
     #[test]

@@ -8,8 +8,8 @@ use crate::render_stats::RenderStats;
 use crate::settings_store::SettingsStore;
 use effects::EffectExecutor;
 use island_core::{
-    AppEvent, AppState, Effect, PersistedSettings, PetRenderer, SettingsTab, TimerId, reduce,
-    render_policy,
+    AppEvent, AppState, CompactModeStyle, Effect, PersistedSettings, PetRenderer, SettingsTab,
+    TimerId, reduce, render_policy,
 };
 use island_platform::kde::ScreenGeometry;
 use island_platform::{KdeManager, OverlapDetector, PlatformWindow};
@@ -343,6 +343,11 @@ impl AppRuntime {
                 PetRenderer::ThreeD
             };
             let _ = tx.send(AppEvent::SetPetRenderer(renderer));
+        });
+        let tx = event_tx.clone();
+        settings_ctx.on_set_compact_mode_style(move |index| {
+            let style = CompactModeStyle::from_index(index);
+            let _ = tx.send(AppEvent::SetCompactModeStyle(style));
         });
         let tx = event_tx.clone();
         settings_ctx.on_reset_avatar(move || {

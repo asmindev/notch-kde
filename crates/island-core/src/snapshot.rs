@@ -3,7 +3,9 @@ use crate::models::{
 };
 use crate::module::ModuleId;
 use crate::prayer::{PrayerAlert, PrayerSettings};
-use crate::settings::{PetBehaviorSettings, PetRenderer, SettingsTab, ShadowSettings};
+use crate::settings::{
+    CompactModeStyle, PetBehaviorSettings, PetRenderer, SettingsTab, ShadowSettings,
+};
 use crate::state::{AppState, MochiMoodState};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -64,6 +66,7 @@ pub struct SettingsSnapshot {
     pub blob_expression_custom: bool,
     pub avatar_random: bool,
     pub avatar_seed: u64,
+    pub compact_mode_style: CompactModeStyle,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -128,6 +131,7 @@ impl ViewSnapshot {
                 blob_expression_custom: state.settings.blob_expression_custom,
                 avatar_random: state.settings.avatar_random,
                 avatar_seed: state.settings.avatar_seed,
+                compact_mode_style: state.settings.compact_mode_style,
             },
         }
     }
